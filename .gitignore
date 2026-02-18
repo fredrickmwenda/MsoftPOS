@@ -1,0 +1,24 @@
+/node_modules
+/public/hot
+/storage/*.key
+/vendor
+.env
+.env.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+
+
+# all public files
+# /public/*
+/public/stock_count/*
+/public/transfer/documents/*
+/public/sample_file/*
+/public/sale/documents/*
+/public/purchase/documents/*
+/public/product/documents/*
+/public/icons/*
+/public/downloads/*
+

@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Observers;
+
+use App\Models\Table;
+use Illuminate\Support\Facades\Cache;
+
+class TableObserver
+{
+    /**
+     * Handle the Table "created" event.
+     */
+    public function created(Table $table): void
+    {
+        Cache::forget('table_list');
+    }
+
+    /**
+     * Handle the Table "updated" event.
+     */
+    public function updated(Table $table): void
+    {
+        Cache::forget('table_list');
+    }
+
+    /**
+     * Handle the Table "deleted" event.
+     */
+    public function deleted(Table $table): void
+    {
+        Cache::forget('table_list');
+    }
+
+    /**
+     * Handle the Table "restored" event.
+     */
+    public function restored(Table $table): void
+    {
+        Cache::forget('table_list');
+    }
+
+    /**
+     * Handle the Table "force deleted" event.
+     */
+    public function forceDeleted(Table $table): void
+    {
+        Cache::forget('table_list');
+    }
+}
