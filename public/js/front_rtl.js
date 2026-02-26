@@ -50,7 +50,8 @@ $(document).ready(function () {
     // ------------------------------------------------------ //
 
     if ($(window).outerWidth() > 992) {
-        $("nav.side-navbar,.table-container,.transaction-list,.right-sidebar").mCustomScrollbar({
+        /* Exclude nav.side-navbar to avoid max-height:none and overlap; sidebar uses native overflow via CSS */
+        $(".table-container,.transaction-list,.right-sidebar").mCustomScrollbar({
             theme: "light",
             scrollInertia: 200
         });

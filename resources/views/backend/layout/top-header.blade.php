@@ -119,7 +119,8 @@
       
       /* Modern Design System */
       :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
+        --primary-gradient: linear-gradient(135deg, #c4c6cf 0%, #299e42 100%);
         --primary-color: #13bd60;
         --secondary-color: #764ba2;
         --accent-color: #ffd700;
@@ -148,6 +149,31 @@
         -moz-osx-font-smoothing: grayscale;
         margin: 0;
         padding: 0;
+      }
+
+      /* Remove header spacing */
+      header {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+      }
+
+      section.pos-section {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+      }
+
+    
+
+      .pos-page {
+        background: white !important;
+        min-height: auto !important;
+        padding-bottom: 0 !important;
+      }
+
+      body.pos-page {
+        background: white !important;
       }
 
       /* Header Navigation Styling */
@@ -273,6 +299,10 @@
         border-radius: 0;
         overflow: hidden;
       }
+      #side-main-menu > li > a
+ {
+        color: green !important;
+ }
 
       .side-navbar li a {
         color: var(--text-light) !important;
@@ -282,6 +312,7 @@
         border-left: 3px solid transparent;
         transition: var(--transition);
         position: relative;
+        /* color: green !important; */
       }
 
       .side-navbar li a:before {
@@ -540,7 +571,7 @@
       }
 
       .modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #5cd562 0%, #e2bb0e 100%);
         color: white;
         border: none;
         border-radius: 12px 12px 0 0;
@@ -633,7 +664,7 @@
   <body class="pos-page" onload="myFunction()">
     <div id="loader"></div>
 
-      <div style="display:none;" id="content" class="animate-bottom">
+      <div style="display:none;" id="content" >
           @yield('content')
       </div>
 
@@ -954,38 +985,38 @@
 
     <!-- customer group modal -->
     <div id="customer-group-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-        <div role="document" class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 id="exampleModalLabel" class="modal-title">{{trans('file.Customer Group Report')}}</h5>
-                    <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
-                </div>
-                <div class="modal-body">
-                  <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
-                    {!! Form::open(['route' => 'report.customer_group', 'method' => 'post']) !!}
-                    <?php
-                      $lims_customer_group_list = DB::table('customer_groups')->where('is_active', true)->get();
-                    ?>
-                      <div class="form-group">
-                          <label>{{trans('file.Customer Group')}} *</label>
-                          <select name="customer_group_id" class="selectpicker form-control" required data-live-search="true" id="customer-group-id" data-live-search-style="begins" title="Select customer group...">
-                              @foreach($lims_customer_group_list as $customer_group)
-                              <option value="{{$customer_group->id}}">{{$customer_group->name}}</option>
-                              @endforeach
-                          </select>
-                      </div>
+      <div role="document" class="modal-dialog">
+          <div class="modal-content">
+              <div class="modal-header">
+                  <h5 id="exampleModalLabel" class="modal-title">{{trans('file.Customer Group Report')}}</h5>
+                  <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+              </div>
+              <div class="modal-body">
+                <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
+                  {!! Form::open(['route' => 'report.customer_group', 'method' => 'post']) !!}
+                  <?php
+                    $lims_customer_group_list = DB::table('customer_groups')->where('is_active', true)->get();
+                  ?>
+                    <div class="form-group">
+                        <label>{{trans('file.Customer Group')}} *</label>
+                        <select name="customer_group_id" class="selectpicker form-control" required data-live-search="true" id="customer-group-id" data-live-search-style="begins" title="Select customer group...">
+                            @foreach($lims_customer_group_list as $customer_group)
+                            <option value="{{$customer_group->id}}">{{$customer_group->name}}</option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                      <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
+                    <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                    <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
-                      <div class="form-group">
-                          <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
-                      </div>
-                    {{ Form::close() }}
-                </div>
-            </div>
-        </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
+                    </div>
+                  {{ Form::close() }}
+              </div>
+          </div>
       </div>
+    </div>
       <!-- end customer group modal -->
 
     <!-- supplier modal -->
@@ -1102,7 +1133,7 @@
 
           function showPage() {
             document.getElementById("loader").style.display = "none";
-            document.getElementById("content").style.display = "block";
+            document.getElementById("content").style.display = "";
             $("#lims_productcodeSearch").focus();
           }
 

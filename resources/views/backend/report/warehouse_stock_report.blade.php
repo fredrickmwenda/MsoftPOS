@@ -1,6 +1,43 @@
 @extends('backend.layout.main')
 
+@push('css')
+<!--  the btn-group to have a border  radius of the black color -->
+<style>
+    .btn-group {
+        border-radius: 0.25rem;
+        border: 1px solid #000000;
+    }
+    .btn-group .btn {
+        border-radius: 0.25rem;
+        border: 1px solid #000000;
+    }
+    .btn-group .btn:hover {
+        background-color: #000000;
+    }
+    .btn-group .btn:active {
+        background-color: #000000;
+    }
+    .btn-group .btn:focus {
+        background-color: #000000;
+    }
+    .btn-group .btn:active:focus {
+        background-color: #000000;
+    }
+    /* Make table use full width of container */
+    #warehouseStockTable {
+        width: 100% !important;
+    }
+    .table-responsive .dataTables_wrapper {
+        width: 100% !important;
+    }
+    .table-responsive .dataTables_scroll,
+    .table-responsive .dataTables_scrollBody {
+        width: 100% !important;
+    }
+</style>
+@endpush
 @section('content')
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 <section>
     <div class="container-fluid">
         <div class="card">
@@ -12,7 +49,7 @@
             {!! Form::open(['route' => 'report.warehouseStockData', 'method' => 'post', 'id' => 'warehouseReportForm']) !!}
             @csrf
             <div class="row mb-3 warehouse-report-filter">
-                <div class="col-md-5 offset-md-1 mt-3">
+                <!-- <div class="col-md-5 offset-md-1 mt-3">
                     <div class="form-group row">
                         <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
                         <div class="d-tc">
@@ -23,11 +60,37 @@
                             </div>
                         </div>
                     </div>
+                </div> -->
+                <div class="col-md-3 mt-3 mb-3 ml-2">
+                    <div class="form-group">
+                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="start_date"
+                                value="{{ !empty($start_date) ? $start_date : '' }}"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 mb-3">
+                    <div class="form-group">
+                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="end_date"
+                                value="{{ !empty($end_date) ? $end_date : '' }}"
+                            />
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4 mt-3">
                     <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
+                        <label class="control-label"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
+                       
                             <input type="hidden" name="warehouse_id_hidden" value="{{$warehouse_id}}" />
                             <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
                                 <option value="">All Warehouses</option>
@@ -37,7 +100,7 @@
                                     </option>
                                 @endforeach
                             </select>
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
@@ -50,8 +113,8 @@
         </div>
 
         {{-- ✅ Data Table --}}
-        <div class="table-responsive">
-            <table class="table table-bordered table-striped" id="warehouseStockTable">
+        <div class="table-responsive" style="width: 100%;">
+            <table class="table table-bordered table-striped" id="warehouseStockTable" style="width: 100%;">
                 <thead>
                     <tr>
                         <th class="not-exported"></th>
@@ -84,6 +147,8 @@ $(document).ready(function() {
   $('#warehouseStockTable').DataTable({
     processing: true,
     serverSide: true,
+    scrollX: true,
+    autoWidth: true,
     ajax: {
         url: "{{ route('report.warehouseStockData') }}", // <-- Laravel route for JSON
         type: "POST",
@@ -154,32 +219,32 @@ $(document).ready(function() {
     ]
 });
 
-setTimeout(function() {
-    $('.daterangepicker-field').daterangepicker({
-        autoUpdateInput: false,
-        startDate: "{{ $start_date }}",
-        endDate: "{{ $end_date }}",
-        locale: {
-            cancelLabel: 'Clear',
-            format: 'YYYY-MM-DD'
-        }
-    }, function(startDate, endDate, label) {
-        var start_date = startDate.format('YYYY-MM-DD');
-        var end_date   = endDate.format('YYYY-MM-DD');
-        var title = start_date + ' To ' + end_date;
+// setTimeout(function() {
+//     $('.daterangepicker-field').daterangepicker({
+//         autoUpdateInput: false,
+//         startDate: "{{ $start_date }}",
+//         endDate: "{{ $end_date }}",
+//         locale: {
+//             cancelLabel: 'Clear',
+//             format: 'YYYY-MM-DD'
+//         }
+//     }, function(startDate, endDate, label) {
+//         var start_date = startDate.format('YYYY-MM-DD');
+//         var end_date   = endDate.format('YYYY-MM-DD');
+//         var title = start_date + ' To ' + end_date;
 
-        // set visible field
-        $('.daterangepicker-field').val(title);
+//         // set visible field
+//         $('.daterangepicker-field').val(title);
 
-        // set hidden fields
-        $('input[name="start_date"]').val(start_date);
-        $('input[name="end_date"]').val(end_date);
+//         // set hidden fields
+//         $('input[name="start_date"]').val(start_date);
+//         $('input[name="end_date"]').val(end_date);
 
-        console.log("Callback fired:", start_date, end_date);
-    });
+//         console.log("Callback fired:", start_date, end_date);
+//     });
 
-    console.log("daterangepicker initialized");
-}, 600);
+//     console.log("daterangepicker initialized");
+// }, 600);
 
 
 

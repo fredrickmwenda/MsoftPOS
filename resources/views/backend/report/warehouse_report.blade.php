@@ -1,5 +1,20 @@
 @extends('backend.layout.main') @section('content')
-<section class="forms">
+@push('css')
+<style>
+    /* Ensure warehouse report tables can scroll horizontally and show in full */
+    .warehouse-report-tables .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        width: 100%;
+    }
+    .warehouse-report-tables .dataTables_wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+</style>
+@endpush
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
+<section class="forms warehouse-report-tables">
     <div class="container-fluid">
         <div class="card">
             <div class="card-header mt-2">
@@ -15,7 +30,7 @@
                                 <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
                                 <input type="hidden" name="start_date" value="{{$start_date}}" />
                                 <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            </div>
+                            </div> 
                         </div>
                     </div>
                 </div>
@@ -262,6 +277,7 @@
     $('#sale-table').DataTable({
         "processing": true,
         "serverSide": true,
+        "scrollX": true,
         "ajax":{
             url:"warehouse-sale-data",
             data:{
@@ -391,6 +407,7 @@
     $('#purchase-table').DataTable({
         "processing": true,
         "serverSide": true,
+        "scrollX": true,
         "ajax":{
             url:"warehouse-purchase-data",
             data:{
@@ -520,6 +537,7 @@
     $('#quotation-table').DataTable({
         "processing": true,
         "serverSide": true,
+        "scrollX": true,
         "ajax":{
             url:"warehouse-quotation-data",
             data:{
@@ -644,6 +662,7 @@
     $('#return-table').DataTable({
         "processing": true,
         "serverSide": true,
+        "scrollX": true,
         "ajax":{
             url:"warehouse-return-data",
             data:{
@@ -767,6 +786,7 @@
     $('#expense-table').DataTable({
         "processing": true,
         "serverSide": true,
+        "scrollX": true,
         "ajax":{
             url:"warehouse-expense-data",
             data:{

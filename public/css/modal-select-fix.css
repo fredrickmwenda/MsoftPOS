@@ -1,0 +1,37 @@
+/**
+ * Ensure report (and other) modals with selectpicker dropdowns are usable.
+ * The backdrop must not block the modal content or the dropdown menu.
+ */
+
+/* Modal and backdrop above page content */
+.modal {
+  z-index: 1050 !important;
+}
+.modal-backdrop {
+  z-index: 1040 !important;
+}
+.modal-dialog {
+  z-index: 1051 !important;
+  position: relative;
+}
+.modal-content {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+}
+.modal-body {
+  pointer-events: auto;
+}
+
+/* Bootstrap-select dropdown: render above modal and backdrop so user can select options */
+.bootstrap-select .dropdown-menu,
+.bootstrap-select.open .dropdown-menu,
+.modal .bootstrap-select .dropdown-menu,
+.modal .dropdown-menu {
+  z-index: 1060 !important;
+}
+/* When selectpicker appends dropdown to body, ensure it's still on top */
+body > .bootstrap-select .dropdown-menu,
+body > .dropdown-menu[class*="selectpicker"] {
+  z-index: 1070 !important;
+}

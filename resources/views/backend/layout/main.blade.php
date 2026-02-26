@@ -53,6 +53,8 @@
     <link rel="stylesheet" href="<?php echo asset('css/dropzone.css') ?>">
     <!-- Custom stylesheet - for your changes-->
     <link rel="stylesheet" href="<?php echo asset('css/custom-'.$general_setting->theme) ?>" type="text/css" id="custom-style">
+    <link rel="stylesheet" href="<?php echo asset('css/sidebar-layout-fix.css') ?>" type="text/css">
+    <link rel="stylesheet" href="<?php echo asset('css/modal-select-fix.css') ?>" type="text/css">
 
     @if( Config::get('app.locale') == 'ar' || $general_setting->is_rtl)
       <!-- RTL css -->
@@ -110,6 +112,8 @@
     <link rel="stylesheet" href="<?php echo asset('../../css/dropzone.css') ?>">
     <!-- Custom stylesheet - for your changes-->
     <link rel="stylesheet" href="<?php echo asset('../../css/custom-'.$general_setting->theme) ?>" type="text/css" id="custom-style">
+    <link rel="stylesheet" href="<?php echo asset('../../css/sidebar-layout-fix.css') ?>" type="text/css">
+    <link rel="stylesheet" href="<?php echo asset('../../css/modal-select-fix.css') ?>" type="text/css">
 
     @if( Config::get('app.locale') == 'ar' || $general_setting->is_rtl)
       <!-- RTL css -->
@@ -129,11 +133,11 @@
       
       /* Modern Design System */
       :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --primary-gradient: linear-gradient(135deg, #c4c6cf 0%, #299e42 100%);
         --primary-color: #13bd60;
         --secondary-color: #764ba2;
         --accent-color: #ffd700;
-        --text-dark: #1a1a2e;
+        --text-dark: #ccdcd3;
         --text-light: #f2f2f2;
         --bg-light: #f8f9fa;
         --border-color: #e0e0e0;
@@ -345,7 +349,7 @@
 
       .btn-secondary {
         background: var(--bg-light);
-        color: var(--text-dark);
+        color: #f2f2f2;
         border: 1px solid var(--border-color);
       }
 
@@ -534,13 +538,14 @@
       }
 
       .modal-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #5cd562 0%, #e2bb0e 100%);
         color: white;
         border: none;
         border-radius: 12px 12px 0 0;
         padding: 16px 20px;
         font-weight: 600;
       }
+      
 
       .modal-header .close {
         color: white;
@@ -603,17 +608,17 @@
         }
       }
 
-      .btn-group{
+      /* .btn-group{
         border: 3px solid #000000!important
-      }
+      } */
 
       /* Dark Mode Support */
       @media (prefers-color-scheme: dark) {
         :root {
-          --text-dark: #111010;
-          --text-light: #1a1a2e;
-          --bg-light: #1a1a2e;
-          --border-color: #333333;
+          --text-dark: #13bd60;;
+          --text-light: #13bd60;;
+          --bg-light: #13bd60;;
+          --border-color: #13bd60;;
         }
 
         nav.navbar {
@@ -626,12 +631,13 @@
           color: var(--text-dark);
         }
       }
+
     </style>
   </head>
 
   <body class="@if($theme == 'dark')dark-mode dripicons-brightness-low @endif  @if(Route::current()->getName() == 'sale.pos') pos-page @endif" onload="myFunction()">
     <div id="loader"></div>
-      <!-- Side Navbar -->
+      <!-- Side Navbar --> 
       <nav class="side-navbar" style="background-color: #ecf0f4 !important;">
         <span class="brand-big mb-3 mt-2">
             @if($general_setting->site_logo)
@@ -649,11 +655,11 @@
       <header >
         <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
           
-           <button class="menu-btn" style="background-color: transparent; border-color:transparent;" id="toggle-btn">
-    <span class="navbar-toggler-iconx">  <a id="toggle-btn" href="#" class=""><i class="fa text-white fa-bars"> </i></a></span>
-  </button>
-             <a class="navbar-brand " style="margin-left: -700px !important;" href="#"> <h1 class="mt-2 text-white">{{ $general_setting->site_title }}</h1></a>
- 
+          <button class="menu-btn" style="background-color: transparent; border-color:transparent;" id="toggle-btn">
+            <span class="navbar-toggler-iconx">  <a id="toggle-btn" href="#" class=""><i class="fa text-white fa-bars"> </i></a></span>
+          </button>
+            <a class="navbar-brand " style="margin-left: -700px !important;" href="#"> <h1 class="mt-2 text-white">{{ $general_setting->site_title }}</h1></a>
+
 
            <ul class="nav-menu list-unstyled d-flex flex-md-row align-items-md-center">
             <!-- <div class="dropdown">

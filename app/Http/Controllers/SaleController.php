@@ -149,6 +149,66 @@ class SaleController extends Controller
         return view('backend.sale.orders',compact('orders'));
     }
 
+    // public function index(Request $request)
+    // {
+    //     $role = Role::find(Auth::user()->role_id);
+    //     if($role->hasPermissionTo('sales-index')) {
+    //         $permissions = Role::findByName($role->name)->permissions;
+    //         foreach ($permissions as $permission)
+    //             $all_permission[] = $permission->name;
+    //         if(empty($all_permission))
+    //             $all_permission[] = 'dummy text';
+
+    //         if($request->input('warehouse_id'))
+    //             $warehouse_id = $request->input('warehouse_id');
+    //         else
+    //             $warehouse_id = 0;
+
+    //         if($request->input('sale_status'))
+    //             $sale_status = $request->input('sale_status');
+    //         else
+    //             $sale_status = 0;
+
+
+    //         if($request->input('payment_status'))
+    //             $payment_status = $request->input('payment_status');
+    //         else
+    //             $payment_status = 0;
+
+    //         if($request->input('starting_date')) {
+    //             $starting_date = $request->input('starting_date');
+    //             $ending_date = $request->input('ending_date');
+    //         }
+    //         else {
+    //             $starting_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
+    //             $ending_date = date("Y-m-d");
+    //         }
+
+    //         $lims_gift_card_list = GiftCard::where("is_active", true)->get();
+    //         $lims_pos_setting_data = PosSetting::latest()->first();
+    //         $lims_reward_point_setting_data = RewardPointSetting::latest()->first();
+    //         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+    //         $lims_account_list = Account::where('is_active', true)->get();
+    //         $lims_courier_list = Courier::where('is_active', true)->get();
+    //         if($lims_pos_setting_data)
+    //             $options = explode(',', $lims_pos_setting_data->payment_options);
+    //         else
+    //             $options = [];
+    //         $numberOfInvoice = Sale::count();
+    //         $custom_fields = CustomField::where([
+    //                             ['belongs_to', 'sale'],
+    //                             ['is_table', true]
+    //                         ])->pluck('name');
+    //         $field_name = [];
+    //         foreach($custom_fields as $fieldName) {
+    //             $field_name[] = str_replace(" ", "_", strtolower($fieldName));
+    //         }
+    //         return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list'));
+    //     }
+    //     else
+    //         return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+    // }
+
     public function index(Request $request)
     {
         $role = Role::find(Auth::user()->role_id);
@@ -169,7 +229,6 @@ class SaleController extends Controller
             else
                 $sale_status = 0;
 
-
             if($request->input('payment_status'))
                 $payment_status = $request->input('payment_status');
             else
@@ -182,6 +241,35 @@ class SaleController extends Controller
             else {
                 $starting_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
                 $ending_date = date("Y-m-d");
+            }
+
+            // Handle cumulative total filter
+            // Priority: User input > Session > Admin default settings
+            $cumulative_total_target = null;
+            $cumulative_total_operator = 'equal';
+            $is_admin_filter = false;
+            
+            if($request->input('cumulative_total_target')) {
+                // User manually set the filter
+                $cumulative_total_target = $request->input('cumulative_total_target');
+                $cumulative_total_operator = $request->input('cumulative_total_operator') ?: 'equal';
+                session([
+                    'cumulative_total_target' => $cumulative_total_target,
+                    'cumulative_total_operator' => $cumulative_total_operator
+                ]);
+            } else if (session('cumulative_total_target')) {
+                // Load from session if previously set by user
+                $cumulative_total_target = session('cumulative_total_target');
+                $cumulative_total_operator = session('cumulative_total_operator', 'equal');
+            } else {
+                // Load admin-set default filters from settings
+                $settings = GeneralSetting::first();
+                if($settings && $settings->sale_cumulative_total_target) {
+                    $cumulative_total_target = $settings->sale_cumulative_total_target;
+                    $cumulative_total_operator = $settings->sale_cumulative_total_operator ?: 'equal';
+                    $is_admin_filter = true;
+                }
+                session(['cumulative_total_target' => null]);
             }
 
             $lims_gift_card_list = GiftCard::where("is_active", true)->get();
@@ -203,7 +291,8 @@ class SaleController extends Controller
             foreach($custom_fields as $fieldName) {
                 $field_name[] = str_replace(" ", "_", strtolower($fieldName));
             }
-            return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list'));
+            
+            return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list', 'cumulative_total_target', 'cumulative_total_operator', 'is_admin_filter'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
@@ -3535,243 +3624,884 @@ public function limsProductSearch(Request $request)
         return Redirect::to($url)->with('not_permitted', $message);
     }
 
+    // public function saleData(Request $request)
+    // {
+    //     $columns = array(
+    //         1 => 'created_at',
+    //         2 => 'reference_no',
+    //         7 => 'grand_total',
+    //         8 => 'paid_amount',
+    //     );
+
+    //     $warehouse_id = $request->input('warehouse_id');
+    //     $sale_status = $request->input('sale_status');
+    //     $payment_status = $request->input('payment_status');
+
+    //     $q = Sale::whereDate('created_at', '>=' ,$request->input('starting_date'))->whereDate('created_at', '<=' ,$request->input('ending_date'));
+
+    //     if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+    //         $q = $q->where('user_id', Auth::id());
+    //     if($sale_status)
+    //         $q = $q->where('sale_status', $sale_status);
+    //     if($payment_status)
+    //         $q = $q->where('payment_status', $payment_status);
+
+    //     $totalData = $q->count();
+    //     $totalFiltered = $totalData;
+
+    //     if($request->input('length') != -1)
+    //         $limit = $request->input('length');
+    //     else
+    //         $limit = $totalData;
+    //     $start = $request->input('start');
+    //     $order = 'sales.'.$columns[$request->input('order.0.column')];
+    //     $dir = $request->input('order.0.dir');
+    //     //fetching custom fields data
+    //     $custom_fields = CustomField::where([
+    //                     ['belongs_to', 'sale'],
+    //                     ['is_table', true]
+    //                 ])->pluck('name');
+    //     $field_names = [];
+    //     foreach($custom_fields as $fieldName) {
+    //         $field_names[] = str_replace(" ", "_", strtolower($fieldName));
+    //     }
+    //     if(empty($request->input('search.value'))) {
+    //         $q = Sale::with('biller', 'customer', 'warehouse', 'user')
+    //             ->whereDate('created_at', '>=' ,$request->input('starting_date'))
+    //             ->whereDate('created_at', '<=' ,$request->input('ending_date'))
+    //             ->offset($start)
+    //             ->limit($limit)
+    //             ->orderBy($order, $dir);
+    //         if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+    //             $q = $q->where('user_id', Auth::id());
+    //         if($warehouse_id)
+    //             $q = $q->where('warehouse_id', $warehouse_id);
+    //         if($sale_status)
+    //             $q = $q->where('sale_status', $sale_status);
+    //         if($payment_status)
+    //             $q = $q->where('payment_status', $payment_status);
+    //         $sales = $q->get();
+    //     }
+    //     else
+    //     {
+    //         $search = $request->input('search.value');
+    //         $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
+    //             ->join('billers', 'sales.biller_id', '=', 'billers.id')
+    //             ->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))))
+    //             ->offset($start)
+    //             ->limit($limit)
+    //             ->orderBy($order,$dir);
+    //         if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+    //             $q = $q->select('sales.*')
+    //                     ->with('biller', 'customer', 'warehouse', 'user')
+    //                     ->where('sales.user_id', Auth::id())
+    //                     ->orwhere([
+    //                         ['sales.reference_no', 'LIKE', "%{$search}%"],
+    //                         ['sales.user_id', Auth::id()]
+    //                     ])
+    //                     ->orwhere([
+    //                         ['customers.name', 'LIKE', "%{$search}%"],
+    //                         ['sales.user_id', Auth::id()]
+    //                     ])
+    //                     ->orwhere([
+    //                         ['customers.phone_number', 'LIKE', "%{$search}%"],
+    //                         ['sales.user_id', Auth::id()]
+    //                     ])
+    //                     ->orwhere([
+    //                         ['billers.name', 'LIKE', "%{$search}%"],
+    //                         ['sales.user_id', Auth::id()]
+    //                     ]);
+    //             foreach ($field_names as $key => $field_name) {
+    //                 $q = $q->orwhere([
+    //                         ['sales.user_id', Auth::id()],
+    //                         ['sales.' . $field_name, 'LIKE', "%{$search}%"]
+    //                     ]);
+    //             }
+    //             $sales = $q->get();
+    //             $totalFiltered = $q->count();
+    //         }
+    //         else {
+    //             $q = $q->select('sales.*')
+    //                     ->with('biller', 'customer', 'warehouse', 'user')
+    //                     ->orwhere('sales.reference_no', 'LIKE', "%{$search}%")
+    //                     ->orwhere('customers.name', 'LIKE', "%{$search}%")
+    //                     ->orwhere('customers.phone_number', 'LIKE', "%{$search}%")
+    //                     ->orwhere('billers.name', 'LIKE', "%{$search}%");
+    //             foreach ($field_names as $key => $field_name) {
+    //                 $q = $q->orwhere('sales.' . $field_name, 'LIKE', "%{$search}%");
+    //             }
+    //             $sales = $q->get();
+    //             $totalFiltered = $q->count();
+    //         }
+    //     }
+    //     $data = array();
+    //     if(!empty($sales))
+    //     {
+    //         foreach ($sales as $key=>$sale)
+    //         {
+    //             $nestedData['id'] = $sale->id;
+    //             $nestedData['key'] = $key;
+    //             $nestedData['date'] = date(config('date_format'), strtotime($sale->created_at->toDateString()));
+    //             $nestedData['reference_no'] = $sale->reference_no;
+    //             $nestedData['biller'] = $sale->biller->name;
+    //             $nestedData['customer'] = $sale->customer->name.'<br>'.$sale->customer->phone_number.'<input type="hidden" class="deposit" value="'.($sale->customer->deposit - $sale->customer->expense).'" />'.'<input type="hidden" class="points" value="'.$sale->customer->points.'" />';
+
+    //             if($sale->sale_status == 1){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-success">'.trans('file.Completed').'</div>';
+    //                 $sale_status = trans('file.Completed');
+    //             }
+    //             elseif($sale->sale_status == 2){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+    //                 $sale_status = trans('file.Pending');
+    //             }
+    //             elseif($sale->sale_status == 3){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-warning">'.trans('file.Draft').'</div>';
+    //                 $sale_status = trans('file.Draft');
+    //             }
+    //             elseif($sale->sale_status == 4){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Returned').'</div>';
+    //                 $sale_status = trans('file.Returned');
+    //             }
+
+    //             if($sale->payment_status == 1)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+    //             elseif($sale->payment_status == 2)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
+    //             elseif($sale->payment_status == 3)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Partial').'</div>';
+    //             else
+    //                 $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
+    //             $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
+    //             if($delivery_data) {
+    //                 if($delivery_data->status == 1)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Packing').'</div>';
+    //                 elseif($delivery_data->status == 2)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivering').'</div>';
+    //                 elseif($delivery_data->status == 3)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivered').'</div>';
+    //                 elseif($delivery_data->status == 0)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
+    //             }
+    //             else
+    //                 $nestedData['delivery_status'] = 'N/A';
+
+    //             $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal'));
+    //             $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
+    //             $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
+    //             $nestedData['paid_amount'] = number_format($sale->paid_amount, config('decimal'));
+    //             $nestedData['due'] = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
+    //             //fetching custom fields data
+    //             foreach($field_names as $field_name) {
+    //                 $nestedData[$field_name] = $sale->$field_name;
+    //             }
+    //             $nestedData['options'] = '<div class="btn-group">
+    //                         <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
+    //                         <span class="caret"></span>
+    //                         <span class="sr-only">Toggle Dropdown</span>
+    //                         </button>
+    //                         <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
+    //                             <li><a href="'.route('sale.invoice', $sale->id).'" class="btn btn-link"><i class="fa fa-copy"></i> '.trans('file.Generate Invoice').'</a></li>
+    //                             <li>
+    //                                 <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
+    //                             </li>';
+    //             if(in_array("sales-edit", $request['all_permission'])){
+    //                 if($sale->sale_status != 3)
+    //                     $nestedData['options'] .= '<li>
+    //                         <a href="'.route('sales.edit', $sale->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+    //                         </li>';
+    //                 else
+    //                     $nestedData['options'] .= '<li>
+    //                         <a href="'.url('sales/'.$sale->id.'/create').'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+    //                     </li>';
+    //             }
+    //             if(in_array("sale-payment-index", $request['all_permission']))
+    //                 $nestedData['options'] .=
+    //                     '<li>
+    //                         <button type="button" class="get-payment btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
+    //                     </li>';
+    //             if(in_array("sale-payment-add", $request['all_permission']))
+    //                 $nestedData['options'] .=
+    //                     '<li>
+    //                         <button type="button" class="add-payment btn btn-link" data-id = "'.$sale->id.'" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> '.trans('file.Add Payment').'</button>
+    //                     </li>';
+
+    //             $nestedData['options'] .=
+    //                 '<li>
+    //                     <button type="button" class="add-delivery btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-truck"></i> '.trans('file.Add Delivery').'</button>
+    //                 </li>';
+    //             if(in_array("sales-delete", $request['all_permission']))
+    //                 $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"] ).'
+    //                         <li>
+    //                         <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
+    //                         </li>'.\Form::close().'
+    //                     </ul>
+    //                 </div>';
+    //             // data for sale details by one click
+    //             $coupon = Coupon::find($sale->coupon_id);
+    //             if($coupon)
+    //                 $coupon_code = $coupon->code;
+    //             else
+    //                 $coupon_code = null;
+
+    //             if($sale->currency_id)
+    //                 $currency_code = Currency::select('code')->find($sale->currency_id)->code;
+    //             else
+    //                 $currency_code = 'N/A';
+
+    //             $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
+    //             );
+    //             $data[] = $nestedData;
+    //         }
+    //     }
+    //     $json_data = array(
+    //         "draw"            => intval($request->input('draw')),
+    //         "recordsTotal"    => intval($totalData),
+    //         "recordsFiltered" => intval($totalFiltered),
+    //         "data"            => $data
+    //     );
+    //     echo json_encode($json_data);
+    // }
+
+    // public function saleData(Request $request)
+    // {
+    //     $columns = array(
+    //         1 => 'created_at',
+    //         2 => 'reference_no',
+    //         7 => 'grand_total',
+    //         8 => 'paid_amount',
+    //     );
+
+    //     $warehouse_id = $request->input('warehouse_id');
+    //     $sale_status = $request->input('sale_status');
+    //     $payment_status = $request->input('payment_status');
+    //     $cumulative_total_range = session('cumulative_total_range');
+
+    //     // Parse the cumulative total range
+    //     $min_total = null;
+    //     $max_total = null;
+    //     if($cumulative_total_range) {
+    //         $range_parts = explode('-', $cumulative_total_range);
+    //         if(count($range_parts) == 2) {
+    //             $min_total = (float)$range_parts[0];
+    //             $max_total = (float)$range_parts[1];
+    //         }
+    //     }
+
+    //     // First, get all sales within the date range ordered by date
+    //     $baseQuery = Sale::whereDate('created_at', '>=', $request->input('starting_date'))
+    //                     ->whereDate('created_at', '<=', $request->input('ending_date'))
+    //                     ->orderBy('created_at', 'asc');
+
+    //     if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+    //         $baseQuery = $baseQuery->where('user_id', Auth::id());
+    //     if($warehouse_id)
+    //         $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
+    //     if($sale_status)
+    //         $baseQuery = $baseQuery->where('sale_status', $sale_status);
+    //     if($payment_status)
+    //         $baseQuery = $baseQuery->where('payment_status', $payment_status);
+
+    //     $allSales = $baseQuery->get(['id', 'grand_total', 'created_at']);
+
+    //     // Calculate running totals and filter by cumulative range
+    //     $running_total = 0;
+    //     $filtered_sale_ids = [];
+        
+    //     foreach($allSales as $sale) {
+    //         $running_total += $sale->grand_total;
+            
+    //         // If we have a range filter, check if this sale's running total falls within the range
+    //         if($min_total !== null && $max_total !== null) {
+    //             if($running_total >= $min_total && $running_total <= $max_total) {
+    //                 $filtered_sale_ids[] = $sale->id;
+    //             }
+    //         } else {
+    //             // No range filter, include all
+    //             $filtered_sale_ids[] = $sale->id;
+    //         }
+    //     }
+
+    //     $totalData = count($filtered_sale_ids);
+    //     $totalFiltered = $totalData;
+
+    //     if($request->input('length') != -1)
+    //         $limit = $request->input('length');
+    //     else
+    //         $limit = $totalData;
+    //     $start = $request->input('start');
+    //     $order = 'sales.'.$columns[$request->input('order.0.column')];
+    //     $dir = $request->input('order.0.dir');
+        
+    //     //fetching custom fields data
+    //     $custom_fields = CustomField::where([
+    //                     ['belongs_to', 'sale'],
+    //                     ['is_table', true]
+    //                 ])->pluck('name');
+    //     $field_names = [];
+    //     foreach($custom_fields as $fieldName) {
+    //         $field_names[] = str_replace(" ", "_", strtolower($fieldName));
+    //     }
+        
+    //     if(empty($request->input('search.value'))) {
+    //         // Get paginated results from filtered IDs
+    //         $paginatedIds = array_slice($filtered_sale_ids, $start, $limit);
+            
+    //         $q = Sale::with('biller', 'customer', 'warehouse', 'user')
+    //             ->whereIn('sales.id', $paginatedIds)
+    //             ->orderBy($order, $dir);
+            
+    //         $sales = $q->get();
+    //     }
+    //     else
+    //     {
+    //         $search = $request->input('search.value');
+            
+    //         // For search, we need to search within the filtered IDs
+    //         $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
+    //             ->join('billers', 'sales.biller_id', '=', 'billers.id')
+    //             ->whereIn('sales.id', $filtered_sale_ids)
+    //             ->where(function($query) use ($search, $field_names) {
+    //                 $query->where('sales.reference_no', 'LIKE', "%{$search}%")
+    //                     ->orWhere('customers.name', 'LIKE', "%{$search}%")
+    //                     ->orWhere('customers.phone_number', 'LIKE', "%{$search}%")
+    //                     ->orWhere('billers.name', 'LIKE', "%{$search}%");
+                    
+    //                 foreach ($field_names as $field_name) {
+    //                     $query->orWhere('sales.' . $field_name, 'LIKE', "%{$search}%");
+    //                 }
+    //             })
+    //             ->select('sales.*')
+    //             ->with('biller', 'customer', 'warehouse', 'user')
+    //             ->offset($start)
+    //             ->limit($limit)
+    //             ->orderBy($order, $dir);
+            
+    //         if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+    //             $q = $q->where('sales.user_id', Auth::id());
+    //         }
+            
+    //         $sales = $q->get();
+    //         $totalFiltered = $q->count();
+    //     }
+        
+    //     $data = array();
+    //     if(!empty($sales))
+    //     {
+    //         // Recalculate running totals for the displayed sales to show in the UI
+    //         $display_sales = Sale::whereIn('id', $filtered_sale_ids)
+    //             ->orderBy('created_at', 'asc')
+    //             ->get(['id', 'grand_total']);
+            
+    //         $running_totals = [];
+    //         $rt = 0;
+    //         foreach($display_sales as $sale) {
+    //             $rt += $sale->grand_total;
+    //             $running_totals[$sale->id] = $rt;
+    //         }
+            
+    //         foreach ($sales as $key=>$sale)
+    //         {
+    //             $nestedData['id'] = $sale->id;
+    //             $nestedData['key'] = $key;
+    //             $nestedData['date'] = date(config('date_format'), strtotime($sale->created_at->toDateString()));
+    //             $nestedData['reference_no'] = $sale->reference_no;
+    //             $nestedData['biller'] = $sale->biller->name;
+    //             $nestedData['customer'] = $sale->customer->name.'<br>'.$sale->customer->phone_number.'<input type="hidden" class="deposit" value="'.($sale->customer->deposit - $sale->customer->expense).'" />'.'<input type="hidden" class="points" value="'.$sale->customer->points.'" />';
+
+    //             if($sale->sale_status == 1){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-success">'.trans('file.Completed').'</div>';
+    //                 $sale_status = trans('file.Completed');
+    //             }
+    //             elseif($sale->sale_status == 2){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+    //                 $sale_status = trans('file.Pending');
+    //             }
+    //             elseif($sale->sale_status == 3){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-warning">'.trans('file.Draft').'</div>';
+    //                 $sale_status = trans('file.Draft');
+    //             }
+    //             elseif($sale->sale_status == 4){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Returned').'</div>';
+    //                 $sale_status = trans('file.Returned');
+    //             }
+
+    //             if($sale->payment_status == 1)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+    //             elseif($sale->payment_status == 2)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
+    //             elseif($sale->payment_status == 3)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Partial').'</div>';
+    //             else
+    //                 $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
+                
+    //             $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
+    //             if($delivery_data) {
+    //                 if($delivery_data->status == 1)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Packing').'</div>';
+    //                 elseif($delivery_data->status == 2)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivering').'</div>';
+    //                 elseif($delivery_data->status == 3)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivered').'</div>';
+    //                 elseif($delivery_data->status == 0)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
+    //             }
+    //             else
+    //                 $nestedData['delivery_status'] = 'N/A';
+
+    //             // Add cumulative total column
+    //             $cumulative_total = isset($running_totals[$sale->id]) ? $running_totals[$sale->id] : 0;
+    //             $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal')) . 
+    //                 '<br><small class="text-muted">Cumulative: ' . number_format($cumulative_total, config('decimal')) . '</small>';
+                
+    //             $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
+    //             $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
+    //             $nestedData['paid_amount'] = number_format($sale->paid_amount, config('decimal'));
+    //             $nestedData['due'] = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
+                
+    //             //fetching custom fields data
+    //             foreach($field_names as $field_name) {
+    //                 $nestedData[$field_name] = $sale->$field_name;
+    //             }
+    //             $nestedData['options'] = '<div class="btn-group">
+    //                         <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
+    //                         <span class="caret"></span>
+    //                         <span class="sr-only">Toggle Dropdown</span>
+    //                         </button>
+    //                         <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
+    //                             <li><a href="'.route('sale.invoice', $sale->id).'" class="btn btn-link"><i class="fa fa-copy"></i> '.trans('file.Generate Invoice').'</a></li>
+    //                             <li>
+    //                                 <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
+    //                             </li>';
+    //             if(in_array("sales-edit", $request['all_permission'])){
+    //                 if($sale->sale_status != 3)
+    //                     $nestedData['options'] .= '<li>
+    //                         <a href="'.route('sales.edit', $sale->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+    //                         </li>';
+    //                 else
+    //                     $nestedData['options'] .= '<li>
+    //                         <a href="'.url('sales/'.$sale->id.'/create').'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+    //                     </li>';
+    //             }
+    //             if(in_array("sale-payment-index", $request['all_permission']))
+    //                 $nestedData['options'] .=
+    //                     '<li>
+    //                         <button type="button" class="get-payment btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
+    //                     </li>';
+    //             if(in_array("sale-payment-add", $request['all_permission']))
+    //                 $nestedData['options'] .=
+    //                     '<li>
+    //                         <button type="button" class="add-payment btn btn-link" data-id = "'.$sale->id.'" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> '.trans('file.Add Payment').'</button>
+    //                     </li>';
+
+    //             $nestedData['options'] .=
+    //                 '<li>
+    //                     <button type="button" class="add-delivery btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-truck"></i> '.trans('file.Add Delivery').'</button>
+    //                 </li>';
+    //             if(in_array("sales-delete", $request['all_permission']))
+    //                 $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"] ).'
+    //                         <li>
+    //                         <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
+    //                         </li>'.\Form::close().'
+    //                     </ul>
+    //                 </div>';
+    //             // data for sale details by one click
+    //             $coupon = Coupon::find($sale->coupon_id);
+    //             if($coupon)
+    //                 $coupon_code = $coupon->code;
+    //             else
+    //                 $coupon_code = null;
+
+    //             if($sale->currency_id)
+    //                 $currency_code = Currency::select('code')->find($sale->currency_id)->code;
+    //             else
+    //                 $currency_code = 'N/A';
+
+    //             $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
+    //             );
+    //             $data[] = $nestedData;
+    //         }
+    //     }
+    //     $json_data = array(
+    //         "draw"            => intval($request->input('draw')),
+    //         "recordsTotal"    => intval($totalData),
+    //         "recordsFiltered" => intval($totalFiltered),
+    //         "data"            => $data
+    //     );
+    //     echo json_encode($json_data);
+    // }
+
     public function saleData(Request $request)
-    {
-        $columns = array(
-            1 => 'created_at',
-            2 => 'reference_no',
-            7 => 'grand_total',
-            8 => 'paid_amount',
-        );
+{
+    $columns = array(
+        1 => 'created_at',
+        2 => 'reference_no',
+        7 => 'grand_total',
+        8 => 'paid_amount',
+    );
 
-        $warehouse_id = $request->input('warehouse_id');
-        $sale_status = $request->input('sale_status');
-        $payment_status = $request->input('payment_status');
+    $warehouse_id = $request->input('warehouse_id');
+    $sale_status = $request->input('sale_status');
+    $payment_status = $request->input('payment_status');
+    $grand_total_target = $request->input('cumulative_total_target');
+    $grand_total_operator = $request->input('cumulative_total_operator') ?: 'equal';
+    
+    // If cumulative filter not provided in request, check for admin-set defaults
+    if (!$grand_total_target) {
+        $settings = GeneralSetting::first();
+        if($settings && $settings->sale_cumulative_total_target) {
+            $grand_total_target = $settings->sale_cumulative_total_target;
+            $grand_total_operator = $settings->sale_cumulative_total_operator ?: 'equal';
+        }
+    }
+    
+    // Check if user is admin (role_id <= 2 typically means admin/super admin)
+    $is_admin = Auth::user()->role_id <= 2;
+    $filter_by_amount = false;
+    $matched_sales = [];
+    
+    // Allow filtering by grand total if target is set (for all users if admin default is set)
+    if ($grand_total_target) {
+        $filter_by_amount = true;
+    }
 
-        $q = Sale::whereDate('created_at', '>=' ,$request->input('starting_date'))->whereDate('created_at', '<=' ,$request->input('ending_date'));
+    // Base query for all sales in the date range
+    $baseQuery = Sale::whereDate('created_at', '>=', $request->input('starting_date'))
+                     ->whereDate('created_at', '<=', $request->input('ending_date'));
 
+    if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        $baseQuery = $baseQuery->where('user_id', Auth::id());
+    if($warehouse_id)
+        $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
+    if($sale_status)
+        $baseQuery = $baseQuery->where('sale_status', $sale_status);
+    if($payment_status)
+        $baseQuery = $baseQuery->where('payment_status', $payment_status);
+    
+    // For cumulative total filtering, get all matching sales and calculate running sum
+    $all_sales_for_cumulative = $baseQuery->orderBy('created_at', 'asc')->get(['id', 'grand_total']);
+    $filtered_sale_ids = [];
+    
+    if ($filter_by_amount && $grand_total_target) {
+        $target = (float)$grand_total_target;
+        $cumulative_sum = 0;
+        $in_range = false;
+        $started_range = false;
+        
+        // Calculate the range for "equal" operator
+        $target_float = (float)$target;
+        $magnitude = 1;
+        if ($target_float > 0) {
+            // Calculate magnitude to match first 2 significant digits
+            // For 10000: mag = 1000 (range 10000-10999)
+            // For 1000: mag = 100 (range 1000-1099)
+            // For 100: mag = 10 (range 100-109)
+            $log_val = log10($target_float);
+            $magnitude = pow(10, max(0, floor($log_val) - 1));
+        }
+        
+        $lower = floor($target_float / $magnitude) * $magnitude;
+        $upper = $lower + $magnitude - 1;
+        
+        foreach ($all_sales_for_cumulative as $sale) {
+            $cumulative_sum += $sale->grand_total;
+            $cumulative_float = (float)$cumulative_sum;
+            
+            $should_include = false;
+            switch($grand_total_operator) {
+                case 'equal':
+                    // Include sales as long as cumulative doesn't exceed upper bound
+                    // Start including once cumulative >= lower bound
+                    if ($cumulative_float <= $upper) {
+                        $should_include = true;
+                        if ($cumulative_float >= $lower) {
+                            $started_range = true;
+                        }
+                        // Include if we've started in range, or if this sale brings us into range
+                        if ($started_range || ($cumulative_float >= $lower && $cumulative_float <= $upper)) {
+                            $in_range = true;
+                        }
+                    } else {
+                        // Exceeded upper bound, stop including
+                        if ($in_range) {
+                            break;
+                        }
+                    }
+                    break;
+                case 'greater':
+                    // Include all sales where cumulative >= target
+                    if ($cumulative_sum >= $target) {
+                        $should_include = true;
+                    }
+                    break;
+                case 'less':
+                    // Include sales while cumulative <= target
+                    if ($cumulative_sum <= $target) {
+                        $should_include = true;
+                    }
+                    break;
+                case 'around':
+                    // Include sales within ±10% of target
+                    if ($cumulative_sum >= $target * 0.9 && $cumulative_sum <= $target * 1.1) {
+                        $should_include = true;
+                    }
+                    break;
+            }
+            
+            if ($should_include) {
+                $filtered_sale_ids[] = $sale->id;
+            } else if ($grand_total_operator === 'equal' && $cumulative_float > $upper) {
+                // Stop processing once we exceed the range
+                break;
+            }
+        }
+    }
+    
+    // Apply the cumulative filter to baseQuery if it was used
+    if ($filter_by_amount && count($filtered_sale_ids) > 0) {
+        $baseQuery = $baseQuery->whereIn('id', $filtered_sale_ids);
+    } elseif ($filter_by_amount && count($filtered_sale_ids) == 0) {
+        // If filter is active but no sales matched, return empty result
+        $baseQuery = $baseQuery->whereIn('id', []);
+    }
+
+    $totalData = $baseQuery->count();
+    $totalFiltered = $totalData;
+
+    if($request->input('length') != -1)
+        $limit = $request->input('length');
+    else
+        $limit = $totalData;
+    $start = $request->input('start');
+    $order = 'sales.'.$columns[$request->input('order.0.column')];
+    $dir = $request->input('order.0.dir');
+    
+    //fetching custom fields data
+    $custom_fields = CustomField::where([
+                    ['belongs_to', 'sale'],
+                    ['is_table', true]
+                ])->pluck('name');
+    $field_names = [];
+    foreach($custom_fields as $fieldName) {
+        $field_names[] = str_replace(" ", "_", strtolower($fieldName));
+    }
+    
+    if(empty($request->input('search.value'))) {
+        // Get paginated results
+        $q = Sale::with('biller', 'customer', 'warehouse', 'user')
+            ->whereDate('created_at', '>=', $request->input('starting_date'))
+            ->whereDate('created_at', '<=', $request->input('ending_date'))
+            ->offset($start)
+            ->limit($limit)
+            ->orderBy($order, $dir);
+            
         if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
             $q = $q->where('user_id', Auth::id());
+        if($warehouse_id)
+            $q = $q->where('warehouse_id', $warehouse_id);
         if($sale_status)
             $q = $q->where('sale_status', $sale_status);
         if($payment_status)
             $q = $q->where('payment_status', $payment_status);
-
-        $totalData = $q->count();
-        $totalFiltered = $totalData;
-
-        if($request->input('length') != -1)
-            $limit = $request->input('length');
-        else
-            $limit = $totalData;
-        $start = $request->input('start');
-        $order = 'sales.'.$columns[$request->input('order.0.column')];
-        $dir = $request->input('order.0.dir');
-        //fetching custom fields data
-        $custom_fields = CustomField::where([
-                        ['belongs_to', 'sale'],
-                        ['is_table', true]
-                    ])->pluck('name');
-        $field_names = [];
-        foreach($custom_fields as $fieldName) {
-            $field_names[] = str_replace(" ", "_", strtolower($fieldName));
+        
+        // Apply filtered sale IDs from cumulative filter
+        if ($filter_by_amount && count($filtered_sale_ids) > 0) {
+            $q = $q->whereIn('id', $filtered_sale_ids);
+        } elseif ($filter_by_amount && count($filtered_sale_ids) == 0) {
+            $q = $q->whereIn('id', []);
         }
-        if(empty($request->input('search.value'))) {
-            $q = Sale::with('biller', 'customer', 'warehouse', 'user')
-                ->whereDate('created_at', '>=' ,$request->input('starting_date'))
-                ->whereDate('created_at', '<=' ,$request->input('ending_date'))
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order, $dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-                $q = $q->where('user_id', Auth::id());
-            if($warehouse_id)
-                $q = $q->where('warehouse_id', $warehouse_id);
-            if($sale_status)
-                $q = $q->where('sale_status', $sale_status);
-            if($payment_status)
-                $q = $q->where('payment_status', $payment_status);
-            $sales = $q->get();
+            
+        $sales = $q->get();
+    }
+    else
+    {
+        $search = $request->input('search.value');
+        $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
+            ->join('billers', 'sales.biller_id', '=', 'billers.id')
+            ->whereDate('sales.created_at', '>=', $request->input('starting_date'))
+            ->whereDate('sales.created_at', '<=', $request->input('ending_date'))
+            ->where(function($query) use ($search, $field_names) {
+                $query->where('sales.reference_no', 'LIKE', "%{$search}%")
+                      ->orWhere('customers.name', 'LIKE', "%{$search}%")
+                      ->orWhere('customers.phone_number', 'LIKE', "%{$search}%")
+                      ->orWhere('billers.name', 'LIKE', "%{$search}%");
+                
+                foreach ($field_names as $field_name) {
+                    $query->orWhere('sales.' . $field_name, 'LIKE', "%{$search}%");
+                }
+            })
+            ->select('sales.*')
+            ->with('biller', 'customer', 'warehouse', 'user')
+            ->offset($start)
+            ->limit($limit)
+            ->orderBy($order, $dir);
+            
+        if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            $q = $q->where('sales.user_id', Auth::id());
         }
-        else
+        if($warehouse_id)
+            $q = $q->where('sales.warehouse_id', $warehouse_id);
+        if($sale_status)
+            $q = $q->where('sales.sale_status', $sale_status);
+        if($payment_status)
+            $q = $q->where('sales.payment_status', $payment_status);
+        
+        // Apply filtered sale IDs from cumulative filter
+        if ($filter_by_amount && count($filtered_sale_ids) > 0) {
+            $q = $q->whereIn('sales.id', $filtered_sale_ids);
+        } elseif ($filter_by_amount && count($filtered_sale_ids) == 0) {
+            $q = $q->whereIn('sales.id', []);
+        }
+            
+        $sales = $q->get();
+        $totalFiltered = $q->count();
+    }
+    
+    $data = array();
+    if(!empty($sales))
+    {
+        foreach ($sales as $key=>$sale)
         {
-            $search = $request->input('search.value');
-            $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
-                ->join('billers', 'sales.biller_id', '=', 'billers.id')
-                ->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))))
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order,$dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
-                $q = $q->select('sales.*')
-                        ->with('biller', 'customer', 'warehouse', 'user')
-                        ->where('sales.user_id', Auth::id())
-                        ->orwhere([
-                            ['sales.reference_no', 'LIKE', "%{$search}%"],
-                            ['sales.user_id', Auth::id()]
-                        ])
-                        ->orwhere([
-                            ['customers.name', 'LIKE', "%{$search}%"],
-                            ['sales.user_id', Auth::id()]
-                        ])
-                        ->orwhere([
-                            ['customers.phone_number', 'LIKE', "%{$search}%"],
-                            ['sales.user_id', Auth::id()]
-                        ])
-                        ->orwhere([
-                            ['billers.name', 'LIKE', "%{$search}%"],
-                            ['sales.user_id', Auth::id()]
-                        ]);
-                foreach ($field_names as $key => $field_name) {
-                    $q = $q->orwhere([
-                            ['sales.user_id', Auth::id()],
-                            ['sales.' . $field_name, 'LIKE', "%{$search}%"]
-                        ]);
-                }
-                $sales = $q->get();
-                $totalFiltered = $q->count();
+            $nestedData['id'] = $sale->id;
+            $nestedData['key'] = $key;
+            $nestedData['date'] = date(config('date_format'), strtotime($sale->created_at->toDateString()));
+            $nestedData['reference_no'] = $sale->reference_no;
+            $nestedData['biller'] = $sale->biller->name;
+            $nestedData['customer'] = $sale->customer->name.'<br>'.$sale->customer->phone_number.'<input type="hidden" class="deposit" value="'.($sale->customer->deposit - $sale->customer->expense).'" />'.'<input type="hidden" class="points" value="'.$sale->customer->points.'" />';
+
+            if($sale->sale_status == 1){
+                $nestedData['sale_status'] = '<div class="badge badge-success">'.trans('file.Completed').'</div>';
+                $sale_status_text = trans('file.Completed');
             }
-            else {
-                $q = $q->select('sales.*')
-                        ->with('biller', 'customer', 'warehouse', 'user')
-                        ->orwhere('sales.reference_no', 'LIKE', "%{$search}%")
-                        ->orwhere('customers.name', 'LIKE', "%{$search}%")
-                        ->orwhere('customers.phone_number', 'LIKE', "%{$search}%")
-                        ->orwhere('billers.name', 'LIKE', "%{$search}%");
-                foreach ($field_names as $key => $field_name) {
-                    $q = $q->orwhere('sales.' . $field_name, 'LIKE', "%{$search}%");
-                }
-                $sales = $q->get();
-                $totalFiltered = $q->count();
+            elseif($sale->sale_status == 2){
+                $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+                $sale_status_text = trans('file.Pending');
             }
-        }
-        $data = array();
-        if(!empty($sales))
-        {
-            foreach ($sales as $key=>$sale)
-            {
-                $nestedData['id'] = $sale->id;
-                $nestedData['key'] = $key;
-                $nestedData['date'] = date(config('date_format'), strtotime($sale->created_at->toDateString()));
-                $nestedData['reference_no'] = $sale->reference_no;
-                $nestedData['biller'] = $sale->biller->name;
-                $nestedData['customer'] = $sale->customer->name.'<br>'.$sale->customer->phone_number.'<input type="hidden" class="deposit" value="'.($sale->customer->deposit - $sale->customer->expense).'" />'.'<input type="hidden" class="points" value="'.$sale->customer->points.'" />';
+            elseif($sale->sale_status == 3){
+                $nestedData['sale_status'] = '<div class="badge badge-warning">'.trans('file.Draft').'</div>';
+                $sale_status_text = trans('file.Draft');
+            }
+            elseif($sale->sale_status == 4){
+                $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Returned').'</div>';
+                $sale_status_text = trans('file.Returned');
+            }
 
-                if($sale->sale_status == 1){
-                    $nestedData['sale_status'] = '<div class="badge badge-success">'.trans('file.Completed').'</div>';
-                    $sale_status = trans('file.Completed');
-                }
-                elseif($sale->sale_status == 2){
-                    $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
-                    $sale_status = trans('file.Pending');
-                }
-                elseif($sale->sale_status == 3){
-                    $nestedData['sale_status'] = '<div class="badge badge-warning">'.trans('file.Draft').'</div>';
-                    $sale_status = trans('file.Draft');
-                }
-                elseif($sale->sale_status == 4){
-                    $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Returned').'</div>';
-                    $sale_status = trans('file.Returned');
-                }
+            if($sale->payment_status == 1)
+                $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+            elseif($sale->payment_status == 2)
+                $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
+            elseif($sale->payment_status == 3)
+                $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Partial').'</div>';
+            else
+                $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
+            
+            $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
+            if($delivery_data) {
+                if($delivery_data->status == 1)
+                    $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Packing').'</div>';
+                elseif($delivery_data->status == 2)
+                    $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivering').'</div>';
+                elseif($delivery_data->status == 3)
+                    $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivered').'</div>';
+                elseif($delivery_data->status == 0)
+                    $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
+            }
+            else
+                $nestedData['delivery_status'] = 'N/A';
 
-                if($sale->payment_status == 1)
-                    $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
-                elseif($sale->payment_status == 2)
-                    $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
-                elseif($sale->payment_status == 3)
-                    $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Partial').'</div>';
-                else
-                    $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
-                $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
-                if($delivery_data) {
-                    if($delivery_data->status == 1)
-                        $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Packing').'</div>';
-                    elseif($delivery_data->status == 2)
-                        $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivering').'</div>';
-                    elseif($delivery_data->status == 3)
-                        $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivered').'</div>';
-                    elseif($delivery_data->status == 0)
-                        $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
-                }
-                else
-                    $nestedData['delivery_status'] = 'N/A';
-
-                $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal'));
-                $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
-                $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
-                $nestedData['paid_amount'] = number_format($sale->paid_amount, config('decimal'));
-                $nestedData['due'] = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
-                //fetching custom fields data
-                foreach($field_names as $field_name) {
-                    $nestedData[$field_name] = $sale->$field_name;
-                }
-                $nestedData['options'] = '<div class="btn-group">
-                            <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
-                                <li><a href="'.route('sale.invoice', $sale->id).'" class="btn btn-link"><i class="fa fa-copy"></i> '.trans('file.Generate Invoice').'</a></li>
-                                <li>
-                                    <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
-                                </li>';
-                if(in_array("sales-edit", $request['all_permission'])){
-                    if($sale->sale_status != 3)
-                        $nestedData['options'] .= '<li>
-                            <a href="'.route('sales.edit', $sale->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+            // Add highlight class if this sale matches the target
+            $highlight_class = '';
+            $match_badge = '';
+            if($filter_by_amount && isset($matched_sales[$sale->id])) {
+                $highlight_class = 'highlighted-sale';
+            }
+            
+            $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal'));
+            
+            $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
+            $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
+            $nestedData['paid_amount'] = number_format($sale->paid_amount, config('decimal'));
+            $nestedData['due'] = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
+            
+            //fetching custom fields data
+            foreach($field_names as $field_name) {
+                $nestedData[$field_name] = $sale->$field_name;
+            }
+            
+            $nestedData['options'] = '<div class="btn-group">
+                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
+                        <span class="caret"></span>
+                        <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
+                            <li><a href="'.route('sale.invoice', $sale->id).'" class="btn btn-link"><i class="fa fa-copy"></i> '.trans('file.Generate Invoice').'</a></li>
+                            <li>
+                                <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
                             </li>';
-                    else
-                        $nestedData['options'] .= '<li>
-                            <a href="'.url('sales/'.$sale->id.'/create').'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+            if(in_array("sales-edit", $request['all_permission'])){
+                if($sale->sale_status != 3)
+                    $nestedData['options'] .= '<li>
+                        <a href="'.route('sales.edit', $sale->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
                         </li>';
-                }
-                if(in_array("sale-payment-index", $request['all_permission']))
-                    $nestedData['options'] .=
-                        '<li>
-                            <button type="button" class="get-payment btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
-                        </li>';
-                if(in_array("sale-payment-add", $request['all_permission']))
-                    $nestedData['options'] .=
-                        '<li>
-                            <button type="button" class="add-payment btn btn-link" data-id = "'.$sale->id.'" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> '.trans('file.Add Payment').'</button>
-                        </li>';
-
+                else
+                    $nestedData['options'] .= '<li>
+                        <a href="'.url('sales/'.$sale->id.'/create').'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+                    </li>';
+            }
+            if(in_array("sale-payment-index", $request['all_permission']))
                 $nestedData['options'] .=
                     '<li>
-                        <button type="button" class="add-delivery btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-truck"></i> '.trans('file.Add Delivery').'</button>
+                        <button type="button" class="get-payment btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
                     </li>';
-                if(in_array("sales-delete", $request['all_permission']))
-                    $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"] ).'
-                            <li>
-                            <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
-                            </li>'.\Form::close().'
-                        </ul>
-                    </div>';
-                // data for sale details by one click
-                $coupon = Coupon::find($sale->coupon_id);
-                if($coupon)
-                    $coupon_code = $coupon->code;
-                else
-                    $coupon_code = null;
+            if(in_array("sale-payment-add", $request['all_permission']))
+                $nestedData['options'] .=
+                    '<li>
+                        <button type="button" class="add-payment btn btn-link" data-id = "'.$sale->id.'" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> '.trans('file.Add Payment').'</button>
+                    </li>';
 
-                if($sale->currency_id)
-                    $currency_code = Currency::select('code')->find($sale->currency_id)->code;
-                else
-                    $currency_code = 'N/A';
+            $nestedData['options'] .=
+                '<li>
+                    <button type="button" class="add-delivery btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-truck"></i> '.trans('file.Add Delivery').'</button>
+                </li>';
+            if(in_array("sales-delete", $request['all_permission']))
+                $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"] ).'
+                        <li>
+                        <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
+                        </li>'.\Form::close().'
+                    </ul>
+                </div>';
+            
+            // data for sale details by one click
+            $coupon = Coupon::find($sale->coupon_id);
+            if($coupon)
+                $coupon_code = $coupon->code;
+            else
+                $coupon_code = null;
 
-                $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
-                );
-                $data[] = $nestedData;
-            }
+            if($sale->currency_id)
+                $currency_code = Currency::select('code')->find($sale->currency_id)->code;
+            else
+                $currency_code = 'N/A';
+
+            $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status_text.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
+            );
+            
+            // Add highlight class to the row data
+            $nestedData['highlight_class'] = $highlight_class;
+            
+            $data[] = $nestedData;
         }
-        $json_data = array(
-            "draw"            => intval($request->input('draw')),
-            "recordsTotal"    => intval($totalData),
-            "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
-        );
-        echo json_encode($json_data);
     }
+    
+    $json_data = array(
+        "draw"            => intval($request->input('draw')),
+        "recordsTotal"    => intval($totalData),
+        "recordsFiltered" => intval($totalFiltered),
+        "data"            => $data
+    );
+    
+    echo json_encode($json_data);
+}
+
    
     private function processGiftCardPayment($payment_data, $amount)
     {
@@ -3944,5 +4674,45 @@ public function limsProductSearch(Request $request)
 
         $message = 'Ad Updated successfully';
         return Redirect::to('ads')->with('message', $message);
+    }
+
+    /**
+     * Save cumulative total filter as default for all users
+     */
+    public function saveDefaultFilter(Request $request)
+    {
+        // Check if user is admin (role_id <= 2)
+        if (Auth::user()->role_id > 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only administrators can set default filters.'
+            ], 403);
+        }
+
+        $request->validate([
+            'cumulative_total_target' => 'required|numeric|min:0',
+            'cumulative_total_operator' => 'required|in:equal,greater,less,around'
+        ]);
+
+        try {
+            $settings = GeneralSetting::first();
+            if (!$settings) {
+                $settings = new GeneralSetting();
+            }
+
+            $settings->sale_cumulative_total_target = $request->input('cumulative_total_target');
+            $settings->sale_cumulative_total_operator = $request->input('cumulative_total_operator');
+            $settings->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Default filter saved successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error saving filter: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

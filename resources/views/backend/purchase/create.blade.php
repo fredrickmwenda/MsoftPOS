@@ -673,6 +673,12 @@ $(document).ready(function() {
         unit_operator[rowindex] = temp_unit_operator.toString() + ',';
         unit_operation_value[rowindex] = temp_unit_operation_value.toString() + ',';
 
+        // Update row qty and recieved from modal so stock receives correct quantity
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(edit_qty);
+        if ($('select[name="status"]').val() == '1' || $('select[name="status"]').val() == '2') {
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.recieved').val(edit_qty);
+        }
+
         // Update the row display
         updateRowValues(rowindex);
         
@@ -831,7 +837,13 @@ $(document).ready(function() {
         var net_unit_cost = parseFloat(row.find('.net-unit-cost-input').val()) || 0;
         var discount_per_unit = parseFloat(row.find('.discount-input').val()) || 0;
         var total_discount = discount_per_unit * qty;
-        
+
+        // Keep received in sync with qty when status is Received (1) or Partial (2) so stock is updated correctly
+        var status = $('select[name="status"]').val();
+        if (status == '1' || status == '2') {
+            row.find('.recieved').val(qty);
+        }
+
         // Update hidden discount value
         row.find('.discount-value').val(total_discount.toFixed({{$general_setting->decimal}}));
         

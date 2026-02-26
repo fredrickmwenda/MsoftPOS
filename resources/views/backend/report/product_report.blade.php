@@ -1,4 +1,5 @@
 @extends('backend.layout.main') @section('content')
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
@@ -11,7 +12,7 @@
             </div>
             {!! Form::open(['route' => 'report.product', 'method' => 'get']) !!}
             <div class="row mb-3 product-report-filter">
-                <div class="col-md-4 offset-md-2 mt-3">
+                <!-- <div class="col-md-4 offset-md-2 mt-3">
                     <div class="form-group row">
                         <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
                         <div class="d-tc">
@@ -22,18 +23,44 @@
                             </div>
                         </div>
                     </div>
+                </div> -->
+                <div class="col-md-3 mt-3 mb-3 ml-2">
+                    <div class="form-group">
+                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="start_date"
+                                value="{{ !empty($start_date) ? $start_date : '' }}"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 mb-3">
+                    <div class="form-group">
+                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="end_date"
+                                value="{{ !empty($end_date) ? $end_date : '' }}"
+                            />
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4 mt-3">
                     <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
+                        <label class="control-label"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
+                        
                             <select name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
                                 <option value="0">{{trans('file.All Warehouse')}}</option>
                                 @foreach($lims_warehouse_list as $warehouse)
                                 <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
                                 @endforeach
                             </select>
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
@@ -104,16 +131,16 @@
     $('.product-report-filter select[name="warehouse_id"]').val(warehouse_id);
     $('.selectpicker').selectpicker('refresh');
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var start_date = startDate.format('YYYY-MM-DD');
-        var end_date = endDate.format('YYYY-MM-DD');
-        var title = start_date + ' To ' + end_date;
-        $(this).val(title);
-        $(".product-report-filter input[name=start_date]").val(start_date);
-        $(".product-report-filter input[name=end_date]").val(end_date);
-      }
-    });
+    // $(".daterangepicker-field").daterangepicker({
+    //   callback: function(startDate, endDate, period){
+    //     var start_date = startDate.format('YYYY-MM-DD');
+    //     var end_date = endDate.format('YYYY-MM-DD');
+    //     var title = start_date + ' To ' + end_date;
+    //     $(this).val(title);
+    //     $(".product-report-filter input[name=start_date]").val(start_date);
+    //     $(".product-report-filter input[name=end_date]").val(end_date);
+    //   }
+    // });
 
     var start_date = $(".product-report-filter input[name=start_date]").val();
     var end_date = $(".product-report-filter input[name=end_date]").val();

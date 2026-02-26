@@ -1,0 +1,49 @@
+/**
+ * POS-only layout: sidebar toggle and main content placement.
+ * Load only on the POS page. Does not modify sidebar-layout-fix.css.
+ */
+
+/* Remove any top spacing that could show as "white page above" when sidebar is collapsed */
+body.pos-page,
+body.pos-page #content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Main content area (header + everything after the sidebar): start at left edge when sidebar is collapsed */
+.pos-page #content > nav.side-navbar ~ * {
+  margin-left: 0 !important;
+  transition: margin-left 0.2s ease;
+}
+
+/* When sidebar is visible (not .shrink), push main content right so it sits beside the sidebar */
+.pos-page #content > nav.side-navbar:not(.shrink) ~ * {
+  margin-left: 230px !important;
+}
+
+/* POS sidebar: fixed so it doesn't push header/content down; collapse when .shrink */
+.pos-page nav.side-navbar {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 230px !important;
+  max-width: 230px !important;
+  height: 100vh !important;
+  z-index: 100 !important;
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.pos-page nav.side-navbar.shrink {
+  width: 0 !important;
+  max-width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Keep header and main content full width when sidebar is collapsed (no white strip) */
+.pos-page #content {
+  width: 100% !important;
+  box-sizing: border-box;
+}

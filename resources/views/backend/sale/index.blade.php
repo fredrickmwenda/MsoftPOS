@@ -7,70 +7,123 @@
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
 
-
 <section>
     <div class="container-fluid">
         <div class="card">
             <div class="card-header mt-2">
                 <h3 class="text-center">{{trans('file.Sale List')}}</h3>
             </div>
-            {!! Form::open(['route' => 'sales.index', 'method' => 'get']) !!}
+            {!! Form::open(['route' => 'sales.index', 'method' => 'get', 'id' => 'filter-form']) !!}
             <div class="row ml-1 mt-2">
+                <!-- Date Range Inputs -->
                 <div class="col-md-3">
-                    <div class="form-group">
-                        <label><strong>{{trans('file.Date')}}</strong></label>
-                        <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                        <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                        <input type="hidden" name="ending_date" value="{{$ending_date}}" />
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label><strong>Start Date</strong></label>
+                                <input type="date" name="starting_date" class="form-control" value="{{$starting_date}}" required />
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label><strong>End Date</strong></label>
+                                <input type="date" name="ending_date" class="form-control" value="{{$ending_date}}" required />
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-3 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
+                
+                <div class="col-md-2 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
                     <div class="form-group">
                         <label><strong>{{trans('file.Warehouse')}}</strong></label>
                         <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
                             <option value="0">{{trans('file.All Warehouse')}}</option>
                             @foreach($lims_warehouse_list as $warehouse)
-                                <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                <option value="{{$warehouse->id}}" {{ $warehouse_id == $warehouse->id ? 'selected' : '' }}>{{$warehouse->name}}</option>
                             @endforeach
                         </select>
                     </div>
                 </div>
-                <div class="col-md-3">
+                
+                <div class="col-md-2">
                     <div class="form-group">
                         <label><strong>{{trans('file.Sale Status')}}</strong></label>
                         <select id="sale-status" class="form-control" name="sale_status">
-                            <option value="0">{{trans('file.All')}}</option>
-                            <option value="1">{{trans('file.Completed')}}</option>
-                            <option value="2">{{trans('file.Pending')}}</option>
-                            <option value="4">{{trans('file.Returned')}}</option>
+                            <option value="0" {{ $sale_status == 0 ? 'selected' : '' }}>{{trans('file.All')}}</option>
+                            <option value="1" {{ $sale_status == 1 ? 'selected' : '' }}>{{trans('file.Completed')}}</option>
+                            <option value="2" {{ $sale_status == 2 ? 'selected' : '' }}>{{trans('file.Pending')}}</option>
+                            <option value="4" {{ $sale_status == 4 ? 'selected' : '' }}>{{trans('file.Returned')}}</option>
                         </select>
                     </div>
                 </div>
-                <div class="col-md-3">
+                
+                <div class="col-md-2">
                     <div class="form-group">
                         <label><strong>{{trans('file.Payment Status')}}</strong></label>
                         <select id="payment-status" class="form-control" name="payment_status">
-                            <option value="0">{{trans('file.All')}}</option>
-                            <option value="1">{{trans('file.Pending')}}</option>
-                            <option value="2">{{trans('file.Due')}}</option>
-                            <option value="3">{{trans('file.Partial')}}</option>
-                            <option value="4">{{trans('file.Paid')}}</option>
+                            <option value="0" {{ $payment_status == 0 ? 'selected' : '' }}>{{trans('file.All')}}</option>
+                            <option value="1" {{ $payment_status == 1 ? 'selected' : '' }}>{{trans('file.Pending')}}</option>
+                            <option value="2" {{ $payment_status == 2 ? 'selected' : '' }}>{{trans('file.Due')}}</option>
+                            <option value="3" {{ $payment_status == 3 ? 'selected' : '' }}>{{trans('file.Partial')}}</option>
+                            <option value="4" {{ $payment_status == 4 ? 'selected' : '' }}>{{trans('file.Paid')}}</option>
                         </select>
                     </div>
                 </div>
+
+                <!-- Sales Amount Filter -->
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label><strong>Filter By Sale Amount</strong></label>
+                        <div class="input-group">
+                            <input type="number" name="cumulative_total_target" class="form-control" placeholder="Enter amount" value="{{ $cumulative_total_target ?? request('cumulative_total_target') }}" step="0.01" min="0" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'readonly' : '' }}>
+                            <div class="input-group-append">
+                                <select name="cumulative_total_operator" class="form-control" style="max-width: 80px;" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'disabled' : '' }}>
+                                    <option value="equal" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'equal' ? 'selected' : '' }}>=</option>
+                                    <option value="greater" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'greater' ? 'selected' : '' }}>≥</option>
+                                    <option value="less" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'less' ? 'selected' : '' }}>≤</option>
+                                    <option value="around" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'around' ? 'selected' : '' }}>≈</option>
+                                </select>
+                            </div>
+                        </div>
+                        @if(\Auth::user()->role_id <= 2)
+                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default filter (shared with all users)' : 'Filter sales by grand total amount' }}</small>
+                        @else
+                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin-set default filter (locked)' : 'Filter sales by grand total amount' }}</small>
+                        @endif
+                    </div>
+                </div>
+
+                @if(\Auth::user()->role_id <= 2)
+                <div class="col-md-2 mt-3">
+                    <div class="form-group">
+                        <button type="button" class="btn btn-warning btn-sm" id="save-admin-filter" title="Save this filter as default for all users">
+                            <i class="dripicons-pin"></i> Save as Default
+                        </button>
+                    </div>
+                </div>
+                @endif
+
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
+                
+                <div class="col-md-2 mt-3">
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" id="reset-filters">Reset</button>
+                    </div>
+                </div>
             </div>
             {!! Form::close() !!}
         </div>
+        
         @if(in_array("sales-add", $all_permission))
             <a href="{{route('sales.create')}}" class="btn btn-info add-sale-btn"><i class="dripicons-plus"></i> {{trans('file.Add Sale')}}</a>&nbsp;
             <a href="{{url('sales/sale_by_csv')}}" class="btn btn-primary add-sale-btn"><i class="dripicons-copy"></i> {{trans('file.Import Sale')}}</a>
         @endif
     </div>
+    
     <div class="table-responsive">
         <table id="sale-table" class="table sale-list" style="width: 100%">
             <thead>
@@ -83,7 +136,7 @@
                     <th>{{trans('file.Sale Status')}}</th>
                     <th>{{trans('file.Payment Status')}}</th>
                     <th>{{trans('file.Delivery Status')}}</th>
-                    <th>{{trans('file.grand total')}}</th>
+                    <th>{{trans('file.grand total')}}<br><small class="text-muted">(Individual)</small></th>
                     <th>{{trans('file.Returned Amount')}}</th>
                     <th>{{trans('file.Paid')}}</th>
                     <th>{{trans('file.Due')}}</th>
@@ -116,8 +169,9 @@
     </div>
 </section>
 
+<!-- Rest of your modals remain exactly the same -->
 <div id="sale-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-    <div role="document" class="modal-dialog">
+    <div role="document" class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="container mt-3 pb-2 border-bottom">
                 <div class="row">
@@ -237,16 +291,13 @@
                                 @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active)
                                 <option value="7">Points</option>
                                 @endif
-                                {{-- changes by yogesh --}}
                                 @if(in_array("mobile_money",$options))
                                 <option value="8">Mobile Money</option>
                                 @endif
-                                {{-- changes end by yogesh --}}
                             </select>
                         </div>
                     </div>
 
-                    {{-- changes by yogesh --}}
                     <div class="form-group col-md-12 mobile_money_fields">
                         <label>{{trans('Mobile Money')}} *</label>
                         <select id="mobile_money_operator" name="mobile-op" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Mobile money operator">
@@ -261,14 +312,7 @@
                         <label>{{trans('Mobile Number')}} *</label>
                         <input type="number" name="mobile_number" class="form-control">
                     </div>
-                    <div class="gift-card form-group">
-                        <label> {{trans('file.Gift Card')}} *</label>
-                        <select id="gift_card_id" name="gift_card_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Gift Card...">
-                            @foreach($lims_gift_card_list as $gift_card)
-                                <option value="{{$gift_card->id}}">{{$gift_card->card_no}}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    
                     <div class="gift-card form-group">
                         <label> {{trans('file.Gift Card')}} *</label>
                         <select id="gift_card_id" name="gift_card_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Gift Card...">
@@ -285,17 +329,20 @@
                             @endforeach
                         </select>
                     </div>
+                    
                     <div class="form-group mt-2">
                         <div class="card-element" class="form-control">
                         </div>
                         <div class="card-errors" role="alert"></div>
                     </div>
+                    
                     <div id="cheque">
                         <div class="form-group">
                             <label>{{trans('file.Cheque Number')}} *</label>
                             <input type="text" name="cheque_no" class="form-control">
                         </div>
                     </div>
+                    
                     <div class="form-group">
                         <label> {{trans('file.Account')}}</label>
                         <select class="form-control selectpicker" name="account_id">
@@ -308,13 +355,13 @@
                         @endforeach
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>{{trans('file.Payment Note')}}</label>
                         <textarea rows="3" class="form-control" name="payment_note"></textarea>
                     </div>
 
                     <input type="hidden" name="sale_id">
-
                     <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
                 {{ Form::close() }}
             </div>
@@ -368,15 +415,13 @@
                                 @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active)
                                 <option value="7">Points</option>
                                 @endif
-                                {{-- changes by yogesh --}}
                                 @if(in_array("mobile_money",$options))
                                 <option value="8">Mobile Money</option>
                                 @endif
-                                {{-- changes end  by yogesh --}}
                             </select>
                         </div>
                     </div>
-                    {{-- changes by yogesh --}}
+                    
                     <div class="form-group col-md-12 edit_mobile_money_fields">
                         <label>{{trans('Mobile Money')}} *</label>
                         <select id="mobile_money_operator" name="mobile-op" class="form-control" data-live-search="true" data-live-search-style="begins" title="Mobile money operator">
@@ -391,7 +436,7 @@
                         <label>{{trans('Mobile Number')}} *</label>
                         <input type="number" name="mobile_number" class="form-control">
                     </div>
-                    {{-- changes end  by yogesh --}}
+                    
                     <div class="gift-card form-group">
                         <label> {{trans('file.Gift Card')}} *</label>
                         <select id="gift_card_id" name="gift_card_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Gift Card...">
@@ -400,17 +445,20 @@
                             @endforeach
                         </select>
                     </div>
+                    
                     <div class="form-group mt-2">
                         <div class="card-element" class="form-control">
                         </div>
                         <div class="card-errors" role="alert"></div>
                     </div>
+                    
                     <div id="edit-cheque">
                         <div class="form-group">
                             <label>{{trans('file.Cheque Number')}} *</label>
                             <input type="text" name="edit_cheque_no" class="form-control">
                         </div>
                     </div>
+                    
                     <div class="form-group">
                         <label> {{trans('file.Account')}}</label>
                         <select class="form-control selectpicker" name="account_id">
@@ -419,13 +467,13 @@
                         @endforeach
                         </select>
                     </div>
+                    
                     <div class="form-group">
                         <label>{{trans('file.Payment Note')}}</label>
                         <textarea rows="3" class="form-control" name="edit_payment_note"></textarea>
                     </div>
 
                     <input type="hidden" name="payment_id">
-
                     <button type="submit" class="btn btn-primary">{{trans('file.update')}}</button>
                 {{ Form::close() }}
             </div>
@@ -510,6 +558,38 @@
     $("ul#sale").addClass("show");
     $("ul#sale #sale-list-menu").addClass("active");
 
+    // Handle Save as Default button for admin cumulative filter
+    $('#save-admin-filter').on('click', function() {
+        var target = $('input[name="cumulative_total_target"]').val();
+        var operator = $('select[name="cumulative_total_operator"]').val();
+        
+        if(!target) {
+            alert('Please enter a target amount before saving as default');
+            return;
+        }
+        
+        $.ajax({
+            type: 'POST',
+            url: '{{ route("sales.save-default-filter") }}',
+            data: {
+                cumulative_total_target: target,
+                cumulative_total_operator: operator,
+                _token: $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if(response.success) {
+                    alert('✓ Default filter saved! All users will see this filter when they login.');
+                    location.reload();
+                } else {
+                    alert('Error: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Error saving default filter. Please try again.');
+            }
+        });
+    });
+
     @if(config('database.connections.saleprosaas_landlord'))
         if(localStorage.getItem("message")) {
             alert(localStorage.getItem("message"));
@@ -528,7 +608,6 @@
             }
         });
     @endif
-
 
     var columns = [{"data": "key"}, {"data": "date"}, {"data": "reference_no"}, {"data": "biller"}, {"data": "customer"}, {"data": "sale_status"}, {"data": "payment_status"}, {"data": "delivery_status"}, {"data": "grand_total"}, {"data": "returned_amount"}, {"data": "paid_amount"}, {"data": "due"}];
     var field_name = <?php echo json_encode($field_name) ?>;
@@ -573,15 +652,37 @@
     $("#sale-status").val(sale_status);
     $("#payment-status").val(payment_status);
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
+    // Date validation
+    $('input[name="ending_date"]').on('change', function() {
+        var startDate = new Date($('input[name="starting_date"]').val());
+        var endDate = new Date($(this).val());
+        
+        if (endDate < startDate) {
+            alert('{{trans("file.End date cannot be earlier than start date")}}');
+            $(this).val($('input[name="starting_date"]').val());
+        }
+    });
+
+    $('input[name="starting_date"]').on('change', function() {
+        var endDate = new Date($('input[name="ending_date"]').val());
+        var startDate = new Date($(this).val());
+        
+        if (endDate < startDate) {
+            $('input[name="ending_date"]').val($(this).val());
+        }
+    });
+
+    // Reset filters
+    $('#reset-filters').on('click', function() {
+        $('input[name="starting_date"]').val('');
+        $('input[name="ending_date"]').val('');
+        $('input[name="cumulative_total_target"]').val('');
+        $('select[name="cumulative_total_operator"]').val('equal');
+        $('#warehouse_id').val(0);
+        $('#sale-status').val(0);
+        $('#payment-status').val(0);
+        $('.selectpicker').selectpicker('refresh');
+        $('#filter-form').submit();
     });
 
     $(".gift-card").hide();
@@ -913,26 +1014,28 @@
             url:"sales/sale-data",
             data:{
                 all_permission: all_permission,
-                starting_date: starting_date,
-                ending_date: ending_date,
-                warehouse_id: warehouse_id,
-                sale_status: sale_status,
-                payment_status: payment_status
+                starting_date: function() { return $('input[name="starting_date"]').val(); },
+                ending_date: function() { return $('input[name="ending_date"]').val(); },
+                warehouse_id: function() { return $('#warehouse_id').val(); },
+                sale_status: function() { return $('#sale-status').val(); },
+                payment_status: function() { return $('#payment-status').val(); },
+                cumulative_total_target: function() { return $('input[name="cumulative_total_target"]').val(); },
+                cumulative_total_operator: function() { return $('select[name="cumulative_total_operator"]').val(); }
             },
             dataType: "json",
             type:"post"
         },
-        /*rowId: function(data) {
-              return 'row_'+data['id'];
-        },*/
         "createdRow": function( row, data, dataIndex ) {
-            //alert(data);
             $(row).addClass('sale-link');
             $(row).attr('data-sale', data['sale']);
+            
+            // Add highlight class if this sale matches the cumulative target
+            if(data.highlight_class) {
+                $(row).addClass(data.highlight_class);
+            }
         },
         "columns": columns,
         'language': {
-
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
             "search":  '{{trans("file.Search")}}',
@@ -941,18 +1044,17 @@
                     'next': '<i class="dripicons-chevron-right"></i>'
             }
         },
-        order:[['1', 'desc']],
+        order:[['1', 'asc']],
         'columnDefs': [
             {
                 "orderable": false,
-                'targets': [0, 3, 4, 5, 6, 7, 10, 11, 12]
+                'targets': [0, 3, 4, 5, 6, 7, -1]
             },
             {
                 'render': function(data, type, row, meta){
                     if(type === 'display'){
                         data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
                     }
-
                    return data;
                 },
                 'checkboxes': {
@@ -1044,7 +1146,6 @@
                                 },
                                 success:function(data){
                                     alert(data);
-                                    //dt.rows({ page: 'current', selected: true }).deselect();
                                     dt.rows({ page: 'current', selected: true }).remove().draw(false);
                                 }
                             });
@@ -1071,13 +1172,13 @@
     function datatable_sum(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
             var rows = dt_selector.rows( '.selected' ).indexes();
-
             $( dt_selector.column( 8 ).footer() ).html(dt_selector.cells( rows, 8, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 9 ).footer() ).html(dt_selector.cells( rows, 9, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 10 ).footer() ).html(dt_selector.cells( rows, 10, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 11 ).footer() ).html(dt_selector.cells( rows, 11, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
         }
         else {
+            var rows = dt_selector.rows( { page: 'current' } ).indexes();
             $( dt_selector.column( 8 ).footer() ).html(dt_selector.cells( rows, 8, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 9 ).footer() ).html(dt_selector.cells( rows, 9, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 10 ).footer() ).html(dt_selector.cells( rows, 10, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
@@ -1215,12 +1316,12 @@
     if(all_permission.indexOf("sales-delete") == -1)
         $('.buttons-delete').addClass('d-none');
 
-        function confirmDelete() {
-            if (confirm("Are you sure want to delete?")) {
-                return true;
-            }
-            return false;
+    function confirmDelete() {
+        if (confirm("Are you sure want to delete?")) {
+            return true;
         }
+        return false;
+    }
 
     function confirmPaymentDelete() {
         if (confirm("Are you sure want to delete? If you delete this money will be refunded.")) {
@@ -1228,45 +1329,53 @@
         }
         return false;
     }
-     // changes by yogesh
+
+    // Mobile Money fields toggle
     document.addEventListener("DOMContentLoaded", function () {
         const paidBySelect = document.querySelector('[name="paid_by_id"]');
         const mobileMoneyFields = document.querySelectorAll('.mobile_money_fields');
+        
         function toggleMobileMoneyFields() {
-            if (paidBySelect.value === '8') {
+            if (paidBySelect && paidBySelect.value === '8') {
                 mobileMoneyFields.forEach(field => field.style.display = 'block');
             } else {
                 mobileMoneyFields.forEach(field => field.style.display = 'none');
             }
         }
         toggleMobileMoneyFields();
-        paidBySelect.addEventListener('change', toggleMobileMoneyFields);
+        if(paidBySelect) {
+            paidBySelect.addEventListener('change', toggleMobileMoneyFields);
+        }
     });
-  
     
     document.addEventListener("DOMContentLoaded", function () {
         const paidBySelect = document.querySelector('[name="edit_paid_by_id"]');
         const mobileMoneyFields = document.querySelectorAll('.edit_mobile_money_fields');
+        
         function toggleMobileMoneyFields() {
-            if (paidBySelect.value === '8') {
+            if (paidBySelect && paidBySelect.value === '8') {
                 mobileMoneyFields.forEach(field => field.style.display = 'block');
             } else {
                 mobileMoneyFields.forEach(field => field.style.display = 'none');
             }
         }
         toggleMobileMoneyFields();
-        paidBySelect.addEventListener('change', toggleMobileMoneyFields);
+        if(paidBySelect) {
+            paidBySelect.addEventListener('change', toggleMobileMoneyFields);
+        }
     });
 
-     // changes end  by yogesh
     document.addEventListener("DOMContentLoaded", function () {
         const dropdown = document.getElementById("mobile_money_operator");
         const hiddenField = document.getElementById("selected_mobile_op");
-        dropdown.addEventListener("change", function () {
+        if(dropdown && hiddenField) {
+            dropdown.addEventListener("change", function () {
+                hiddenField.value = dropdown.value;
+            });
             hiddenField.value = dropdown.value;
-        });
-        hiddenField.value = dropdown.value;
+        }
     });
+
 </script>
 <script type="text/javascript" src="https://js.stripe.com/v3/"></script>
 @endpush

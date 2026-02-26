@@ -50,254 +50,243 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
             <div class="reports-grid" id="reportsGrid">
-                <!-- Sales Reports Section -->
-                <div class="report-item" data-category="sales" data-name="Daily Sales">
-                    <a href="{{ route('report.dailySale', [date('Y'), date('m')]) }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-graph-line"></i>
-                        </div>
-                        <h6>Daily Sales</h6>
-                        <span class="badge bg-success">Sales</span>
-                    </a>
-                </div>
+    <!-- Sales Reports Section -->
+    <div class="report-item" data-category="sales" data-name="Daily Sales">
+        <a href="{{ url('report/daily_sale/'.date('Y').'/'.date('m')) }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-graph-line"></i></div>
+            <h6>Daily Sales</h6>
+            <span class="badge bg-success">Sales</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="sales" data-name="Monthly Sales">
-                    <a href="{{ route('report.monthlySale', [date('Y')]) }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-document"></i>
-                        </div>
-                        <h6>Monthly Sales</h6>
-                        <span class="badge bg-success">Sales</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="sales" data-name="Monthly Sales">
+        <a href="{{ url('report/monthly_sale/'.date('Y')) }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-document"></i></div>
+            <h6>Monthly Sales</h6>
+            <span class="badge bg-success">Sales</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="sales" data-name="Best Sellers">
-                    <a href="{{ route('report.bestSeller') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-star"></i>
-                        </div>
-                        <h6>Best Sellers</h6>
-                        <span class="badge bg-success">Sales</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="sales" data-name="Best Sellers">
+        <a href="{{ url('report/best_seller') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-star"></i></div>
+            <h6>Best Sellers</h6>
+            <span class="badge bg-success">Sales</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="sales" data-name="Sale Details">
-                    <a href="{{ route('report.sale') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-cart"></i>
-                        </div>
-                        <h6>Sale Details</h6>
-                        <span class="badge bg-success">Sales</span>
-                    </a>
-                </div>
+    <!-- Sale Details remains a simple link if there is no sidebar equivalent -->
+<div class="report-item" data-category="sales" data-name="Sale Details">
+    {!! Form::open(['route' => 'report.sale', 'method' => 'post', 'id' => 'sale-details-form']) !!}
+    <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+    <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+    <input type="hidden" name="warehouse_id" value="0">
+    <a href="#" onclick="this.closest('form').submit(); return false;" class="report-link">
+        <div class="report-icon"><i class="dripicons dripicons-cart"></i></div>
+        <h6>Sale Details</h6>
+        <span class="badge bg-success">Sales</span>
+    </a>
+    {!! Form::close() !!}
+</div>
 
-                <div class="report-item" data-category="sales" data-name="Daily Sales Objective">
-                    <a href="{{ route('report.dailySaleObjective') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-rocket"></i>
-                        </div>
-                        <h6>Daily Sales Objective</h6>
-                        <span class="badge bg-success">Sales</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="sales" data-name="Daily Sales Objective">
+        <a href="{{ route('report.dailySaleObjective') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-rocket"></i></div>
+            <h6>Daily Sales Objective</h6>
+            <span class="badge bg-success">Sales</span>
+        </a>
+    </div>
 
-                <!-- Purchase Reports Section -->
-                <div class="report-item" data-category="purchase" data-name="Daily Purchases">
-                    <a href="{{ route('report.dailyPurchase', [date('Y'), date('m')]) }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-box"></i>
-                        </div>
-                        <h6>Daily Purchases</h6>
-                        <span class="badge bg-info">Purchase</span>
-                    </a>
-                </div>
+    <!-- Purchase Reports Section -->
+    <div class="report-item" data-category="purchase" data-name="Daily Purchases">
+        <a href="{{ url('report/daily_purchase/'.date('Y').'/'.date('m')) }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-box"></i></div>
+            <h6>Daily Purchases</h6>
+            <span class="badge bg-info">Purchase</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="purchase" data-name="Monthly Purchases">
-                    <a href="{{ route('report.monthlyPurchase', [date('Y')]) }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-document"></i>
-                        </div>
-                        <h6>Monthly Purchases</h6>
-                        <span class="badge bg-info">Purchase</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="purchase" data-name="Monthly Purchases">
+        <a href="{{ url('report/monthly_purchase/'.date('Y')) }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-document"></i></div>
+            <h6>Monthly Purchases</h6>
+            <span class="badge bg-info">Purchase</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="purchase" data-name="Purchase Details">
-                    <a href="{{ route('report.purchase') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-list"></i>
-                        </div>
-                        <h6>Purchase Details</h6>
-                        <span class="badge bg-info">Purchase</span>
-                    </a>
-                </div>
+    <!-- Purchase Details remains a simple link -->
+    <div class="report-item" data-category="purchase" data-name="Purchase Details">
+    {!! Form::open(['route' => 'report.purchase', 'method' => 'post', 'id' => 'purchase-details-form']) !!}
+    <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+    <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+    <input type="hidden" name="warehouse_id" value="0">
+    <a href="#" onclick="this.closest('form').submit(); return false;" class="report-link">
+        <div class="report-icon"><i class="dripicons dripicons-list"></i></div>
+        <h6>Purchase Details</h6>
+        <span class="badge bg-info">Purchase</span>
+    </a>
+    {!! Form::close() !!}
+</div>
 
-                <!-- Warehouse Reports Section -->
-                <div class="report-item" data-category="warehouse" data-name="Warehouse Stock">
-                    <a href="{{ route('report.warehouseStock') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-store"></i>
-                        </div>
-                        <h6>Warehouse Stock</h6>
-                        <span class="badge bg-warning">Warehouse</span>
-                    </a>
-                </div>
+    <!-- Warehouse Reports Section -->
+    <div class="report-item" data-category="warehouse" data-name="Warehouse Stock">
+        <a href="{{ route('report.warehouseStock') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-store"></i></div>
+            <h6>Warehouse Stock</h6>
+            <span class="badge bg-warning">Warehouse</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="warehouse" data-name="Stock Report">
-                    <a href="{{ route('report.warehouseStockReport') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-stack"></i>
-                        </div>
-                        <h6>Stock Report</h6>
-                        <span class="badge bg-warning">Warehouse</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="warehouse" data-name="Stock Report">
+        <a href="{{ route('report.warehouseStockReport') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-stack"></i></div>
+            <h6>Stock Report</h6>
+            <span class="badge bg-warning">Warehouse</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="warehouse" data-name="Warehouse Analysis">
-                    <a href="{{ route('report.warehouse') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-briefcase"></i>
-                        </div>
-                        <h6>Warehouse Analysis</h6>
-                        <span class="badge bg-warning">Warehouse</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="warehouse" data-name="Warehouse Analysis">
+        <a href="{{ route('report.warehouse') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-briefcase"></i></div>
+            <h6>Warehouse Analysis</h6>
+            <span class="badge bg-warning">Warehouse</span>
+        </a>
+    </div>
 
-                <!-- Financial Reports Section -->
-                <div class="report-item" data-category="financial" data-name="Profit & Loss">
-                    <a href="{{ route('report.profitLoss') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-pulse"></i>
-                        </div>
-                        <h6>Profit & Loss</h6>
-                        <span class="badge bg-danger">Financial</span>
-                    </a>
-                </div>
+    <!-- Financial Reports Section -->
+    <div class="report-item" data-category="financial" data-name="Profit & Loss">
+        {!! Form::open(['route' => 'report.profitLoss', 'method' => 'post', 'id' => 'profitLoss-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-pulse"></i></div>
+            <h6>Profit & Loss</h6>
+            <span class="badge bg-danger">Financial</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
 
-                <div class="report-item" data-category="financial" data-name="Payment Report">
-                    <a href="{{ route('report.paymentReport') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-wallet"></i>
-                        </div>
-                        <h6>Payment Report</h6>
-                        <span class="badge bg-danger">Financial</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="financial" data-name="Payment Report">
+        {!! Form::open(['route' => 'report.paymentByDate', 'method' => 'post', 'id' => 'payment-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-wallet"></i></div>
+            <h6>Payment Report</h6>
+            <span class="badge bg-danger">Financial</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
 
-                <!-- Customer Reports Section -->
-                <div class="report-item" data-category="customer" data-name="Customer Report">
-                    <a href="{{ route('report.customer') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-user"></i>
-                        </div>
-                        <h6>Customer Report</h6>
-                        <span class="badge bg-primary">Customer</span>
-                    </a>
-                </div>
+    <!-- Customer Reports Section -->
+    <div class="report-item" data-category="customer" data-name="Customer Report">
+        {!! Form::open(['route' => 'report.customer', 'method' => 'post', 'id' => 'customer-report-form']) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <a href="#" onclick="this.closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-user"></i></div>
+            <h6>Customer Report</h6>
+            <span class="badge bg-primary">Customer</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
 
-                <div class="report-item" data-category="customer" data-name="Customer Due Report">
-                    <a href="{{ route('report.customerDueByDate') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-alarm"></i>
-                        </div>
-                        <h6>Customer Due Report</h6>
-                        <span class="badge bg-primary">Customer</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="customer" data-name="Customer Due Report">
+        {!! Form::open(['route' => 'report.customerDueByDate', 'method' => 'post', 'id' => 'customer-due-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d', strtotime('-1 year')) }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-alarm"></i></div>
+            <h6>Customer Due Report</h6>
+            <span class="badge bg-primary">Customer</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
 
-                <div class="report-item" data-category="customer" data-name="First Time Customers">
-                    <a href="{{ route('report.firstTimeCustomers') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-user-id"></i>
-                        </div>
-                        <h6>First Time Customers</h6>
-                        <span class="badge bg-primary">Customer</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="customer" data-name="First Time Customers">
+        <a href="{{ url('report/first-time-customers') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-user-id"></i></div>
+            <h6>First Time Customers</h6>
+            <span class="badge bg-primary">Customer</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="customer" data-name="Customer Group Report">
-                    <a href="{{ route('report.customer_group') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-user-group"></i>
-                        </div>
-                        <h6>Customer Group Report</h6>
-                        <span class="badge bg-primary">Customer</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="customer" data-name="Customer Group Report">
+        <a id="customer-group-report-link" href="" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-user-group"></i></div>
+            <h6>Customer Group Report</h6>
+            <span class="badge bg-primary">Customer</span>
+        </a>
+    </div>
 
-                <!-- Supplier Reports Section -->
-                <div class="report-item" data-category="supplier" data-name="Supplier Report">
-                    <a href="{{ route('report.supplier') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-briefcase"></i>
-                        </div>
-                        <h6>Supplier Report</h6>
-                        <span class="badge bg-secondary">Supplier</span>
-                    </a>
-                </div>
+    <!-- Supplier Reports Section -->
+    <div class="report-item" data-category="supplier" data-name="Supplier Report">
+        <a id="supplier-report-link" href="" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-briefcase"></i></div>
+            <h6>Supplier Report</h6>
+            <span class="badge bg-secondary">Supplier</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="supplier" data-name="Supplier Due Report">
-                    <a href="{{ route('report.supplierDueByDate') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-wallet"></i>
-                        </div>
-                        <h6>Supplier Due Report</h6>
-                        <span class="badge bg-secondary">Supplier</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="supplier" data-name="Supplier Due Report">
+        {!! Form::open(['route' => 'report.supplierDueByDate', 'method' => 'post', 'id' => 'supplier-due-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d', strtotime('-1 year')) }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-wallet"></i></div>
+            <h6>Supplier Due Report</h6>
+            <span class="badge bg-secondary">Supplier</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
 
-                <!-- Product Reports Section -->
-                <div class="report-item" data-category="product" data-name="Product Report">
-                    <a href="{{ route('report.product') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-box"></i>
-                        </div>
-                        <h6>Product Report</h6>
-                        <span class="badge bg-secondary">Product</span>
-                    </a>
-                </div>
+    <!-- Product Reports Section -->
+    <div class="report-item" data-category="product" data-name="Product Report">
+        {!! Form::open(['route' => 'report.product', 'method' => 'get', 'id' => 'product-report-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <input type="hidden" name="warehouse_id" value="0">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-box"></i></div>
+            <h6>Product Report</h6>
+            <span class="badge bg-secondary">Product</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
 
-                <div class="report-item" data-category="product" data-name="Qty Alert">
-                    <a href="{{ route('report.qtyAlert') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-alarm"></i>
-                        </div>
-                        <h6>Qty Alert</h6>
-                        <span class="badge bg-secondary">Product</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="product" data-name="Qty Alert">
+        <a href="{{ route('report.qtyAlert') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-alarm"></i></div>
+            <h6>Qty Alert</h6>
+            <span class="badge bg-secondary">Product</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="product" data-name="Product Expiry">
-                    <a href="{{ route('report.productExpiry') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-calendar"></i>
-                        </div>
-                        <h6>Product Expiry</h6>
-                        <span class="badge bg-secondary">Product</span>
-                    </a>
-                </div>
+    <div class="report-item" data-category="product" data-name="Product Expiry">
+        <a href="{{ route('report.productExpiry') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-calendar"></i></div>
+            <h6>Product Expiry</h6>
+            <span class="badge bg-secondary">Product</span>
+        </a>
+    </div>
 
-                <!-- User & Department Reports -->
-                <div class="report-item" data-category="financial" data-name="User Report">
-                    <a href="{{ route('report.user') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-user-group"></i>
-                        </div>
-                        <h6>User Report</h6>
-                        <span class="badge bg-danger">Financial</span>
-                    </a>
-                </div>
+    <!-- User & Department Reports -->
+    <div class="report-item" data-category="financial" data-name="User Report">
+        <a id="user-report-link" href="" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-user-group"></i></div>
+            <h6>User Report</h6>
+            <span class="badge bg-danger">Financial</span>
+        </a>
+    </div>
 
-                <div class="report-item" data-category="financial" data-name="Department Report">
-                    <a href="{{ route('report.department') }}" class="report-link">
-                        <div class="report-icon">
-                            <i class="dripicons dripicons-photo-group"></i>
-                        </div>
-                        <h6>Department Report</h6>
-                        <span class="badge bg-danger">Financial</span>
-                    </a>
-                </div>
-            </div>
+    <div class="report-item" data-category="financial" data-name="Department Report">
+        <a href="{{ route('report.department') }}" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-photo-group"></i></div>
+            <h6>Department Report</h6>
+            <span class="badge bg-danger">Financial</span>
+        </a>
+    </div>
+</div>
 
             <!-- No Results Message -->
             <div class="alert alert-warning mt-4 d-none text-center" id="noResults">
@@ -349,7 +338,7 @@
 
     .report-link:hover {
         background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-        border-color: #667eea;
+        border-color: #13bd60;
         transform: translateY(-4px);
         box-shadow: 0 8px 20px rgba(102, 126, 234, 0.15);
     }
@@ -363,7 +352,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #667eea;
+        color: #13bd60;
         margin-bottom: 12px;
         transition: all 0.3s ease;
     }
@@ -393,12 +382,12 @@
     .input-group-text {
         background: white !important;
         border: 1px solid #e0e0e0 !important;
-        color: #667eea !important;
+        color: #13bd60 !important;
     }
 
     .form-control:focus,
     .form-select:focus {
-        border-color: #667eea !important;
+        border-color: #13bd60 !important;
         box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15) !important;
     }
 

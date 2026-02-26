@@ -12,6 +12,7 @@
 */
 
 use App\Http\Controllers\AccountsController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AddonInstallController;
 use App\Http\Controllers\AdjustmentController;
 use App\Http\Controllers\AttendanceController;
@@ -333,6 +334,8 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         Route::get('edit-ad/{id}', 'editAd');
         Route::post('update-ad', 'updateAd')->name('ad.update');
     });
+    
+    Route::post('sales/save-default-filter', [SaleController::class, 'saveDefaultFilter'])->name('sales.save-default-filter');
     Route::resource('sales', SaleController::class);
 
     Route::controller(HirePurchaseController::class)->group(function () {
@@ -581,6 +584,12 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         Route::post('expenses/{id}/approve', 'approveExpense')->name('expenses.approve');
     });
     Route::resource('expenses', ExpenseController::class);
+
+    // Central Approvals (Purchase Payments + Expenses)
+    Route::controller(ApprovalController::class)->group(function () {
+        Route::get('approvals', 'index')->name('approvals.index');
+        Route::post('approvals/expense/{id}/approve', 'approveExpense')->name('approval.expense.approve');
+    });
 
 
     Route::controller(GiftCardController::class)->group(function () {

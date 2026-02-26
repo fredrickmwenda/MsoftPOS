@@ -5,10 +5,12 @@
         padding: 0;
         margin: 0;
         list-style: none;
-        min-height: 100vh;
         position: relative;
         border-right: 1px solid #e0e0e0;
         box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
     }
 
     #side-main-menu li {
@@ -43,9 +45,9 @@
     }
 
     #side-main-menu > li > a:hover {
-        border-left-color: #667eea;
+        border-left-color: #13bd60;
         padding-left: 24px;
-        color: #667eea;
+        color: #13bd60;
     }
 
     #side-main-menu > li > a:hover::before {
@@ -55,8 +57,8 @@
     #side-main-menu > li.active > a,
     #side-main-menu > li > a.active {
         background: rgba(102, 126, 234, 0.12);
-        border-left-color: #667eea;
-        color: #667eea;
+        border-left-color: #13bd60;
+        color: #13bd60;
         font-weight: 600;
     }
 
@@ -140,14 +142,14 @@
         transform: translateY(-50%);
         width: 4px;
         height: 0;
-        background: #667eea;
+        background: #13bd60;
         transition: height 0.3s ease;
     }
 
     #side-main-menu .collapse li a:hover {
         background: #f0f1f7;
         padding-left: 54px;
-        color: #667eea;
+        color: #13bd60;
         font-weight: 500;
     }
 
@@ -157,10 +159,10 @@
 
     #side-main-menu .collapse li a.active {
         background: #e8ecf9;
-        color: #667eea;
+        color: #13bd60;
         font-weight: 600;
         padding-left: 54px;
-        border-left: 3px solid #667eea;
+        border-left: 3px solid #13bd60;
     }
 
     #side-main-menu .collapse li a.active::before {
@@ -255,7 +257,7 @@
                 $adjustment_active = $role_has_permissions_list->where('name', 'adjustment')->first();
             ?>
             @if($category_permission_active || $index_permission_active || $print_barcode_active || $stock_count_active || $adjustment_active)
-            <li><a href="#product" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-list"></i><span>Manage {{__('file.product')}}s</span><span></a>
+            <li><a href="#product" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-list"></i><span> {{__('file.product')}}s</span><span></a>
             <ul id="product" class="collapse list-unstyled ">
                 @if($category_permission_active)
                 <li id="category-menu"><a href="{{route('category.index')}}">{{__('file.category')}}</a></li>
@@ -289,7 +291,7 @@
                 $index_permission_active = $role_has_permissions_list->where('name', 'purchases-index')->first();
             ?>
             @if($index_permission_active)
-            <li><a href="#purchase" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-card"></i><span>Manage {{trans('file.Purchase')}}s</span></a>
+            <li><a href="#purchase" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-card"></i><span> {{trans('file.Purchase')}}s</span></a>
             <ul id="purchase" class="collapse list-unstyled ">
                 <li id="purchase-list-menu"><a href="{{route('purchases.index')}}">{{trans('file.Purchase List')}}</a></li>
                 <?php
@@ -314,7 +316,7 @@
                 $sale_add_permission_active = $role_has_permissions_list->where('name', 'sales-add')->first();
             ?>
             @if($sale_index_permission_active || $gift_card_permission_active || $coupon_permission_active || $delivery_permission_active)
-            <li><a href="#sale" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-cart"></i><span>Manage {{trans('file.Sale')}}s</span></a>
+            <li><a href="#sale" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-cart"></i><span> {{trans('file.Sale')}}s</span></a>
             <ul id="sale" class="collapse list-unstyled ">
                 @if($sale_add_permission_active)
                 <li id="sale-list-menu"><a href="{{route('sales.index')}}">{{trans('file.Sale List')}}</a></li>
@@ -351,7 +353,7 @@
             $index_permission_active = $role_has_permissions_list->where('name', 'expenses-index')->first();
             ?>
             @if($index_permission_active)
-            <li><a href="#expense" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-wallet"></i><span>Manage {{trans('file.Expense')}}s</span></a>
+            <li><a href="#expense" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-wallet"></i><span> {{trans('file.Expense')}}s</span></a>
             <ul id="expense" class="collapse list-unstyled ">
                 <li id="exp-cat-menu"><a href="{{route('expense_categories.index')}}">{{trans('file.Expense Category')}}</a></li>
                 <li id="exp-list-menu"><a href="{{route('expenses.index')}}">{{trans('file.Expense List')}}</a></li>
@@ -365,10 +367,16 @@
             </li>
             @endif
             <?php
+            $approvals_index_active = $role_has_permissions_list->where('name', 'approvals-index')->first();
+            ?>
+            @if($approvals_index_active)
+            <li id="approvals-menu"><a href="{{ route('approvals.index') }}"> <i class="dripicons dripicons-checkmark"></i><span> Approvals</span></a></li>
+            @endif
+            <?php
             $index_permission_active = $role_has_permissions_list->where('name', 'quotes-index')->first();
             ?>
             @if($index_permission_active)
-            <li><a href="#quotation" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-document"></i><span>Manage {{trans('file.Quotation')}}s</span><span></a>
+            <li><a href="#quotation" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-document"></i><span> {{trans('file.Quotation')}}s</span><span></a>
             <ul id="quotation" class="collapse list-unstyled ">
                 <li id="quotation-list-menu"><a href="{{route('quotations.index')}}">{{trans('file.Quotation List')}}</a></li>
                 <?php
@@ -384,7 +392,7 @@
             $index_permission_active = $role_has_permissions_list->where('name', 'transfers-index')->first();
             ?>
             @if($index_permission_active)
-            <li><a href="#transfer" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-export"></i><span>Manage {{trans('file.Transfer')}}s</span></a>
+            <li><a href="#transfer" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-export"></i><span> {{trans('file.Transfer')}}s</span></a>
             <ul id="transfer" class="collapse list-unstyled ">
                 <li id="transfer-list-menu"><a href="{{route('transfers.index')}}">{{trans('file.Transfer List')}}</a></li>
                 <?php
@@ -404,7 +412,7 @@
                 $purchase_return_index_permission_active = $role_has_permissions_list->where('name', 'purchase-return-index')->first();
             ?>
             @if($sale_return_index_permission_active || $purchase_return_index_permission_active)
-            <li><a href="#return" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-return"></i><span>Manage {{trans('file.return')}}s</span></a>
+            <li><a href="#return" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-return"></i><span> {{trans('file.return')}}s</span></a>
             <ul id="return" class="collapse list-unstyled ">
                 @if($sale_return_index_permission_active)
                 <li id="sale-return-menu"><a href="{{route('return-sale.index')}}">{{trans('file.Sale')}}</a></li>
@@ -426,7 +434,7 @@
 
             ?>
             @if($index_permission_active || $balance_sheet_permission_active || $account_statement_permission_active || $money_transfer_permission_active)
-            <li class=""><a href="#account" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-briefcase"></i><span>{{trans('file.Accounting')}} Module</span></a>
+            <li class=""><a href="#account" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-briefcase"></i><span>{{trans('file.Accounting')}}</span></a>
             <ul id="account" class="collapse list-unstyled ">
                 @if($index_permission_active)
                 <li id="account-list-menu"><a href="{{route('accounts.index')}}">{{trans('file.Account List')}}</a></li>
@@ -488,9 +496,9 @@
                 $supplier_index_permission_active = $role_has_permissions_list->where('name', 'suppliers-index')->first();
 
             ?>
-           <!-- <li><a href="{{url('/shippings')}}"> <i class="dripicons dripicons-meter"></i><span>Manage Shippings</span></a></li>-->
+           <!-- <li><a href="{{url('/shippings')}}"> <i class="dripicons dripicons-meter"></i><span> Shippings</span></a></li>-->
             @if($user_index_permission_active || $customer_index_permission_active || $biller_index_permission_active || $supplier_index_permission_active)
-            <li><a href="#people" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-user"></i><span>Manage {{trans('file.People')}}</span></a>
+            <li><a href="#people" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-user"></i><span> {{trans('file.People')}}</span></a>
             <ul id="people" class="collapse list-unstyled ">
 
                 @if($user_index_permission_active)
@@ -587,179 +595,7 @@
             ?>
             <!-- incase needed add the permission -->
             @if($profit_loss_active || $best_seller_active || $warehouse_report_active || $warehouse_stock_report_active || $product_report_active || $daily_sale_active || $monthly_sale_active || $daily_purchase_active || $monthly_purchase_active || $purchase_report_active || $sale_report_active || $sale_report_chart_active || $payment_report_active || $product_expiry_report_active || $product_qty_alert_active || $dso_report_active || $user_report_active || $customer_report_active || $supplier_report_active || $due_report_active || $supplier_due_report_active )
-            <li><a href="#report" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-document-remove"></i><span>View {{trans('file.Reports')}}</span></a>
-            <ul id="report" class="collapse list-unstyled ">
-                <li><a href="{{ route('report.dashboard') }}"> Report Dashboard</a></li>
-
-                @if($profit_loss_active)
-                <li id="profit-loss-report-menu">
-                {!! Form::open(['route' => 'report.profitLoss', 'method' => 'post', 'id' => 'profitLoss-report-form']) !!}
-                <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                <a id="profitLoss-link" href="">{{trans('file.Summary Report')}}</a>
-                {!! Form::close() !!}
-                </li>
-
-
-                @endif
-
-                <li id="profit-loss-report-data">
-                <a href="{{route('report.profitLossData')}}">Profit Loss Report</a>
-                </li>
-                
-                @if($best_seller_active)
-                <li id="best-seller-report-menu">
-                <a href="{{url('report/best_seller')}}">{{trans('file.Best Seller')}}</a>
-                </li>
-                @endif
-                    <li id="best-seller-report-menu">
-                        <a href="{{url('report/first-time-customers')}}">First Time Customers</a>
-                    </li>
-                @if($product_report_active)
-                <li id="product-report-menu">
-                {!! Form::open(['route' => 'report.product', 'method' => 'get', 'id' => 'product-report-form']) !!}
-                <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                <input type="hidden" name="warehouse_id" value="0" />
-                <a id="report-link" href="">{{trans('file.Product Report')}}</a>
-                {!! Form::close() !!}
-                </li>
-                @endif
-                @if($daily_sale_active)
-                <li id="daily-sale-report-menu">
-                <a href="{{url('report/daily_sale/'.date('Y').'/'.date('m'))}}">{{trans('file.Daily Sale')}}</a>
-                </li>
-                @endif
-                @if($monthly_sale_active)
-                <li id="monthly-sale-report-menu">
-                <a href="{{url('report/monthly_sale/'.date('Y'))}}">{{trans('file.Monthly Sale')}}</a>
-                </li>
-                @endif
-                @if($daily_purchase_active)
-                <li id="daily-purchase-report-menu">
-                <a href="{{url('report/daily_purchase/'.date('Y').'/'.date('m'))}}">{{trans('file.Daily Purchase')}}</a>
-                </li>
-                @endif
-                @if($monthly_purchase_active)
-                <li id="monthly-purchase-report-menu">
-                <a href="{{url('report/monthly_purchase/'.date('Y'))}}">{{trans('file.Monthly Purchase')}}</a>
-                </li>
-                @endif
-                @if($sale_report_active)
-                <li id="sale-report-menu">
-                {!! Form::open(['route' => 'report.sale', 'method' => 'post', 'id' => 'sale-report-form']) !!}
-                <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                <input type="hidden" name="warehouse_id" value="0" />
-                <a id="sale-report-link" href="">{{trans('file.Sale Report')}}</a>
-                {!! Form::close() !!}
-                </li>
-                @endif
-                @if($sale_report_chart_active)
-                <li id="sale-report-chart-menu">
-                    {!! Form::open(['route' => 'report.saleChart', 'method' => 'post', 'id' => 'sale-report-chart-form']) !!}
-                    <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                    <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                    <input type="hidden" name="warehouse_id" value="0" />
-                    <input type="hidden" name="time_period" value="weekly" />
-                    <a id="sale-report-chart-link" href="">{{trans('file.Sale Report Chart')}}</a>
-                    {!! Form::close() !!}
-                </li>
-                @endif
-                @if($payment_report_active)
-                <li id="payment-report-menu">
-                {!! Form::open(['route' => 'report.paymentByDate', 'method' => 'post', 'id' => 'payment-report-form']) !!}
-                <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                <a id="payment-report-link" href="">{{trans('file.Payment Report')}}</a>
-                {!! Form::close() !!}
-                </li>
-                @endif
-                @if($purchase_report_active)
-                <li id="purchase-report-menu">
-                {!! Form::open(['route' => 'report.purchase', 'method' => 'post', 'id' => 'purchase-report-form']) !!}
-                <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
-                <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                <input type="hidden" name="warehouse_id" value="0" />
-                <a id="purchase-report-link" href="">{{trans('file.Purchase Report')}}</a>
-                {!! Form::close() !!}
-                </li>
-                @endif
-                @if($customer_report_active)
-                <li id="customer-report-menu">
-                <a id="customer-report-link" href="">{{trans('file.Customer Report')}}</a>
-                </li>
-                @endif
-                @if($customer_report_active)
-                <li id="customer-report-menu">
-                    <a id="customer-group-report-link" href="">{{trans('file.Customer Group Report')}}</a>
-                </li>
-                @endif
-                @if($due_report_active)
-                <li id="due-report-menu">
-                    {!! Form::open(['route' => 'report.customerDueByDate', 'method' => 'post', 'id' => 'customer-due-report-form']) !!}
-                    <input type="hidden" name="start_date" value="{{date('Y-m-d', strtotime('-1 year'))}}" />
-                    <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                    <a id="due-report-link" href="">{{trans('file.Customer Due Report')}}</a>
-                    {!! Form::close() !!}
-                </li>
-                @endif
-                @if($supplier_report_active)
-                <li id="supplier-report-menu">
-                    <a id="supplier-report-link" href="">{{trans('file.Supplier Report')}}</a>
-                </li>
-                @endif
-                @if($supplier_due_report_active)
-                <li id="supplier-due-report-menu">
-                    {!! Form::open(['route' => 'report.supplierDueByDate', 'method' => 'post', 'id' => 'supplier-due-report-form']) !!}
-                    <input type="hidden" name="start_date" value="{{date('Y-m-d', strtotime('-1 year'))}}" />
-                    <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
-                    <a id="supplier-due-report-link" href="">{{trans('file.Supplier Due Report')}}</a>
-                    {!! Form::close() !!}
-                </li>
-                @endif
-                
-                <li id="department-report-menu">
-                    <a href="{{route('report.department')}}">Department Report</a>
-                </li>
-                
-                @if($warehouse_report_active)
-                <li id="warehouse-report-menu">
-                <a id="warehouse-report-link" href="">{{trans('file.Warehouse Report')}}</a>
-                </li>
-                @endif
-                @if($warehouse_stock_report_active)
-                <li id="warehouse-stock-report-menu">
-                <a href="{{route('report.warehouseStock')}}">{{trans('file.Warehouse Stock Chart')}}</a>
-                </li>
-                @endif
-                @if($warehouse_stock_report_active)
-                <li id="warehouse-stock-report-menu">
-                <a href="{{route('report.warehouseStockReport')}}">Warehouse Stock Report</a>
-                </li>
-                @endif
-                @if($product_expiry_report_active)
-                <li id="productExpiry-report-menu">
-                <a href="{{route('report.productExpiry')}}">{{trans('file.Product Expiry Report')}}</a>
-                </li>
-                @endif
-                @if($product_qty_alert_active)
-                <li id="qtyAlert-report-menu">
-                <a href="{{route('report.qtyAlert')}}">{{trans('file.Product Quantity Alert')}}</a>
-                </li>
-                @endif
-                @if($dso_report_active)
-                <li id="daily-sale-objective-menu">
-                    <a href="{{route('report.dailySaleObjective')}}">{{trans('file.Daily Sale Objective Report')}}</a>
-                </li>
-                @endif
-                @if($user_report_active)
-                <li id="user-report-menu">
-                <a id="user-report-link" href="">{{trans('file.User Report')}}</a>
-                </li>
-                @endif
-            </ul>
-            </li>
+            <li><a href="{{ route('report.dashboard') }}"> <i class="dripicons dripicons-document-remove"></i><span>Reports</span></a></li>
             @endif
             @if(!config('database.connections.saleprosaas_landlord') && 1 == 0)
             <li><a href="{{url('addon-list')}}" id="addon-list"> <i class="dripicons dripicons-flag"></i><span>{{trans('file.Addons')}}</span></a></li>

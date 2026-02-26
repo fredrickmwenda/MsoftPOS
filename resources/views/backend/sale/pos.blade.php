@@ -1,5 +1,7 @@
-@extends('backend.layout.top-head')
+@extends('backend.layout.top-header')
 @section('content')
+<link rel="stylesheet" href="{{ asset('css/pos-layout.css') }}" type="text/css">
+
 @if($errors->has('phone_number'))
 <div class="alert alert-danger alert-dismissible text-center">
     <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ $errors->first('phone_number') }}</div>
@@ -12,14 +14,97 @@
 @endif
  
     <style>
-        @media screen and (max-width: 480px) {
-              .order-2 {
-                margin-top:-150px !important;
-              }
-            }
+        /* Remove all default spacing */
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            height: 100%;
+            min-height: 100vh;  
+            padding-bottom: 0 !important;
+        }
+
+        header {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            height: auto !important;
+            display: block !important;
+            min-height: auto !important;
+        }
+
+        nav.navbar {
+            margin: 0 !important;
+            padding: 12px 24px !important;
+        }
+
+   
+
+        .container-fluid {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .row {
+            margin: 0 !important;
+        }
+
+        .pos-page {
+            min-height: auto !important;
+            background: white !important;
+            padding-bottom: 0 !important;
+        }
+
+        /* Sidebar toggle and main content layout handled by pos-layout.css */
+
+        /* Remove all space-creating elements */
+        .page,
+        .pos-page::before,
+        .pos-page::after {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: auto !important;
+            padding-bottom: 0 !important;
+            overflow: hidden;
+        }
+
+        /* Ensure navbar is compact */
+        header nav {
+            height: auto !important;
+            min-height: auto !important;
+        }
+
+        /* Remove all bottom spacing */
+        .card,
+        .card-body,
+        .card-footer,
+        section,
+        .container-fluid > div {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        body.pos-page {
+            padding-bottom: 0 !important;
+            overflow-y: auto;
+            background: white !important;
+        }
+
+        body {
+            padding-bottom: 0 !important;
+            padding: 0 !important;
+        }
+
         
         #product-table td p {
-              color:blue;  
+              color:green !important;  
         }
         #product-table td {
             background-color:#e6f5ff !important;
@@ -50,11 +135,21 @@
         .dripicons{
             color:#fff !important;
         }
+
+        /* Totals title icons: gradient color */
+        .totals-title i,
+        .totals-title .btn i {
+            background: linear-gradient(135deg, #5cd562 0%, #e2bb0e 100%) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+        }
         .column-5{
             margin-bottom:15px !important;
         }
         .payment-amount h2 {
-            color: #00172D;
+            color: #058c49;
             font-size: 1.5rem;
             line-height: 2;
             margin-bottom: 0;
@@ -65,39 +160,135 @@
         .transition-all {
             transition: all 0.3s ease;
         }
-        #toggle-filters {
-            transition: all 0.3s ease;
-        }
-        #toggle-filters:j nk k over {
-            background: #f1f1f1;
-        }
-        /* Target only #myTable */
-      .btn svg {vertical-align: middle; width: 16px}
- button.close svg {vertical-align: middle; width: 26px}
 
+        /* Target only #myTable */
+       .btn svg {vertical-align: middle; width: 16px}
+       button.close svg {vertical-align: middle; width: 26px}
+
+        /* Remove white space at bottom */
+        .card-body {
+            padding-bottom: 0 !important;
+        }
+
+        .container-fluid > .row {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        #content,
+        .animate-bottom {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+
+            /* Make body a vertical flex container that fills the viewport */
+        body {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* #content stays block, but grows to fill available space */
+        #content {
+            flex: 1 0 auto !important;   /* expands to fill height */
+            display: block !important;    /* keep block layout */
+            width: 100%;
+        }
+
+        /* Make the forms section fill the expanded #content */
+        section.forms {
+            height: 100%;                  /* fill its parent (#content) */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ensure the inner container also stretches */
+        section.forms .container-fluid {
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        section.forms .row {
+            flex: 1 0 auto;
+        }
+
+        /* Ensure product search autocomplete dropdown is visible above sidebar/modal - black/dark theme */
+        .ui-autocomplete {
+            z-index: 9999 !important;
+            max-height: 280px;
+            overflow-y: auto;
+            background: #1a1a1a !important;
+            border: 1px solid #333 !important;
+            border-radius: 4px;
+        }
+        .ui-autocomplete .ui-menu-item {
+            border-color: #333 !important;
+        }
+        .ui-autocomplete .ui-menu-item-wrapper {
+            background: #1a1a1a !important;
+            color: #e0e0e0 !important;
+            padding: 8px 12px;
+        }
+        .ui-autocomplete .ui-menu-item-wrapper.ui-state-active,
+        .ui-autocomplete .ui-menu-item-wrapper:hover {
+            background: #333 !important;
+            color: #fff !important;
+            border-color: #333 !important;
+        }
+        #side-main-menu > li > a
+        {
+                color: green !important;
+        }
+        .side-navbar li ul li a {
+            color: green!important;
+        }
+        #side-main-menu i {
+            color: green !important;
+        }
+        #side-main-menu i:hover {
+            color: green !important;
+        }
+        #side-main-menu i:active {
+            color: green !important;
+        }
+        #side-main-menu i:focus {
+            color: green !important;
+        }
+        
 
     </style>
     {!! ToastMagic::styles() !!}
-<!-- Side Navbar -->
-<nav class="side-navbar shrink" style="background-color: #00172D !important;">
-    <span class="brand-big mb-3">
-        @if($general_setting->site_logo)
-        <a href="{{url('/')}}"> <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a></a>
-        @else
-        <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
-        @endif
+    <!-- Side Navbar -->
+    <nav class="side-navbar shrink" style="background-color: #ecf0f4 !important;">
+        <span class="brand-big mb-3">
+            @if($general_setting->site_logo)
+            <a href="{{url('/')}}"> <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a></a>
+            @else
+            <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+            @endif
+            
+        <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
         
-      <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
-      
-      
-    </span>
+        
+        </span>
 
-    @include('backend.layout.sidebar')
-</nav>
+        @include('backend.layout.sidebar')
+    </nav>
  <!-- navbar-->
 <header>
-    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #62cff4, #2c67f2) !important;">
+    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+
         <a id="toggle-btn" href="#" class="menu-btn"><i class="fa fa-bars"> </i></a>
+
+        <span class="brand-big mb-3 mt-2">
+            
+            <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+            
+        </span>
 
         <div class="navbar-header">
             <ul class="nav-menu list-unstyled d-flex flex-md-row align-items-md-center">
@@ -227,25 +418,25 @@
 <section class="forms pos-section">
     <div class="container-fluid">
         
-        <div class="row" style="margin-top:-5px !important;">
+        <div class="row">
             <audio id="mysoundclip1" preload="auto">
                 <source src="{{url('beep/beep-timber.mp3')}}"></source>
             </audio>
             <audio id="mysoundclip2" preload="auto">
                 <source src="{{url('beep/beep-07.mp3')}}"></source>
             </audio>
-            <div class="col-md-2 order-3 order-md-1" style="background-color: #00172D !important;">
-                <div class="row mt-3"> 
+            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #13bd60, #f5f8fe) !important;">
+                <div class="row" style="padding: 10px;"> 
                      
                         @if(in_array("cash",$options))
                         <div class="column-5 col-6">
-                            <button  type="button" class="btn bg-success btn-sm btn-custom payment-btn text-white" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> <br> {{trans('file.Cash')}}</button>
+                            <button  style="background: #f5f5f0 !important; color:black !important;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> <br> {{trans('file.Cash')}}</button>
                         </div>
                         @endif
                
                         @if(in_array("card",$options))
                         <div class="column-5 col-6 ">
-                            <button style="background: #0984e3" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="credit-card-btn"><i class="fa fa-credit-card fa-2x"></i><br> {{trans('file.Card')}}</button>
+                            <button style="background: #f5f5f0 !important; color:black !important;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="credit-card-btn"><i class="fa fa-credit-card fa-2x"></i><br> {{trans('file.Card')}}</button>
                         </div>
                         @endif
                         
@@ -253,41 +444,43 @@
        
                         @if(in_array("paypal",$options) && $lims_pos_setting_data && (strlen($lims_pos_setting_data->paypal_live_api_username)>0) && (strlen($lims_pos_setting_data->paypal_live_api_password)>0) && (strlen($lims_pos_setting_data->paypal_live_api_secret)>0))
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="paypal-btn"><i class="fa fa-paypal fa-2x"></i><br> {{trans('file.PayPal')}}</button>
+                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="paypal-btn"><i class="fa fa-paypal fa-2x"></i><br> {{trans('file.PayPal')}}</button>
                         </div>
                         @endif
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom" id="draft-btn"><i class="dripicons-flag"></i> <br> Hold</button>
+                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom" id="draft-btn"><i class="dripicons-flag"></i> <br> Hold</button>
 
                         </div>
                         @if(in_array("cheque",$options))
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="cheque-btn"><i class="fa fa-money"></i><br> {{trans('file.Cheque')}}</button>
+                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="cheque-btn"><i class="fa fa-money"></i><br> {{trans('file.Cheque')}}</button>
                         </div>
                         @endif
                         
                         @if(in_array("gift_card",$options))
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="gift-card-btn"><i class="fa fa-credit-card-alt"></i><br> {{trans('file.Gift Card')}}</button>
+                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="gift-card-btn"><i class="fa fa-credit-card-alt"></i><br> {{trans('file.Gift Card')}}</button>
                         </div>
                         @endif
                         
                         @if(in_array("deposit",$options))
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i><br> {{trans('file.Deposit')}}</button>
+                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i><br> {{trans('file.Deposit')}}</button>
                         </div>
                         @endif
                         
                         @if(in_array("mobile_money",$options))
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-credit-card-alt"></i>
-                                <br> {{('MobileMoney')}}</button>
+                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-credit-card-alt"></i>
+                                Mobile
+                                <br> 
+                                Money</button>
                         </div>
                         @endif
                         
                         @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active && in_array("points",$options))
                         <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="point-btn"><i class="dripicons-rocket"></i><br> {{trans('file.Points')}}</button>
+                            <button style="background: transparent; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="point-btn"><i class="dripicons-rocket"></i><br> {{trans('file.Points')}}</button>
                         </div>
                         @endif
                          <div class="column-5 col-6">
@@ -300,7 +493,7 @@
                 </div>
             </div>
             <div class="col-md-10 col-lg-10 order-2 order-md-2 transition-all" id="main-column"  style="background-color:#f5f5f0 !important;">
-                <div class="card "  style="background-color:#f5f5f0 !important;">
+                <div class="card " style="margin-top: 10px;"  style="background-color:#f5f5f0 !important;">
                     <div class="card-body" style="padding-bottom: 0px !important;">
                         {!! Form::open(['route' => 'sales.store', 'method' => 'post', 'files' => true, 'class' => 'payment-form']) !!}
                         @php
@@ -366,7 +559,7 @@
                                             </div>
                                         </div>
                                     @endif
-                                    <div class="col-md-4">
+                                    <div class="col-md-3">
                                         <div class="form-group">
                                             @if($lims_pos_setting_data)
                                             <input type="hidden" name="biller_id_hidden" value="{{$lims_pos_setting_data->biller_id}}">
@@ -378,48 +571,41 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="form-group">
-                                            @if($lims_pos_setting_data)
-                                            <input type="hidden" name="customer_id_hidden" value="{{$lims_pos_setting_data->customer_id}}">
-                                            @endif
-                                            <div class="input-group pos">
-                                                @if($customer_active)
-                                                <select required name="customer_id" id="customer_id" class="selectpicker form-control" data-live-search="true" title="Select customer..." style="width: 100px">
-                                                <?php
-                                                  $deposit = [];
-                                                  $points = [];
-                                                ?>
-                                                @foreach($lims_customer_list as $customer)
-                                                    @php
-                                                      $deposit[$customer->id] = $customer->deposit - $customer->expense;
+                                   <div class="col-md-4">   <!-- You may change this to col-md-5 if needed -->
+    <div class="form-group">
+        @if($lims_pos_setting_data)
+            <input type="hidden" name="customer_id_hidden" value="{{$lims_pos_setting_data->customer_id}}">
+        @endif
 
-                                                      $points[$customer->id] = $customer->points;
-                                                    @endphp
-                                                    <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
-                                                @endforeach
-                                                </select>
-                                                {{--    type="button" data-toggle="modal" data-target="#addCustomer"--}}
-                                                <a href="#" data-toggle="modal" data-target="#addCustomer" class="btn btn-default btn-sm"><i class="dripicons-plus"></i></a>
-                                                @else
-                                                <?php
-                                                  $deposit = [];
-                                                  $points = [];
-                                                ?>
-                                                <select required name="customer_id" id="customer_id" class="selectpicker form-control" data-live-search="true" title="Select customer...">
-                                                @foreach($lims_customer_list as $customer)
-                                                    @php
-                                                      $deposit[$customer->id] = $customer->deposit - $customer->expense;
+        <!-- Flex container: keeps select and button in one row -->
+        <div class="d-flex align-items-center">
+            <select required name="customer_id" id="customer_id"
+                    class="selectpicker form-control"
+                    data-live-search="true"
+                    title="Select customer..."
+                    style="flex: 1; min-width: 0;">   <!-- flex:1 fills space; min-width:0 prevents overflow -->
+                <?php
+                    $deposit = [];
+                    $points = [];
+                ?>
+                @foreach($lims_customer_list as $customer)
+                    @php
+                        $deposit[$customer->id] = $customer->deposit - $customer->expense;
+                        $points[$customer->id] = $customer->points;
+                    @endphp
+                    <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
+                @endforeach
+            </select>
 
-                                                      $points[$customer->id] = $customer->points;
-                                                    @endphp
-                                                    <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
-                                                @endforeach
-                                                </select>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
+            @if($customer_active)
+                <a href="#" data-toggle="modal" data-target="#addCustomer"
+                   class="btn btn-default btn-sm ml-2">   <!-- ml-2 adds a small left margin -->
+                    <i class="dripicons-plus"></i>
+                </a>
+            @endif
+        </div>
+    </div>
+</div>
                                     <div class="col-md-2">
                                         <select name="currency_id" id="currency" class="form-control selectpicker" data-toggle="tooltip" title="" data-original-title="Sale currency">
                                             @foreach($currency_list as $currency_data)
@@ -550,7 +736,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-12 totals" style="border-top: 2px solid #e4e6fc; padding-top: 10px;">
+                                <div class="col-12 totals" style="border-top: 2px solid #e4e6fc; padding-top: 10px; color: #13bd60;">
                                     <div class="row">
                                         <div class="col-sm-4">
                                             <span class="totals-title">{{trans('file.Items')}}</span><span id="item">0</span>
@@ -582,25 +768,7 @@
                         </div>
                         <div class="payment-options"></div>
                 
-                        <div id="toggle-filters"
-                                style="
-                                    position: fixed;
-                                    top: 50%;
-                                    right: 15px;
-                                    transform: translateY(-50%);
-                                    cursor: pointer;
-                                    background: #fff;
-                                    border-radius: 4px;
-                                    padding: 12px 15px;
-                                    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-                                    z-index: 1050;
-                                    display: flex;
-                                    align-items: center;
-                                    justify-content: center;
-                                    border: 1px solid #ddd;
-                                ">
-                                <i class="fa fa-shopping-cart" style="font-size: 24px; color: #333;"></i>
-                        </div>
+                        
         
                         <!-- payment modal -->
                         <div id="add-payment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
@@ -806,134 +974,7 @@
                 </div>
             </div>
             <!-- product list -->
-            <div class="col-md-5 order-1 order-md-3 d-none transition-all" id="filter-column">
-              
-                <div class="filter-window">
-                    <div class="category mt-3">
-                        <div class="row ml-2 mr-2 px-2">
-                            <div class="col-7">Choose category</div>
-                            <div class="col-5 text-right">
-                                <span class="btn btn-default btn-sm">
-                                    <i class="dripicons-cross"></i>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="row ml-2 mt-3">
-                            @foreach($lims_category_list as $category)
-                            <div class="col-md-3 category-img text-center" style="box-shadow: rgba(149, 157, 165, 0.2) 0px 8px 24px;" data-category="{{$category->id}}">
-                                @if($category->image)
-                                    <img  src="{{url('images/category', $category->image)}}" />
-                                @else
-                                    <img  src="{{url('images/product/zummXD2dvAtI.png')}}" />
-                                @endif
-                                <p class="text-center">{{$category->name}}</p>
-                            </div>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="brand mt-3">
-                        <div class="row ml-2 mr-2 px-2">
-                            <div class="col-7">Choose brand</div>
-                            <div class="col-5 text-right">
-                                <span class="btn btn-default btn-sm">
-                                    <i class="dripicons-cross"></i>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="row ml-2 mt-3">
-                            @foreach($lims_brand_list as $brand)
-                            @if($brand->image)
-                                <div class="col-md-3 brand-img text-center" data-brand="{{$brand->id}}">
-                                    <img  src="{{url('images/brand',$brand->image)}}" />
-                                    <p class="text-center">{{$brand->title}}</p>
-                                </div>
-                            @else
-                                <div class="col-md-3 brand-img" data-brand="{{$brand->id}}">
-                                    <img  src="{{url('images/product/zummXD2dvAtI.png')}}" />
-                                    <p class="text-center">{{$brand->title}}</p>
-                                </div>
-                            @endif
-                            @endforeach
-                        </div>
-                    </div>
-                </div>
-                <div class="row mt-2">
-                    
-
-                    <!-- <div class="col-md-4 col-4 ">
-                        <button class="btn btn-block btn-warning" style="color:#fff;" id="category-filter">
-                            {{trans('file.category')}}
-                        </button>
-                    </div>
-                    <div class="col-md-4 col-4">
-                        <button class="btn btn-block btn-success" style="color:#fff;" id="brand-filter">
-                            {{trans('file.Brand')}}/Make
-                        </button>
-                    </div>
-                    <div class="col-md-4 col-4">
-                        <button class="btn btn-block btn-danger" style="color:#fff;" id="featured-filter">
-                            {{trans('file.Featured')}}
-                        </button>
-                    </div>
-
-
-                    <div class="col-md-12 mt-1 table-container">
-                        <table id="product-table" class="table no-shadow product-list">
-                            <thead class="d-none">
-                                <tr>
-                                    <th></th>
-                                    <th></th>
-                                    <th></th>
-                                    <th></th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            @for ($i=0; $i < ceil($product_number/5); $i++)
-                                <tr>
-                                    <td class="product-img sound-btn" title="{{$lims_product_list[0+$i*5]->name}}" data-product ="{{$lims_product_list[0+$i*5]->code . ' (' . $lims_product_list[0+$i*5]->name . ')'}}"><img  src="{{url('images/product',$lims_product_list[0+$i*5]->base_image)}}" width="100%" />
-                                        <p>{{$lims_product_list[0+$i*5]->name}}</p>
-                                        <span>{{$lims_product_list[0+$i*5]->code}}</span>
-                                    </td>
-                                    @if(!empty($lims_product_list[1+$i*5]))
-                                    <td class="product-img sound-btn" title="{{$lims_product_list[1+$i*5]->name}}" data-product ="{{$lims_product_list[1+$i*5]->code . ' (' . $lims_product_list[1+$i*5]->name . ')'}}"><img  src="{{url('images/product',$lims_product_list[1+$i*5]->base_image)}}" width="100%" />
-                                        <p>{{$lims_product_list[1+$i*5]->name}}</p>
-                                        <span>{{$lims_product_list[1+$i*5]->code}}</span>
-                                    </td>
-                                    @else
-                                    <td style="border:none;"></td>
-                                    @endif
-                                    @if(!empty($lims_product_list[2+$i*5]))
-                                    <td class="product-img sound-btn" title="{{$lims_product_list[2+$i*5]->name}}" data-product ="{{$lims_product_list[2+$i*5]->code . ' (' . $lims_product_list[2+$i*5]->name . ')'}}"><img  src="{{url('images/product',$lims_product_list[2+$i*5]->base_image)}}" width="100%" />
-                                        <p>{{$lims_product_list[2+$i*5]->name}}</p>
-                                        <span>{{$lims_product_list[2+$i*5]->code}}</span>
-                                    </td>
-                                    @else
-                                    <td style="border:none;"></td>
-                                    @endif
-                                    @if(!empty($lims_product_list[3+$i*5]))
-                                    <td class="product-img sound-btn" title="{{$lims_product_list[3+$i*5]->name}}" data-product ="{{$lims_product_list[3+$i*5]->code . ' (' . $lims_product_list[3+$i*5]->name . ')'}}"><img  src="{{url('images/product',$lims_product_list[3+$i*5]->base_image)}}" width="100%" />
-                                        <p>{{$lims_product_list[3+$i*5]->name}}</p>
-                                        <span>{{$lims_product_list[3+$i*5]->code}}</span>
-                                    </td>
-                                    @else
-                                    <td style="border:none;"></td>
-                                    @endif
-                                    @if(!empty($lims_product_list[4+$i*5]))
-                                    <td class="product-img sound-btn" title="{{$lims_product_list[4+$i*5]->name}}" data-product ="{{$lims_product_list[4+$i*5]->code . ' (' . $lims_product_list[4+$i*5]->name . ')'}}"><img  src="{{url('images/product',$lims_product_list[4+$i*5]->base_image)}}" width="100%" />
-                                        <p>{{$lims_product_list[4+$i*5]->name}}</p>
-                                        <span>{{$lims_product_list[4+$i*5]->code}}</span>
-                                    </td>
-                                    @else
-                                    <td style="border:none;"></td>
-                                    @endif
-                                </tr>
-                            @endfor
-                            </tbody>
-                        </table>
-                    </div> -->
-              </div>
-            </div>
+            
             <!-- product edit modal -->
             <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                 <div role="document" class="modal-dialog">
@@ -1591,29 +1632,8 @@ if(getSavedValue("localStorageQty")) {
     //calculateRowProductData(localStorageQty[i]);
   }
 }
-// document.getElementById("toggle-filters").addEventListener("click", function() {
-//     document.querySelectorAll(".filter-buttons").forEach(function(el) {
-//         el.classList.toggle("d-none");
-//     });
-// });
-document.getElementById("toggle-filters").addEventListener("click", function () {
-    let filterCol = document.getElementById("filter-column");
-    let mainCol = document.getElementById("main-column");
-    console.log(mainCol.classList);
 
-    if (filterCol.classList.contains("d-none")) {
-        // Show filter column (shrink main to 5 cols)
-        filterCol.classList.remove("d-none");
-        mainCol.classList.remove("col-md-10", "col-lg-10");
-        mainCol.classList.add("col-md-5", "col-lg-5");
- 
-    } else {
-        // Hide filter column (expand main to 10 cols)
-        filterCol.classList.add("d-none");
-        mainCol.classList.remove("col-md-5", "col-lg-5");
-        mainCol.classList.add("col-md-10", "col-lg-10");
-    }
-});
+
 
 
 
@@ -1932,45 +1952,47 @@ $.get('sales/getcustomergroup/' + id, function(data) {
     customer_group_rate = (data / 100);
 });
 
-var id = $("#warehouse_id").val();
-$.get('sales/getproduct/' + id, function(data) {
-    lims_product_array = [];
-    product_code = data[0];
-    product_name = data[1];
-    product_qty = data[2];
-    product_type = data[3];
-    product_id = data[4];
-    product_list = data[5];
-    qty_list = data[6];
-    product_warehouse_price = data[7];
-    batch_no = data[8];
-    product_batch_id = data[9];
-    is_embeded = data[11];
-    product_shelf = data[12];
-    $.each(product_code, function(index) {
-        if(is_embeded[index])
-            lims_product_array.push(
-                 'Code: ' + product_code[index] +
-                ' | Name: ' + product_name[index] +
-                ' | Price: ' + product_warehouse_price[index] +
-                ' | Qty: ' + product_qty[index] +
-                ' | Shelf: ' + product_shelf[index] +
-                ' | Embeded: ' + is_embeded[index] 
-           );
-              
-                // lims_product_array.push(product_code[index] + ' (' + product_name[index] + ')' + ' (' + product_qty[index] + ')' + ' (' + product_warehouse_price[index] + ')'+ ' (' + product_shelf[index] + ')|'+ is_embeded[index]);
+// Use DOM value or fallback to warehouse_id (selectpicker may not have updated the select yet)
+var id = $("#warehouse_id").val() || $('select[name="warehouse_id"]').val() || warehouse_id;
+if (id) {
+    $.get('sales/getproduct/' + id, function(data) {
+        lims_product_array = [];
+        product_code = data[0];
+        product_name = data[1];
+        product_qty = data[2];
+        product_type = data[3];
+        product_id = data[4];
+        product_list = data[5];
+        qty_list = data[6];
+        product_warehouse_price = data[7];
+        batch_no = data[8];
+        product_batch_id = data[9];
+        is_embeded = data[11];
+        product_shelf = data[12];
+        $.each(product_code, function(index) {
+            if(is_embeded[index])
+                lims_product_array.push(
+                     'Code: ' + product_code[index] +
+                    ' | Name: ' + product_name[index] +
+                    ' | Price: ' + product_warehouse_price[index] +
+                    ' | Qty: ' + product_qty[index] +
+                    ' | Shelf: ' + product_shelf[index] +
+                    ' | Embeded: ' + is_embeded[index] 
+               );
             else
                 lims_product_array.push(
-                 'Code: ' + product_code[index] +
-                ' | Name: ' + product_name[index] +
-                ' | Price: ' + product_warehouse_price[index] +
-                ' | Qty: ' + product_qty[index] +
-                ' | Shelf: ' + product_shelf[index] 
-           );
+                     'Code: ' + product_code[index] +
+                    ' | Name: ' + product_name[index] +
+                    ' | Price: ' + product_warehouse_price[index] +
+                    ' | Qty: ' + product_qty[index] +
+                    ' | Shelf: ' + product_shelf[index] 
+               );
+        });
     });
-});
-
-isCashRegisterAvailable(id);
+}
+if (id) {
+    isCashRegisterAvailable(id);
+}
 
 function  isCashRegisterAvailable(warehouse_id) {
     $.ajax({
@@ -2280,8 +2302,14 @@ $('select[name="warehouse_id"]').on('change', function() {
 var lims_productcodeSearch = $('#lims_productcodeSearch');
 
 lims_productcodeSearch.autocomplete({
+    minLength: 1,
     source: function(request, response) {
-        var matcher = new RegExp(".?" + $.ui.autocomplete.escapeRegex(request.term), "i");
+        var term = (request.term || '').trim();
+        if (!term) {
+            response([]);
+            return;
+        }
+        var matcher = new RegExp(".*" + $.ui.autocomplete.escapeRegex(term) + ".*", "i");
         response($.grep(lims_product_array, function(item) {
             return matcher.test(item);
         }));

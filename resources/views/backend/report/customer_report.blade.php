@@ -1,4 +1,5 @@
 @extends('backend.layout.main') @section('content')
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 <section class="forms">
     <div class="container-fluid">
         <div class="card">
@@ -7,29 +8,42 @@
             </div>
             {!! Form::open(['route' => 'report.customer', 'method' => 'post']) !!}
             <div class="row mb-3">
-                <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
-                                <input type="hidden" name="start_date" value="{{$start_date}}" />
-                                <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            </div>
+                
+                <div class="col-md-3 mt-3 mb-3 ml-2">
+                    <div class="form-group">
+                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="starting_date"
+                                value="{{ !empty($starting_date) ? $starting_date : '' }}"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 mb-3">
+                    <div class="form-group">
+                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="ending_date"
+                                value="{{ !empty($ending_date) ? $ending_date : '' }}"
+                            />
                         </div>
                     </div>
                 </div>
                 <div class="col-md-4 mt-3">
                     <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Customer')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <input type="hidden" name="customer_id_hidden" value="{{$customer_id}}" />
-                            <select id="customer_id" name="customer_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                @foreach($lims_customer_list as $customer)
-                                <option value="{{$customer->id}}">{{$customer->name}} ({{$customer->phone_number}})</option>
-                                @endforeach
-                            </select>
-                        </div>
+                        <label class="control-label"><strong>{{trans('file.Choose Customer')}}</strong> &nbsp;</label>                      
+                        <input type="hidden" name="customer_id_hidden" value="{{$customer_id}}" />
+                        <select id="customer_id" name="customer_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
+                            @foreach($lims_customer_list as $customer)
+                            <option value="{{$customer->id}}">{{$customer->name}} ({{$customer->phone_number}})</option>
+                            @endforeach
+                        </select>      
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
@@ -205,16 +219,16 @@
     $('#customer_id').val($('input[name="customer_id_hidden"]').val());
     $('.selectpicker').selectpicker('refresh');
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var start_date = startDate.format('YYYY-MM-DD');
-        var end_date = endDate.format('YYYY-MM-DD');
-        var title = start_date + ' To ' + end_date;
-        $(this).val(title);
-        $('input[name="start_date"]').val(start_date);
-        $('input[name="end_date"]').val(end_date);
-      }
-    });
+    // $(".daterangepicker-field").daterangepicker({
+    //   callback: function(startDate, endDate, period){
+    //     var start_date = startDate.format('YYYY-MM-DD');
+    //     var end_date = endDate.format('YYYY-MM-DD');
+    //     var title = start_date + ' To ' + end_date;
+    //     $(this).val(title);
+    //     $('input[name="start_date"]').val(start_date);
+    //     $('input[name="end_date"]').val(end_date);
+    //   }
+    // });
 
     $('#sale-table').DataTable({
         "processing": true,

@@ -1,46 +1,51 @@
 @extends('backend.layout.main')
 @push('css')
 <style>
+    .btn-group {
+        border-radius: 0.25rem;
+        border: 1px solid #000000;
+    }
+    .btn-group .btn {
+        border-radius: 0.25rem;
+        border: 1px solid #000000;
+    }
+    .btn-group .btn:hover {
+        background-color: #000000;
+    }
+    .btn-group .btn:active {
+        background-color: #000000;
+    }
+    .btn-group .btn:focus {
+        background-color: #000000;
+    }
     .pie-chart {
         padding: 20px;
-        max-width: 600p                options: {
-            responsive: true,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                },
-                tooltip: {
-                    enabled: true
-                },
-                datalabels: {
-                    color: '#fff',
-                    anchor: 'center',
-                    align: 'center',
-                    formatter: function(value) {
-                        return Number(value).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2
-                        });
-                    },
-                    font: {
-                        weight: 'bold',
-                        size: 14
-                    }
-                }  margin: 0 auto;
+        max-width: 600px;
+        margin: 0 auto;
     }
-    canvas {
+    .pie-chart canvas {
         max-width: 100%;
         height: auto !important;
+    }
+    /* Full width layout for warehouse stock page */
+    .warehouse-stock-page section .container-fluid,
+    .warehouse-stock-page .card,
+    .warehouse-stock-page .card-body {
+        width: 100%;
+    }
+    .warehouse-stock-page .col-md-12 {
+        max-width: 100%;
     }
 </style>
 @endpush
 @section('content')
-<section>
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
+<section class="warehouse-stock-page">
 	<div class="container-fluid">
         <div class="card">
             <div class="card-body">
-				<div class="col-md-12">
-					<div class="col-md-6 offset-md-3 mt-3 text-center">
+				<div class="col-12">
+					<div class="col-12 mt-3 text-center">
 						{{ Form::open(['route' => 'report.warehouseStock', 'method' => 'get', 'id' => 'report-form']) }}
 						<h3>{{trans('file.Stock Chart')}} </h3>
 						<p>Select warehouse to view chart</p>
@@ -53,7 +58,7 @@
 						{{ Form::close() }}
 					</div>
 
-					<div class="col-md-6 offset-md-3 mt-3 mb-3">
+					<div class="col-12 mt-3 mb-3">
 						<div class="row">
 							<div class="col-md-6">
 								<span>Total {{trans('file.Items')}}</span>
@@ -66,7 +71,7 @@
 						</div>
 					</div>
 
-					<div class="col-md-5 offset-md-3 mt-2">
+					<div class="col-12 mt-2">
 						<div class="pie-chart">
 							@php
 			                    if($general_setting->theme == 'default.css'){

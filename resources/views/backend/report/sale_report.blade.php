@@ -1,5 +1,5 @@
 @extends('backend.layout.main') @section('content')
-
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 @if(empty($product_name))
 <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{'No Data exist between this date range!'}}</div>
 @endif
@@ -14,7 +14,7 @@
             <div class="card-body">
                 <div class="row">
                     <!-- Date Range Filter -->
-                    <div class="col-md-4 mb-3">
+                    <!-- <div class="col-md-4 mb-3">
                         <div class="form-group">
                             <label class="control-label"><strong>{{trans('file.Choose Your Date')}}</strong></label>
                             <div class="input-group">
@@ -24,7 +24,33 @@
 
                             </div>
                         </div>
+                    </div> -->
+                <div class="col-md-3 mt-3 mb-3 ml-2">
+                    <div class="form-group">
+                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="start_date"
+                                value="{{ !empty($start_date) ? $start_date : '' }}"
+                            />
+                        </div>
                     </div>
+                </div>
+                <div class="col-md-3 mt-3 mb-3">
+                    <div class="form-group">
+                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="end_date"
+                                value="{{ !empty($end_date) ? $end_date : '' }}"
+                            />
+                        </div>
+                    </div>
+                </div>
 
                     <!-- Warehouse Filter -->
                     <div class="col-md-4 mb-3">
@@ -402,19 +428,19 @@ $(document).ready(function() {
     if (!end.isValid()) end = moment();
 
     function updateDateFields(start, end) {
-        $('.daterangepicker-field').val(start.format('YYYY-MM-DD') + ' To ' + end.format('YYYY-MM-DD'));
+       // $('.daterangepicker-field').val(start.format('YYYY-MM-DD') + ' To ' + end.format('YYYY-MM-DD'));
         $('input[name="start_date"]').val(start.format('YYYY-MM-DD'));
         $('input[name="end_date"]').val(end.format('YYYY-MM-DD'));
     }
 
-    $('.daterangepicker-field').daterangepicker({
-        startDate: start,
-        endDate: end,
-        locale: {
-            format: 'YYYY-MM-DD',
-            separator: ' To ',
-        }
-    }, updateDateFields);
+    // $('.daterangepicker-field').daterangepicker({
+    //     startDate: start,
+    //     endDate: end,
+    //     locale: {
+    //         format: 'YYYY-MM-DD',
+    //         separator: ' To ',
+    //     }
+    // }, updateDateFields);
 
     updateDateFields(start, end);
 });

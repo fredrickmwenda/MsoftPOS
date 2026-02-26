@@ -1,4 +1,5 @@
 @extends('backend.layout.main') @section('content')
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 <section class="forms">
     <div class="container-fluid">
         <div class="card">
@@ -7,30 +8,37 @@
             </div>
             {!! Form::open(['route' => 'report.paymentByDate', 'method' => 'post']) !!}
             <div class="row">
-            <div class="col-md-5 mt-3 mb-3">
+            <div class="col-md-3 mt-3 mb-3 ml-2">
                 <div class="form-group">
-                    <label class="control-label"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
+                    <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
                     <div class="">
-                        <div class="input-group">
-                            <input 
-                                type="text" 
-                                class="daterangepicker-field form-control" 
-                                value="{{ !empty($start_date) ? $start_date : '' }}{{ !empty($end_date) ? ' To ' . $end_date : '' }}" 
-                                
-                            />
-
-                            <input type="hidden" name="start_date" />
-                            <input type="hidden" name="end_date" />
-                         
-                        </div>
+                        <input 
+                            type="date" 
+                            class="form-control" 
+                            name="start_date"
+                            value="{{ !empty($start_date) ? $start_date : '' }}"
+                        />
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mt-3 mb-3">
+                <div class="form-group">
+                    <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                    <div class="">
+                        <input 
+                            type="date" 
+                            class="form-control" 
+                            name="end_date"
+                            value="{{ !empty($end_date) ? $end_date : '' }}"
+                        />
                     </div>
                 </div>
             </div>
             <!-- Select filter for suppliers-->
-             <div class="col-md-5 mt-3 mb-3">
-                <div class="form-group">
+             <div class="col-md-3 mt-3 mb-3">
+                <div class="form-group"> 
                     <label class="control-label"><strong>Filter By Supplier</strong> &nbsp;</label>
-                    <?php
+                    <?php 
                         $suppliers = \DB::table('suppliers')->where('is_active', true)->get();
                     ?>
                     <select name="supplier_id" class="form-control selectpicker" data-live-search="true" data-live-search-style="begins">
@@ -44,9 +52,9 @@
                 </div>
              </div>
 
-             <div class="col-md-2 mt-4 mb-3">
-                <div class="form-group mt-5">
-                    <button class="btn btn-primary" type="submit">{{trans('file.submit')}}</button>
+             <div class="col-md-2 mt-3 mb-3" style="display: flex; align-items: flex-end;">
+                <div class="form-group w-100">
+                    <button class="btn btn-primary w-100" type="submit">{{trans('file.submit')}}</button>
                 </div>
                 </div>
             </div>
@@ -74,17 +82,17 @@
         </div>
     </div>
     <div class="table-responsive mb-4">
-        <table id="report-table" class="table table-hover">
+        <table id="report-table" class="table table-hover table-striped table-bordered">
             <thead>
                 <tr>
-                    <th class="not-exported"></th>
-                    <th>{{trans('file.Date')}}</th>
-                    <th>{{trans('file.Payment Reference')}} </th>
-                    <th>{{trans('file.Sale Reference')}}</th>
-                    <th>{{trans('file.Purchase Reference')}}</th>
-                    <th>{{trans('file.Paid By')}}</th>
-                    <th>{{trans('file.Amount')}}</th>
-                    <th>{{trans('file.Created By')}}</th>
+                    <th>Select</th>
+                    <th>Date</th>
+                    <th>Payment Reference</th>
+                    <th>Sale Reference</th>
+                    <th>Purchase Reference</th>
+                    <th>Paid By</th>
+                    <th>Amount</th>
+                    <th>Created By</th>
                 </tr>
             </thead>
             <tbody>
@@ -96,26 +104,28 @@
                     $user = DB::table('users')->find($payment->user_id);
                 ?>
                 <tr>
-                    <td></td>
-                    <td>{{date($general_setting->date_format, strtotime($payment->created_at->toDateString())) . ' '. $payment->created_at->toTimeString()}}</td>
+                    <td><input type="checkbox" class="row-checkbox"></td>
+                    <td>{{date($general_setting->date_format, strtotime($payment->created_at->toDateString()))}}</td>
                     <td>{{$payment->payment_reference}}</td>
-                    <td>@if($sale){{$sale->reference_no}}@endif</td>
-                    <td>@if($purchase){{$purchase->reference_no}}@endif</td>
+                    <td>@if($sale){{$sale->reference_no}}@else N/A @endif</td>
+                    <td>@if($purchase){{$purchase->reference_no}}@else N/A @endif</td>
                     <td>{{$payment->paying_method}}</td>
-                    <td>{{$payment->amount}}</td>
-                    <td>{{$user->name}}<br>{{$user->email}}</td>
+                    <td class="text-right">{{$payment->amount}}</td>
+                    <td>{{$user->name}}</td>
                 </tr>
                 @endforeach  
             </tbody>
-            <tfoot class="tfoot active">
-                <th></th>
-                <th>{{trans('file.Total')}}:</th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th>{{number_format(0, $general_setting->decimal, '.', '')}}<</th>
-                <th></th>
+            <tfoot>
+                <tr>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th></th>
+                    <th>Total:</th>
+                    <th></th>
+                </tr>
             </tfoot>
         </table>
     </div>
@@ -129,137 +139,45 @@
     $("ul#report").addClass("show");
     $("ul#report li#payment-report-menu").addClass("active");
 
-    $('#report-table').DataTable( {
+    var table = $('#report-table').DataTable( {
         "order": [[1, 'desc']],
+        "pageLength": 10,
         'language': {
-            'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
-             "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
-            "search":  '{{trans("file.Search")}}',
+            'lengthMenu': '_MENU_ records per page',
+            "info": 'Showing _START_ to _END_ of _TOTAL_ entries',
+            "search": 'Search:',
             'paginate': {
-                    'previous': '<i class="dripicons-chevron-left"></i>',
-                    'next': '<i class="dripicons-chevron-right"></i>'
+                'previous': '<i class="fa fa-chevron-left"></i>',
+                'next': '<i class="fa fa-chevron-right"></i>'
             }
         },
         'columnDefs': [
             {
                 "orderable": false,
                 'targets': 0
-            },
-            {
-                'render': function(data, type, row, meta){
-                    if(type === 'display'){
-                        data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
-                    }
-
-                   return data;
-                },
-                'checkboxes': {
-                   'selectRow': true,
-                   'selectAllRender': '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>'
-                },
-                'targets': [0]
             }
         ],
-        'select': { style: 'multi',  selector: 'td:first-child'},
-        'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
-        dom: '<"row"lfB>rtip',
-        buttons: [
-            {
-                extend: 'pdf',
-                text: '<i title="export to pdf" class="fa fa-file-pdf-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'excel',
-                text: '<i title="export to excel" class="dripicons-document-new"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'csv',
-                text: '<i title="export to csv" class="fa fa-file-text-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'print',
-                text: '<i title="print" class="fa fa-print"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'colvis',
-                text: '<i title="column visibility" class="fa fa-eye"></i>',
-                columns: ':gt(0)'
-            }
-        ],
-        drawCallback: function () {
+        'lengthMenu': [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+        'dom': '<"row"<"col-md-6"l><"col-md-6"f>>rtp',
+        'drawCallback': function() {
             var api = this.api();
-            datatable_sum(api, false);
+            datatable_sum(api);
         }
     } );
 
-    function datatable_sum(dt_selector, is_calling_first) {
-        if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
-            var rows = dt_selector.rows( '.selected' ).indexes();
-
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'all' } ).data().sum().toFixed({{$general_setting->decimal}}));
-        }
-        else {
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'all'} ).data().sum().toFixed({{$general_setting->decimal}}));
-        }
+    function datatable_sum(dt_selector) {
+        var total = dt_selector.column(6, {page: 'all'}).data().sum();
+        dt_selector.column(6).footer().innerHTML = '<strong>' + total.toFixed(2) + '</strong>';
     }
 
-$(".daterangepicker-field").daterangepicker({
-  callback: function(startDate, endDate, period){
-    var start_date = startDate.format('YYYY-MM-DD');
-    var end_date = endDate.format('YYYY-MM-DD');
-    var title = start_date + ' to ' + end_date;
-    $(this).val(title);
-    $('input[name="start_date"]').val(start_date);
-    $('input[name="end_date"]').val(end_date);
-  }
-});
-
-// changes by yogesh
+    // Payment method change handler
     document.addEventListener('DOMContentLoaded', function () {
-        document.getElementById('payment_methods').addEventListener('change', function () {
-            document.getElementById('paymentForm').submit();
-        });
+        var paymentMethodsSelect = document.getElementById('payment_methods');
+        if (paymentMethodsSelect) {
+            paymentMethodsSelect.addEventListener('change', function () {
+                document.getElementById('paymentForm').submit();
+            });
+        }
     });
-// changes end by yogesh
 </script>
 @endpush

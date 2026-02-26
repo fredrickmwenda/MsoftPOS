@@ -137,6 +137,7 @@ section header {
 @media (min-width: 768px) {
     .container-fluid {
         padding: 0 1.5rem;
+        margin: 10px !important;
     }
 }
 nav.navbar {

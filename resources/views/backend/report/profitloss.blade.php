@@ -1,7 +1,7 @@
 @extends('backend.layout.main')
 
 @section('content')
-
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 <section>
     <div class="container-fluid">
         <div class="card">

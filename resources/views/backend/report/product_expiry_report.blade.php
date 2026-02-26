@@ -1,5 +1,5 @@
 @extends('backend.layout.main') @section('content')
-
+<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 <section class="forms">
     <div class="container-fluid">
 	    <h4 class="text-center">{{trans('file.Product Expiry Report')}}</h4>

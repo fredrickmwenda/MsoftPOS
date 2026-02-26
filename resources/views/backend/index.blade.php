@@ -47,7 +47,7 @@
     /* Quick Action Cards */
     .action-card {
         border-radius: var(--border-radius);
-        overflow: hidden;
+        overflow: hidden; 
         box-shadow: var(--shadow);
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         height: 100%;
@@ -466,7 +466,7 @@
         </div>
     </div>
 </div>
-
+<div class="ml-5 mr-5">
 <!-- Quick Actions Row -->
 <div class="row mb-4">
     <div class="col-md-4 animate" style="animation-delay: 0.1s">
@@ -474,11 +474,11 @@
             <img src="{{asset('/images/action.jpg')}}" alt="Quick Actions">
             <div class="action-content">
                 <h5 class="mb-3">Quick Actions</h5>
-                <div class="dropdown">
-                    <button class="action-btn dropdown-toggle" type="button" data-toggle="dropdown">
-                        Select Action <i class="dripicons-chevron-down"></i>
+                <div class="dropdown dropup">
+                    <button class="action-btn dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Select Action <i class="dripicons-chevron-up"></i>
                     </button>
-                    <ul class="dropdown-menu">
+                    <ul class="dropdown-menu" style="bottom:100%;top:auto;">
                         @if($role_has_permissions_list->where('name', 'category')->first())
                             <li class="dropdown-item"><a data-toggle="modal" data-target="#category-modal">{{__('file.Add Category')}}</a></li>
                         @endif
@@ -502,7 +502,7 @@
 
     <div class="col-md-4 animate" style="animation-delay: 0.2s">
         <div class="action-card">
-            <img src="{{asset('/images/POSs.jpg')}}" alt="POS System">
+            <img src="{{asset('/images/pos.png')}}" alt="POS System">
             <div class="action-content">
                 <h5 class="mb-3">Point of Sale</h5>
                 <a @if($role_has_permissions_list->where('name', 'sales-add')->first()) href="{{url('/pos')}}" @else onclick="alert('You do not have permission')" @endif class="action-btn">
@@ -835,6 +835,8 @@
             </div>
         </div>
     </div>
+</div>
+
 </div>
 
 @endsection
@@ -1342,5 +1344,6 @@ $(document).ready(function() {
         });
     }
 });
+
 </script>
 @endpush
