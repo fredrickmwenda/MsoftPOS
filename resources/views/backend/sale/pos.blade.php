@@ -136,10 +136,42 @@
             color:#fff !important;
         }
 
+        /* Totals section: nicer labels and values */
+        .totals .col-sm-4 {
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+        .totals .col-sm-4:hover {
+            background: rgba(19, 189, 96, 0.06);
+        }
+        .totals-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            letter-spacing: 0.02em;
+            color: inherit;
+            opacity: 0.95;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .totals .col-sm-4 > span:not(.totals-title) {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-left: 4px;
+        }
+        .totals-title .btn {
+            padding: 0 2px;
+            vertical-align: middle;
+        }
+        .totals-title .btn:hover {
+            opacity: 0.9;
+        }
         /* Totals title icons: gradient color */
         .totals-title i,
         .totals-title .btn i {
-            background: linear-gradient(135deg, #5cd562 0%, #e2bb0e 100%) !important;
+            background:rgb(199, 66, 33) !important;
             -webkit-background-clip: text !important;
             background-clip: text !important;
             -webkit-text-fill-color: transparent !important;

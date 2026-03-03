@@ -1,245 +1,142 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main')
+
+@section('content')
 <div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
-<section class="forms">
+<section class="forms supplier-due-report">
     <div class="container-fluid">
-        <div class="card">
-            <div class="card-header mt-2">
-                <h4 class="text-center">{{trans('file.Supplier Due Report')}}</h4>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h4 class="card-title mb-0">{{ trans('file.Supplier Due Report') }}</h4>
             </div>
             {!! Form::open(['route' => 'report.supplierDueByDate', 'method' => 'post']) !!}
-            <!-- <div class="col-md-6 offset-md-3 mt-4 mb-3">
-                <div class="form-group row">
-                    <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                    <div class="d-tc">
-                        <div class="input-group">
-                            <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
-                            <input type="hidden" name="start_date" value="{{$start_date}}" />
-                            <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="submit">{{trans('file.submit')}}</button>
-                            </div>
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <div class="form-group mb-0">
+                            <label class="control-label"><strong>Start Date</strong></label>
+                            <input type="date" class="form-control" name="start_date" value="{{ $start_date ?? '' }}" />
                         </div>
                     </div>
-                </div>
-            </div> -->
-            <div class="row">
-               <div class="col-md-3 mt-3 mb-3 ml-2">
-                    <div class="form-group">
-                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
-                        <div class="">
-                            <input 
-                                type="date" 
-                                class="form-control" 
-                                name="start_date"
-                                value="{{ !empty($start_date) ? $start_date : '' }}"
-                            />
+                    <div class="col-md-3">
+                        <div class="form-group mb-0">
+                            <label class="control-label"><strong>End Date</strong></label>
+                            <input type="date" class="form-control" name="end_date" value="{{ $end_date ?? '' }}" />
                         </div>
                     </div>
-                </div>
-                <div class="col-md-3 mt-3 mb-3">
-                    <div class="form-group">
-                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
-                        <div class="">
-                            <input 
-                                type="date" 
-                                class="form-control" 
-                                name="end_date"
-                                value="{{ !empty($end_date) ? $end_date : '' }}"
-                            />
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2 mt-3">
-                    <div class="form-group">
-                        <button class="btn btn-primary" type="submit">{{trans('file.submit')}}</button>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary" type="submit">{{ trans('file.submit') }}</button>
                     </div>
                 </div>
             </div>
             {!! Form::close() !!}
         </div>
-    </div>
-    <div class="table-responsive mb-4">
-        <table id="report-table" class="table table-hover">
-            <thead>
-                <tr>
-                    <th class="not-exported"></th>
-                    <th>{{trans('file.Date')}}</th>
-                    <th>{{trans('file.reference')}}</th>
-                    <th>{{trans('file.Supplier Details')}}</th>
-                    <th>{{trans('file.grand total')}}</th>
-                    <th>{{trans('file.Returned Amount')}}</th>
-                    <th>{{trans('file.Paid')}}</th>
-                    <th>{{trans('file.Due')}}</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($lims_purchase_data as $key => $purchase_data)
-                    @if($purchase_data->supplier_id)
-                    <?php
-                        $supplier = DB::table('suppliers')->find($purchase_data->supplier_id);
-                        $returned_amount = DB::table('return_purchases')->where('purchase_id', $purchase_data->id)->sum('grand_total');
-                    ?>
-                    <tr>
-                        <td>{{$key}}</td>
-                        <td>{{date($general_setting->date_format, strtotime($purchase_data->created_at->toDateString())) . ' '. $purchase_data->created_at->toTimeString()}}</td>
-                        <td>{{$purchase_data->reference_no}}</td>
-                        <td>{{$supplier->name .' (' .$supplier->phone_number . ')'}}</td>
-                        <td>{{number_format((float)$purchase_data->grand_total, $general_setting->decimal, '.', '')}}</td>
-                        <td>{{number_format((float)$returned_amount, $general_setting->decimal, '.', '')}}</td>
-                        @if($purchase_data->paid_amount)
-                        <td>{{number_format((float)$purchase_data->paid_amount, $general_setting->decimal, '.', '')}}</td>
-                        @else
-                        <td>{{number_format(0, $general_setting->decimal, '.', '')}}</td>
-                        @endif
-                        <td>{{number_format((float)($purchase_data->grand_total - $returned_amount - $purchase_data->paid_amount), $general_setting->decimal, '.', '')}}</td>
-                    </tr>
-                    @endif
+
+        @if(empty($supplier_summaries))
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <p class="text-muted mb-0">No supplier dues found for the selected date range.</p>
+                </div>
+            </div>
+        @else
+            <div class="row">
+                @foreach($supplier_summaries as $summary)
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card supplier-due-card h-100 shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="supplier-icon rounded-circle bg-light d-flex align-items-center justify-content-center mr-3" style="width: 48px; height: 48px;">
+                                    <i class="fa fa-truck text-primary" style="font-size: 1.4rem;"></i>
+                                </div>
+                                <div>
+                                    <h5 class="card-title mb-0 font-weight-bold">{{ $summary['supplier_name'] }}</h5>
+                                    @if($summary['supplier_phone'])
+                                        <small class="text-muted">{{ $summary['supplier_phone'] }}</small>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="border-top pt-3">
+                                <div class="row text-center mb-2">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">Purchases</small>
+                                        <span class="badge badge-info badge-pill">{{ $summary['purchases_count'] }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">{{ trans('file.grand total') }}</small>
+                                        <strong>{{ number_format((float)$summary['total_grand_total'], $general_setting->decimal ?? 2, '.', '') }}</strong>
+                                    </div>
+                                </div>
+                                <div class="row text-center mb-2">
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">{{ trans('file.Returned Amount') }}</small>
+                                        <span class="text-secondary">{{ number_format((float)$summary['total_returned'], $general_setting->decimal ?? 2, '.', '') }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted d-block">{{ trans('file.Paid') }}</small>
+                                        <span class="text-success">{{ number_format((float)$summary['total_paid'], $general_setting->decimal ?? 2, '.', '') }}</span>
+                                    </div>
+                                </div>
+                                <div class="text-center mt-3 pt-3 border-top">
+                                    <small class="text-muted d-block mb-1">{{ trans('file.Due') }}</small>
+                                    <h4 class="mb-0 font-weight-bold text-danger">{{ number_format((float)$summary['total_due'], $general_setting->decimal ?? 2, '.', '') }}</h4>
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button class="btn btn-sm btn-primary btn-block" type="button" data-toggle="collapse" data-target="#purchases-{{ $summary['supplier_id'] }}" aria-expanded="false">
+                                    <i class="fa fa-list"></i> View {{ $summary['purchases_count'] }} purchase(s)
+                                </button>
+                            </div>
+                            <div class="collapse mt-2" id="purchases-{{ $summary['supplier_id'] }}">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0 small">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>{{ trans('file.Date') }}</th>
+                                                <th>{{ trans('file.reference') }}</th>
+                                                <th class="text-right">{{ trans('file.grand total') }}</th>
+                                                <th class="text-right">{{ trans('file.Due') }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($summary['purchases'] as $p)
+                                            <tr>
+                                                <td>{{ date($general_setting->date_format ?? 'd/m/Y', strtotime($p->created_at)) }}</td>
+                                                <td>{{ $p->reference_no }}</td>
+                                                <td class="text-right">{{ number_format((float)$p->grand_total, $general_setting->decimal ?? 2, '.', '') }}</td>
+                                                <td class="text-right text-danger">{{ number_format((float)$p->due, $general_setting->decimal ?? 2, '.', '') }}</td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 @endforeach
-            </tbody>
-            <tfoot class="tfoot active">
-                <th></th>
-                <th>{{trans('file.Total')}}:</th>
-                <th></th>
-                <th></th>
-                <th>{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                <th>{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                <th>{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                <th>{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-            </tfoot>
-        </table>
+            </div>
+        @endif
     </div>
 </section>
 
+<style>
+.supplier-due-report .supplier-due-card {
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.supplier-due-report .supplier-due-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important;
+}
+.supplier-due-report .card-title { font-size: 1.05rem; }
+.supplier-due-report .badge-pill { padding: 0.35em 0.65em; }
+.supplier-due-report .table-sm td, .supplier-due-report .table-sm th { padding: 0.4rem; font-size: 0.8rem; }
+</style>
 @endsection
 
 @push('scripts')
 <script type="text/javascript">
-
     $("ul#report").siblings('a').attr('aria-expanded','true');
     $("ul#report").addClass("show");
     $("ul#report #supplier-due-report-menu").addClass("active");
-
-    $('#report-table').DataTable( {
-        "order": [],
-        'language': {
-            'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
-             "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
-            "search":  '{{trans("file.Search")}}',
-            'paginate': {
-                    'previous': '<i class="dripicons-chevron-left"></i>',
-                    'next': '<i class="dripicons-chevron-right"></i>'
-            }
-        },
-        'columnDefs': [
-            {
-                "orderable": false,
-                'targets': 0
-            },
-            {
-                'render': function(data, type, row, meta){
-                    if(type === 'display'){
-                        data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
-                    }
-
-                   return data;
-                },
-                'checkboxes': {
-                   'selectRow': true,
-                   'selectAllRender': '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>'
-                },
-                'targets': [0]
-            }
-        ],
-        'select': { style: 'multi',  selector: 'td:first-child'},
-        'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
-        dom: '<"row"lfB>rtip',
-        buttons: [
-            {
-                extend: 'pdf',
-                text: '<i title="export to pdf" class="fa fa-file-pdf-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'excel',
-                text: '<i title="export to excel" class="fa fa-file-text-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'csv',
-                text: '<i title="export to csv" class="fa fa-file-text-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'print',
-                text: '<i title="print" class="fa fa-print"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'colvis',
-                text: '<i title="column visibility" class="fa fa-eye"></i>',
-                columns: ':gt(0)'
-            }
-        ],
-        drawCallback: function () {
-            var api = this.api();
-            datatable_sum(api, false);
-        }
-    } );
-
-    function datatable_sum(dt_selector, is_calling_first) {
-        if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
-            var rows = dt_selector.rows( '.selected' ).indexes();
-
-            $( dt_selector.column( 4 ).footer() ).html(dt_selector.cells( rows, 4, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-        }
-        else {
-            $( dt_selector.column( 4 ).footer() ).html(dt_selector.column( 4, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 5, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.column( 7, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-        }
-    }
-
-
-
 </script>
 @endpush

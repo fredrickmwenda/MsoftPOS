@@ -47,3 +47,18 @@ body.pos-page #content {
   width: 100% !important;
   box-sizing: border-box;
 }
+
+/* POS sidebar on small screens: overlay drawer with clear separation */
+@media (max-width: 1199px) {
+  .pos-page nav.side-navbar {
+    width: 280px !important;
+    max-width: 85vw !important;
+    z-index: 1050 !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+  .pos-page nav.side-navbar.shrink {
+    width: 0 !important;
+    max-width: 0 !important;
+  }
+}
+

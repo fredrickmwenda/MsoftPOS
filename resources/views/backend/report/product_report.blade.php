@@ -145,21 +145,16 @@
     var start_date = $(".product-report-filter input[name=start_date]").val();
     var end_date = $(".product-report-filter input[name=end_date]").val();
     var warehouse_id = $(".product-report-filter select[name=warehouse_id]").val();
+    var decimal = {{ $general_setting->decimal }};
     $('#product-report-table').DataTable( {
         "processing": true,
         "serverSide": true,
-        "ajax":{
-            url:"product_report_data",
-            data:{
-                start_date: start_date,
-                end_date: end_date,
-                warehouse_id: warehouse_id
-            },
-            dataType: "json",
-            type:"post",
-            /*success:function(data){
-                console.log(data);
-            }*/
+        "ajax": function(data, callback, settings) {
+            var params = $.extend({}, data, { start_date: start_date, end_date: end_date, warehouse_id: warehouse_id });
+            $.post("product_report_data", params).done(function(json) {
+                $(settings.nTable).data('grandTotals', json.grand_totals || null);
+                callback(json);
+            });
         },
         /*"createdRow": function( row, data, dataIndex ) {
             console.log(data);
@@ -282,37 +277,57 @@
         ],
         drawCallback: function () {
             var api = this.api();
-            datatable_sum(api, false);
+            var gt = $(api.table().node()).data('grandTotals');
+            if (gt) {
+                $(api.column(3).footer()).html(parseFloat(gt.purchased_amount || 0).toFixed(decimal));
+                $(api.column(5).footer()).html(parseFloat(gt.sold_amount || 0).toFixed(decimal));
+                $(api.column(7).footer()).html(parseFloat(gt.returned_amount || 0).toFixed(decimal));
+                $(api.column(9).footer()).html(parseFloat(gt.purchase_returned_amount || 0).toFixed(decimal));
+                $(api.column(4).footer()).html(api.column(4, {page:'current'}).data().sum().toFixed(decimal));
+                $(api.column(6).footer()).html(api.column(6, {page:'current'}).data().sum().toFixed(decimal));
+                $(api.column(8).footer()).html(api.column(8, {page:'current'}).data().sum().toFixed(decimal));
+                $(api.column(10).footer()).html(api.column(10, {page:'current'}).data().sum().toFixed(decimal));
+                $(api.column(11).footer()).html(api.column(11, {page:'current'}).data().sum().toFixed(decimal));
+                $(api.column(12).footer()).html(api.column(12, {page:'current'}).data().sum().toFixed(12));
+            } else {
+                datatable_sum(api, false);
+            }
         }
     } );
 
     function datatable_sum(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
             var rows = dt_selector.rows( '.selected' ).indexes();
-
-            
-            $( dt_selector.column( 3 ).footer() ).html(dt_selector.cells( rows, 3, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 4 ).footer() ).html(dt_selector.cells( rows, 4, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 8 ).footer() ).html(dt_selector.cells( rows, 8, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 9 ).footer() ).html(dt_selector.cells( rows, 9, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 10 ).footer() ).html(dt_selector.cells( rows, 10, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 11 ).footer() ).html(dt_selector.cells( rows, 11, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 3 ).footer() ).html(dt_selector.cells( rows, 3, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 4 ).footer() ).html(dt_selector.cells( rows, 4, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 8 ).footer() ).html(dt_selector.cells( rows, 8, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 9 ).footer() ).html(dt_selector.cells( rows, 9, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 10 ).footer() ).html(dt_selector.cells( rows, 10, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 11 ).footer() ).html(dt_selector.cells( rows, 11, { page: 'current' } ).data().sum().toFixed(decimal));
             $( dt_selector.column( 12 ).footer() ).html(dt_selector.cells( rows, 12, { page: 'current' } ).data().sum().toFixed(12));
         }
         else {
-            $( dt_selector.column( 3 ).footer() ).html(dt_selector.column( 3, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 4 ).footer() ).html(dt_selector.column( 4, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 5, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.column( 7, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 8 ).footer() ).html(dt_selector.column( 8, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 9 ).footer() ).html(dt_selector.column( 9, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 10 ).footer() ).html(dt_selector.column( 10, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 11 ).footer() ).html(dt_selector.column( 11, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 12 ).footer() ).html(dt_selector.column( 12, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
+            var gt = $(dt_selector.table().node()).data('grandTotals');
+            if (gt) {
+                $( dt_selector.column( 3 ).footer() ).html(parseFloat(gt.purchased_amount || 0).toFixed(decimal));
+                $( dt_selector.column( 5 ).footer() ).html(parseFloat(gt.sold_amount || 0).toFixed(decimal));
+                $( dt_selector.column( 7 ).footer() ).html(parseFloat(gt.returned_amount || 0).toFixed(decimal));
+                $( dt_selector.column( 9 ).footer() ).html(parseFloat(gt.purchase_returned_amount || 0).toFixed(decimal));
+            } else {
+                $( dt_selector.column( 3 ).footer() ).html(dt_selector.column( 3, {page:'current'} ).data().sum().toFixed(decimal));
+                $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 5, {page:'current'} ).data().sum().toFixed(decimal));
+                $( dt_selector.column( 7 ).footer() ).html(dt_selector.column( 7, {page:'current'} ).data().sum().toFixed(decimal));
+                $( dt_selector.column( 9 ).footer() ).html(dt_selector.column( 9, {page:'current'} ).data().sum().toFixed(decimal));
+            }
+            $( dt_selector.column( 4 ).footer() ).html(dt_selector.column( 4, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 8 ).footer() ).html(dt_selector.column( 8, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 10 ).footer() ).html(dt_selector.column( 10, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 11 ).footer() ).html(dt_selector.column( 11, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 12 ).footer() ).html(dt_selector.column( 12, {page:'current'} ).data().sum().toFixed(12));
         }
     }
 </script>

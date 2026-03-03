@@ -493,7 +493,7 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
             Route::post('sale-report-chart', 'saleReportChart')->name('report.saleChart');
             Route::get('payment_report', 'paymentReportByDate')->name('report.paymentReport');
             Route::post('payment_report_by_date', 'paymentReportByDate')->name('report.paymentByDate');
-            Route::post('warehouse_report', 'warehouseReport')->name('report.warehouse');
+            Route::match(['get', 'post'], 'warehouse_report', 'warehouseReport')->name('report.warehouse');
             Route::post('warehouse-sale-data', 'warehouseSaleData');
             Route::post('warehouse-purchase-data', 'warehousePurchaseData');
             Route::post('warehouse-expense-data', 'warehouseExpenseData');

@@ -13,7 +13,7 @@
             </div>
             <div class="col-md-4 text-end">
                 <div class="card bg-light border-0">
-                    <div class="card-body">
+                    <div class="card-body"> 
                         <small class="text-muted">Total Reports</small>
                         <h3 class="mb-0">24</h3>
                     </div>
@@ -78,7 +78,7 @@
     <!-- Sale Details remains a simple link if there is no sidebar equivalent -->
 <div class="report-item" data-category="sales" data-name="Sale Details">
     {!! Form::open(['route' => 'report.sale', 'method' => 'post', 'id' => 'sale-details-form']) !!}
-    <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+    <input type="hidden" name="start_date" value="{{ date('Y-m-d') }}">
     <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
     <input type="hidden" name="warehouse_id" value="0">
     <a href="#" onclick="this.closest('form').submit(); return false;" class="report-link">
@@ -117,7 +117,7 @@
     <!-- Purchase Details remains a simple link -->
     <div class="report-item" data-category="purchase" data-name="Purchase Details">
     {!! Form::open(['route' => 'report.purchase', 'method' => 'post', 'id' => 'purchase-details-form']) !!}
-    <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+    <input type="hidden" name="start_date" value="{{ date('Y-m-d') }}">
     <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
     <input type="hidden" name="warehouse_id" value="0">
     <a href="#" onclick="this.closest('form').submit(); return false;" class="report-link">
@@ -154,13 +154,26 @@
     </div>
 
     <!-- Financial Reports Section -->
-    <div class="report-item" data-category="financial" data-name="Profit & Loss">
+    {{-- Summary Report (old Profit & Loss summary) --}}
+    <div class="report-item" data-category="financial" data-name="Summary Report">
         {!! Form::open(['route' => 'report.profitLoss', 'method' => 'post', 'id' => 'profitLoss-form-' . uniqid()]) !!}
         <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
         <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
         <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
             <div class="report-icon"><i class="dripicons dripicons-pulse"></i></div>
-            <h6>Profit & Loss</h6>
+            <h6>Summary Report</h6>
+            <span class="badge bg-danger">Financial</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
+
+    {{-- Detailed Profit & Loss (yearly P&L statement) --}}
+    <div class="report-item" data-category="financial" data-name="Profit & Loss Report">
+        {!! Form::open(['route' => 'report.profitLossData', 'method' => 'post', 'id' => 'profitLossData-form-' . uniqid()]) !!}
+        <input type="hidden" name="year" value="{{ date('Y') }}">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-graph-line"></i></div>
+            <h6>Profit &amp; Loss Report</h6>
             <span class="badge bg-danger">Financial</span>
         </a>
         {!! Form::close() !!}

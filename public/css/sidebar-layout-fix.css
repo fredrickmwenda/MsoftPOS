@@ -88,11 +88,37 @@ nav.navbar {
   z-index: 1000 !important;
 }
 
-/* Mobile: sidebar drawer stays narrow */
+/* Tablet: sidebar as overlay drawer */
+@media (max-width: 1199px) {
+  nav.side-navbar {
+    width: 280px !important;
+    max-width: 85vw !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    z-index: 1050 !important;
+  }
+  nav.side-navbar.shrink {
+    width: 0 !important;
+    max-width: 0 !important;
+    box-shadow: none;
+  }
+  .page {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}
+
+/* Mobile: sidebar drawer stays narrow, touch-friendly */
 @media (max-width: 768px) {
   nav.side-navbar {
-    width: 100% !important;
+    width: 280px !important;
     max-width: 280px !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+    z-index: 1050 !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  nav.side-navbar.shrink {
+    width: 0 !important;
+    max-width: 0 !important;
   }
   .page {
     margin-left: 0 !important;

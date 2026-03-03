@@ -264,6 +264,16 @@
     var start_date = <?php echo json_encode($start_date); ?>;
     var end_date = <?php echo json_encode($end_date); ?>;
     var warehouse_id = <?php echo json_encode($warehouse_id); ?>;
+    var decimal = {{ $general_setting->decimal }};
+
+    function reportParams() {
+        return {
+            start_date: start_date,
+            end_date: end_date,
+            warehouse_id: warehouse_id,
+            biller_id: ($('#biller_id').length ? $('#biller_id').val() : 0) || 0
+        };
+    }
 
     $.ajaxSetup({
         headers: {
@@ -278,15 +288,12 @@
         "processing": true,
         "serverSide": true,
         "scrollX": true,
-        "ajax":{
-            url:"warehouse-sale-data",
-            data:{
-                start_date: start_date,
-                end_date: end_date,
-                warehouse_id: warehouse_id
-            },
-            dataType: "json",
-            type:"post"
+        "ajax": function(data, callback, settings) {
+            var params = $.extend({}, data, reportParams());
+            $.post("warehouse-sale-data", params).done(function(json) {
+                $(settings.nTable).data('grandTotals', json.grand_totals || null);
+                callback(json);
+            });
         },
         "columns": [
             {"data": "key"},
@@ -385,22 +392,28 @@
         ],
         drawCallback: function () {
             var api = this.api();
-            datatable_sum_sale(api, false);
+            var gt = $(api.table().node()).data('grandTotals');
+            if (gt) {
+                $(api.column(5).footer()).html(parseFloat(gt.grand_total).toFixed(decimal));
+                $(api.column(6).footer()).html(parseFloat(gt.paid).toFixed(decimal));
+                $(api.column(7).footer()).html(parseFloat(gt.due).toFixed(decimal));
+            } else {
+                datatable_sum_sale(api, false);
+            }
         }
     });
 
     function datatable_sum_sale(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
             var rows = dt_selector.rows( '.selected' ).indexes();
-
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed(decimal));
         }
         else {
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 8, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 5, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 7 ).footer() ).html(dt_selector.column( 7, {page:'current'} ).data().sum().toFixed(decimal));
         }
     }
 
@@ -408,15 +421,12 @@
         "processing": true,
         "serverSide": true,
         "scrollX": true,
-        "ajax":{
-            url:"warehouse-purchase-data",
-            data:{
-                start_date: start_date,
-                end_date: end_date,
-                warehouse_id: warehouse_id
-            },
-            dataType: "json",
-            type:"post"
+        "ajax": function(data, callback, settings) {
+            var params = $.extend({}, data, reportParams());
+            $.post("warehouse-purchase-data", params).done(function(json) {
+                $(settings.nTable).data('grandTotals', json.grand_totals || null);
+                callback(json);
+            });
         },
         "columns": [
             {"data": "key"},
@@ -469,13 +479,13 @@
                 extend: 'pdf',
                 text: '<i title="export to pdf" class="fa fa-file-pdf-o"></i>',
                 exportOptions: {
-                    columns: ':visible:Not(.not-exported-sale)',
+                    columns: ':visible:Not(.not-exported-purchase)',
                     rows: ':visible'
                 },
                 action: function(e, dt, button, config) {
-                    datatable_sum_sale(dt, true);
+                    datatable_sum_purchase(dt, true);
                     $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum_sale(dt, false);
+                    datatable_sum_purchase(dt, false);
                 },
                 footer:true
             },
@@ -483,13 +493,13 @@
                 extend: 'csv',
                 text: '<i title="export to csv" class="fa fa-file-text-o"></i>',
                 exportOptions: {
-                    columns: ':visible:Not(.not-exported-sale)',
+                    columns: ':visible:Not(.not-exported-purchase)',
                     rows: ':visible'
                 },
                 action: function(e, dt, button, config) {
-                    datatable_sum_sale(dt, true);
+                    datatable_sum_purchase(dt, true);
                     $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum_sale(dt, false);
+                    datatable_sum_purchase(dt, false);
                 },
                 footer:true
             },
@@ -497,13 +507,13 @@
                 extend: 'print',
                 text: '<i title="print" class="fa fa-print"></i>',
                 exportOptions: {
-                    columns: ':visible:Not(.not-exported-sale)',
+                    columns: ':visible:Not(.not-exported-purchase)',
                     rows: ':visible'
                 },
                 action: function(e, dt, button, config) {
-                    datatable_sum_sale(dt, true);
+                    datatable_sum_purchase(dt, true);
                     $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
-                    datatable_sum_sale(dt, false);
+                    datatable_sum_purchase(dt, false);
                 },
                 footer:true
             },
@@ -515,22 +525,28 @@
         ],
         drawCallback: function () {
             var api = this.api();
-            datatable_sum_sale(api, false);
+            var gt = $(api.table().node()).data('grandTotals');
+            if (gt) {
+                $(api.column(5).footer()).html(parseFloat(gt.grand_total).toFixed(decimal));
+                $(api.column(6).footer()).html(parseFloat(gt.paid).toFixed(decimal));
+                $(api.column(7).footer()).html(parseFloat(gt.due).toFixed(decimal));
+            } else {
+                datatable_sum_purchase(api, false);
+            }
         }
     });
 
-    function datatable_sum_sale(dt_selector, is_calling_first) {
+    function datatable_sum_purchase(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
             var rows = dt_selector.rows( '.selected' ).indexes();
-
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 6 ).footer() ).html(dt_selector.cells( rows, 6, { page: 'current' } ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed(decimal));
         }
         else {
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 5, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed({{$general_setting->decimal}}));
-            $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 5 ).footer() ).html(dt_selector.column( 5, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 6 ).footer() ).html(dt_selector.column( 6, {page:'current'} ).data().sum().toFixed(decimal));
+            $( dt_selector.column( 7 ).footer() ).html(dt_selector.column( 7, {page:'current'} ).data().sum().toFixed(decimal));
         }
     }
 
@@ -538,15 +554,12 @@
         "processing": true,
         "serverSide": true,
         "scrollX": true,
-        "ajax":{
-            url:"warehouse-quotation-data",
-            data:{
-                start_date: start_date,
-                end_date: end_date,
-                warehouse_id: warehouse_id
-            },
-            dataType: "json",
-            type:"post"
+        "ajax": function(data, callback, settings) {
+            var params = $.extend({}, data, reportParams());
+            $.post("warehouse-quotation-data", params).done(function(json) {
+                $(settings.nTable).data('grandTotals', json.grand_totals || null);
+                callback(json);
+            });
         },
         "columns": [
             {"data": "key"},
@@ -644,7 +657,12 @@
         ],
         drawCallback: function () {
             var api = this.api();
-            datatable_sum_quotation(api, false);
+            var gt = $(api.table().node()).data('grandTotals');
+            if (gt && gt.grand_total != null) {
+                $(api.column(6).footer()).html(parseFloat(gt.grand_total).toFixed(decimal));
+            } else {
+                datatable_sum_quotation(api, false);
+            }
         }
     });
 
@@ -663,15 +681,12 @@
         "processing": true,
         "serverSide": true,
         "scrollX": true,
-        "ajax":{
-            url:"warehouse-return-data",
-            data:{
-                start_date: start_date,
-                end_date: end_date,
-                warehouse_id: warehouse_id
-            },
-            dataType: "json",
-            type:"post"
+        "ajax": function(data, callback, settings) {
+            var params = $.extend({}, data, reportParams());
+            $.post("warehouse-return-data", params).done(function(json) {
+                $(settings.nTable).data('grandTotals', json.grand_totals || null);
+                callback(json);
+            });
         },
         "columns": [
             {"data": "key"},
@@ -768,7 +783,12 @@
         ],
         drawCallback: function () {
             var api = this.api();
-            datatable_sum_return(api, false);
+            var gt = $(api.table().node()).data('grandTotals');
+            if (gt && gt.grand_total != null) {
+                $(api.column(6).footer()).html(parseFloat(gt.grand_total).toFixed(decimal));
+            } else {
+                datatable_sum_return(api, false);
+            }
         }
     });
 
@@ -787,15 +807,12 @@
         "processing": true,
         "serverSide": true,
         "scrollX": true,
-        "ajax":{
-            url:"warehouse-expense-data",
-            data:{
-                start_date: start_date,
-                end_date: end_date,
-                warehouse_id: warehouse_id
-            },
-            dataType: "json",
-            type:"post"
+        "ajax": function(data, callback, settings) {
+            var params = $.extend({}, data, reportParams());
+            $.post("warehouse-expense-data", params).done(function(json) {
+                $(settings.nTable).data('grandTotals', json.grand_totals || null);
+                callback(json);
+            });
         },
         "columns": [
             {"data": "key"},
@@ -891,7 +908,12 @@
         ],
         drawCallback: function () {
             var api = this.api();
-            datatable_sum_expense(api, false);
+            var gt = $(api.table().node()).data('grandTotals');
+            if (gt && gt.amount != null) {
+                $(api.column(4).footer()).html(parseFloat(gt.amount).toFixed(decimal));
+            } else {
+                datatable_sum_expense(api, false);
+            }
         }
     });
 

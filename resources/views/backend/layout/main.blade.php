@@ -137,9 +137,9 @@
         --primary-color: #13bd60;
         --secondary-color: #764ba2;
         --accent-color: #ffd700;
-        --text-dark: #ccdcd3;
-        --text-light: #f2f2f2;
-        --bg-light: #f8f9fa;
+        --text-dark:rgb(7, 10, 8);
+        --text-light:#13bd60;
+        --bg-light: #13bd60;
         --border-color: #e0e0e0;
         --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
         --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -189,7 +189,52 @@
         z-index: 100;
       }
 
+      /* Top bar: menu btn + brand + nav menu – separated and responsive */
+      nav.navbar.navbar-main {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px 20px;
+      }
+
+      nav.navbar .menu-btn {
+        flex-shrink: 0;
+        order: 1;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 10px 12px;
+        margin: 0;
+        margin-right: 4px;
+        background: transparent !important;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease;
+      }
+
+      nav.navbar .menu-btn:hover {
+        background: rgba(0, 0, 0, 0.06) !important;
+      }
+
+      nav.navbar .menu-btn .navbar-toggler-iconx {
+        font-size: 1.25rem;
+        color: #fff;
+      }
+
+      nav.navbar .menu-btn .navbar-toggler-iconx i {
+        color: inherit;
+      }
+
       nav.navbar .navbar-brand {
+        order: 2;
+        flex: 1 1 auto;
+        min-width: 0;
+        margin: 0;
+        padding: 0 8px;
         font-size: 22px;
         font-weight: 800;
         background: var(--primary-gradient);
@@ -199,6 +244,25 @@
         letter-spacing: -1px;
         display: flex;
         align-items: center;
+        text-decoration: none;
+      }
+
+      nav.navbar .navbar-brand-title {
+        margin: 0;
+        font-size: inherit;
+        font-weight: inherit;
+        color: #212529;
+        -webkit-text-fill-color: #212529;
+        background: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      nav.navbar .nav-menu {
+        order: 3;
+        margin-left: auto;
+        flex-shrink: 0;
       }
 
       nav.navbar .navbar-brand img {
@@ -273,7 +337,7 @@
       }
 
       .side-navbar li a {
-        color: var(--text-light) !important;
+        color: var(--primary-color) !important;
         font-size: 14px;
         font-weight: 500;
         padding: 12px 16px !important;
@@ -362,7 +426,7 @@
       .btn-pos {
         background: rgba(255, 255, 255, 0.2) !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        color: var(--text-light) !important;
+        color: var(--primary-color) !important;
         border-radius: 8px;
         padding: 10px 18px;
         font-weight: 600;
@@ -377,7 +441,7 @@
 
       .btn-pos i,
       .btn-pos span {
-        color: var(--text-light) !important;
+        color: var(--primary-color) !important;
       }
 
       /* Form Elements */
@@ -469,6 +533,65 @@
         background: rgba(102, 126, 234, 0.05);
       }
 
+      /* DataTables top controls layout */
+      .dataTables_wrapper > .row:first-child {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        min-width: 0;
+      }
+
+      .dataTables_wrapper > .row:first-child > * {
+        flex-shrink: 0;
+      }
+
+      /* Let the filter (middle) column shrink so length + buttons + search stay in one row */
+      .dataTables_wrapper > .row:first-child > *:nth-child(2) {
+        flex-shrink: 1;
+        min-width: 0;
+      }
+
+      .dataTables_wrapper .dataTables_filter input {
+        min-width: 120px;
+      }
+
+      .dataTables_wrapper .dataTables_length,
+      .dataTables_wrapper .dataTables_filter,
+      .dataTables_wrapper .dt-buttons {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.25rem;
+      }
+
+      .dataTables_wrapper .dt-buttons {
+        flex-wrap: nowrap;
+      }
+
+      .dataTables_wrapper .dataTables_length label,
+      .dataTables_wrapper .dataTables_filter label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 0;
+      }
+
+      /* On smaller screens, stack the controls and keep even spacing */
+      @media (max-width: 991px) {
+        .dataTables_wrapper > .row:first-child {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter,
+        .dataTables_wrapper .dt-buttons {
+          justify-content: space-between;
+        }
+      }
+
       /* Badge */
       .badge {
         padding: 6px 12px;
@@ -498,7 +621,7 @@
         color: #fff;
       }
 
-      /* Loader */
+      /* Loader: z-index below modal (10050) so modals stay on top and interactive */
       #loader {
         display: none;
         position: fixed;
@@ -507,7 +630,7 @@
         width: 100%;
         height: 100%;
         background: rgba(255, 255, 255, 0.9);
-        z-index: 9999;
+        z-index: 10030;
         align-items: center;
         justify-content: center;
       }
@@ -588,7 +711,36 @@
       /* Responsive Design */
       @media (max-width: 768px) {
         nav.navbar {
-          padding: 10px 16px;
+          padding: 10px 12px;
+        }
+
+        nav.navbar.navbar-main {
+          gap: 8px 12px;
+        }
+
+        nav.navbar .menu-btn {
+          min-width: 40px;
+          min-height: 40px;
+          padding: 8px 10px;
+          margin-right: 0;
+        }
+
+        nav.navbar .navbar-brand {
+          font-size: 1rem;
+          padding: 0 6px;
+        }
+
+        nav.navbar .navbar-brand-title {
+          font-size: 1rem;
+        }
+
+        nav.navbar .nav-menu {
+          width: 100%;
+          margin-left: 0;
+          margin-top: 4px;
+          padding-top: 8px;
+          border-top: 1px solid rgba(0, 0, 0, 0.08);
+          justify-content: flex-end;
         }
 
         .side-navbar {
@@ -605,6 +757,16 @@
 
         .side-navbar.show {
           left: 0;
+        }
+      }
+
+      @media (max-width: 480px) {
+        nav.navbar .navbar-brand {
+          font-size: 0.9rem;
+        }
+
+        nav.navbar .navbar-brand-title {
+          font-size: 0.9rem;
         }
       }
 
@@ -631,6 +793,33 @@
           color: var(--text-dark);
         }
       }
+      .btn-group{
+        border: 1px solid #13bd60!important;
+        border-radius: 8px!important;
+      }
+
+              .ui-autocomplete {
+            z-index: 9999 !important;
+            max-height: 280px;
+            overflow-y: auto;
+            background: #1a1a1a !important;
+            border: 1px solid #333 !important;
+            border-radius: 4px;
+        }
+        .ui-autocomplete .ui-menu-item {
+            border-color: #333 !important;
+        }
+        .ui-autocomplete .ui-menu-item-wrapper {
+            background: #1a1a1a !important;
+            color: #e0e0e0 !important;
+            padding: 8px 12px;
+        }
+        .ui-autocomplete .ui-menu-item-wrapper.ui-state-active,
+        .ui-autocomplete .ui-menu-item-wrapper:hover {
+            background: #333 !important;
+            color: #fff !important;
+            border-color: #333 !important;
+        }
 
     </style>
   </head>
@@ -653,12 +842,11 @@
         <!-- navbar-->
       @if(Route::current()->getName() != 'sale.pos')
       <header >
-        <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
-          
-          <button class="menu-btn" style="background-color: transparent; border-color:transparent;" id="toggle-btn">
-            <span class="navbar-toggler-iconx">  <a id="toggle-btn" href="#" class=""><i class="fa text-white fa-bars"> </i></a></span>
+        <nav class="navbar navbar-main" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+          <button class="menu-btn" type="button" aria-label="Toggle menu" id="toggle-btn">
+            <span class="navbar-toggler-iconx"><i class="fa fa-bars"></i></span>
           </button>
-            <a class="navbar-brand " style="margin-left: -700px !important;" href="#"> <h1 class="mt-2 text-white">{{ $general_setting->site_title }}</h1></a>
+          <a class="navbar-brand" href="#"><h1 class="navbar-brand-title">{{ $general_setting->site_title }}</h1></a>
 
 
            <ul class="nav-menu list-unstyled d-flex flex-md-row align-items-md-center">
@@ -927,6 +1115,8 @@
           </div>
         </div>
       </footer>
+    </div>
+    <!-- .page closed so modals are body children and appear above backdrop -->
 
       <!-- notification modal -->
       <div id="notification-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
@@ -1462,8 +1652,6 @@
         </div>
       </div>
       <!-- end supplier modal -->
-    </div>
-    
 
     @if(!config('database.connections.saleprosaas_landlord'))
         <script type="text/javascript" src="<?php echo asset('vendor/jquery/jquery.min.js') ?>"></script>
@@ -1650,6 +1838,15 @@
         document.getElementById("loader").style.display = "none";
         document.getElementById("content").style.display = "block";
       }
+
+      /* Ensure loader is hidden and modal is moved to body so it appears above backdrop */
+      $(document).on('show.bs.modal', '.modal', function () {
+        $('#loader').css('display', 'none');
+        var $modal = $(this);
+        if ($modal.parent().length && !$modal.parent().is('body')) {
+          $modal.appendTo('body');
+        }
+      });
 
       $("div.alert:not(#update-alert-section)").delay(4000).slideUp(800);
 

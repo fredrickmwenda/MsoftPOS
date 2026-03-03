@@ -49,6 +49,7 @@
     <noscript><link href="<?php echo asset('vendor/datatable/dataTables.bootstrap4.min.css') ?>" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="<?php echo asset('css/style.default.css') ?>" id="theme-stylesheet" type="text/css">
     <link rel="stylesheet" href="<?php echo asset('css/style.css') ?>">
+    <link rel="stylesheet" href="<?php echo asset('css/modal-select-fix.css') ?>" type="text/css">
 
     <!-- Custom stylesheet - for your changes-->
     <link rel="stylesheet" href="<?php echo asset('css/custom-'.$general_setting->theme) ?>" type="text/css" id="custom-style">
@@ -101,6 +102,7 @@
     <noscript><link href="<?php echo asset('../../vendor/datatable/dataTables.bootstrap4.min.css') ?>" rel="stylesheet"></noscript>
     <link rel="stylesheet" href="<?php echo asset('../../css/style.default.css') ?>" id="theme-stylesheet" type="text/css">
     <link rel="stylesheet" href="<?php echo asset('../../css/style.css') ?>">
+    <link rel="stylesheet" href="<?php echo asset('../../css/modal-select-fix.css') ?>" type="text/css">
 
     <!-- Custom stylesheet - for your changes-->
     <link rel="stylesheet" href="<?php echo asset('../../css/custom-'.$general_setting->theme) ?>" type="text/css" id="custom-style">
@@ -275,7 +277,7 @@
       }
 
       .side-navbar li a {
-        color: var(--text-light) !important;
+        color: var(--primary-color) !important;
         font-size: 14px;
         font-weight: 500;
         padding: 12px 16px !important;
@@ -1105,6 +1107,15 @@
             document.getElementById("content").style.display = "block";
             $("#lims_productcodeSearch").focus();
           }
+
+          /* Move modal to body when shown so it appears above backdrop (fix for modals inside #content) */
+          $(document).on('show.bs.modal', '.modal', function () {
+            $('#loader').css('display', 'none');
+            var $modal = $(this);
+            if ($modal.parent().length && !$modal.parent().is('body')) {
+              $modal.appendTo('body');
+            }
+          });
 
           $("div.alert").delay(3000).slideUp(750);
           $('select').selectpicker({

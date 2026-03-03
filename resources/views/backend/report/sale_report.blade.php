@@ -4,12 +4,68 @@
 <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{'No Data exist between this date range!'}}</div>
 @endif
 
+@push('css')
+<style>
+.report-summary-cards { margin-bottom: 0.5rem; }
+.report-summary-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.report-summary-card__label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.report-summary-card__value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #212529;
+}
+.report-summary-card--amount .report-summary-card__value { color: #0d6efd; }
+.report-summary-card--qty .report-summary-card__value { color: #198754; }
+.report-summary-card--stock .report-summary-card__value { color: #6f42c1; }
+</style>
+@endpush
+
 <section class="forms">
     <div class="container-fluid">
         <div class="card">
             <div class="card-header mt-2">
                 <h3 class="text-center">{{trans('file.Sale Report')}}</h3>
-            </div> 
+            </div>
+
+            {{-- Exclusive totals (same as footer) in small cards --}}
+            <div class="report-summary-cards px-3 pt-3">
+                <div class="row no-gutters">
+                    <div class="col-md-4 col-6 mb-2 pr-1">
+                        <div class="report-summary-card report-summary-card--amount">
+                            <span class="report-summary-card__label">{{trans('file.Sold Amount')}}</span>
+                            <span class="report-summary-card__value" id="report-total-sold-amount">0</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6 mb-2 pl-1 pr-1">
+                        <div class="report-summary-card report-summary-card--qty">
+                            <span class="report-summary-card__label">{{trans('file.Sold Qty')}}</span>
+                            <span class="report-summary-card__value" id="report-total-sold-qty">0</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6 mb-2 pl-1">
+                        <div class="report-summary-card report-summary-card--stock">
+                            <span class="report-summary-card__label">{{trans('file.In Stock')}}</span>
+                            <span class="report-summary-card__value" id="report-total-in-stock">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {!! Form::open(['route' => 'report.sale', 'method' => 'post']) !!}
             <div class="card-body">
                 <div class="row">
@@ -384,7 +440,14 @@
         ],
         drawCallback: function () {
             var api = this.api();
+            var decimal = {{ $general_setting->decimal ?? 2 }};
             datatable_sum(api, false);
+            var soldAmount = api.column(4, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            var soldQty = api.column(5, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            var inStock = api.column(6, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            $('#report-total-sold-amount').text(soldAmount.toFixed(decimal));
+            $('#report-total-sold-qty').text(soldQty.toFixed(0));
+            $('#report-total-in-stock').text(inStock.toFixed(0));
         }
     } );
 
@@ -402,14 +465,15 @@ function datatable_sum(dt_selector, is_calling_first) {
             dt_selector.cells(rows, 6, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
         );
     } else {
+        /* Footer shows grand total (all data), not just current page */
         $(dt_selector.column(4).footer()).html(
-            dt_selector.column(4, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0).toFixed({{$general_setting->decimal}})
+            dt_selector.column(4, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0).toFixed({{$general_setting->decimal}})
         );
         $(dt_selector.column(5).footer()).html(
-            dt_selector.column(5, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
+            dt_selector.column(5, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
         );
         $(dt_selector.column(6).footer()).html(
-            dt_selector.column(6, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
+            dt_selector.column(6, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
         );
     }
 }

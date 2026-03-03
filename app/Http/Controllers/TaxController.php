@@ -124,7 +124,7 @@ class TaxController extends Controller
         $lims_tax_data = Tax::findOrFail($id);
         
         // Remove tax associations from products
-        DB::table('product_taxes')->where('tax_id', $id)->delete();
+        DB::table('product_tax')->where('tax_id', $id)->delete();
         
         // Alternative if you have a relationship defined:
         // $lims_tax_data->products()->detach();
@@ -141,7 +141,7 @@ class TaxController extends Controller
         $lims_tax_data = Tax::findOrFail($id);
         
         // Remove tax associations from products
-        DB::table('product_taxes')->where('tax_id', $id)->delete();
+        DB::table('product_tax')->where('tax_id', $id)->delete();
         
         // Alternative if you have a relationship defined:
         // $lims_tax_data->products()->detach();

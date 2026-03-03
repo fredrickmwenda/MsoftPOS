@@ -100,6 +100,24 @@
         text-decoration: none;
     }
 
+    /* Quick Actions widgets: extra margin-bottom on small devices */
+    @media (max-width: 991px) {
+        .quick-actions-widgets {
+            margin-bottom: 1.5rem !important;
+        }
+        .quick-actions-widgets .action-card {
+            margin-bottom: 1rem;
+        }
+    }
+    @media (max-width: 768px) {
+        .quick-actions-widgets {
+            margin-bottom: 2rem !important;
+        }
+        .quick-actions-widgets .action-card {
+            margin-bottom: 1.25rem;
+        }
+    }
+
     /* Date Filter Buttons */
     .filter-group {
         background: var(--white);
@@ -468,7 +486,7 @@
 </div>
 <div class="ml-5 mr-5">
 <!-- Quick Actions Row -->
-<div class="row mb-4">
+<div class="row mb-4 quick-actions-widgets">
     <div class="col-md-4 animate" style="animation-delay: 0.1s">
         <div class="action-card">
             <img src="{{asset('/images/action.jpg')}}" alt="Quick Actions">

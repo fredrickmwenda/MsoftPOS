@@ -7,7 +7,7 @@
         <div class="card">
             <div class="card-header mt-2">
                 <h3 class="text-center">
-                    Profit and Loss Report (<span id="selectedYear">{{ $selected_year ?? date('Y') }}</span>)
+                    Profit and Loss Report (<span id="selectedPeriod">{{ $period_label ?? ($selected_year ?? date('Y')) }}</span>)
                 </h3>
             </div>
 
@@ -15,7 +15,7 @@
             {!! Form::open(['route' => 'report.profitLossData', 'method' => 'post', 'id' => 'yearForm']) !!}
             @csrf
             <div class="row mb-3 pl-report-filter">
-                <div class="col-md-5 offset-md-1 mt-3">
+                <div class="col-md-3 offset-md-1 mt-3">
                     <div class="form-group row">
                         <label class="d-tc mt-2"><strong>Choose Year</strong> &nbsp;</label>
                         <div class="d-tc">
@@ -30,6 +30,19 @@
                                         {{ $year }}
                                     </option>
                                 @endfor
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3">
+                    <div class="form-group row">
+                        <label class="d-tc mt-2"><strong>Choose Month</strong> &nbsp;</label>
+                        <div class="d-tc">
+                            <select name="month" id="month" class="form-control">
+                                <option value="">All (Full Year)</option>
+                                @foreach(['01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'] as $num => $name)
+                                    <option value="{{ $num }}" {{ ($selected_month ?? '') === $num ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
                             </select>
                         </div>
                     </div>
@@ -59,7 +72,7 @@
                     <tr>
                         <th colspan="3" class="text-center">
                             <h4 class="mb-0">PROFIT AND LOSS STATEMENT</h4>
-                            <p class="mb-0">For the Year Ending {{ $selected_year }}</p>
+                            <p class="mb-0">{{ $period_subtitle ?? 'For the Year Ending ' . $selected_year }}</p>
                         </th>
                     </tr>
                 </thead>
@@ -258,24 +271,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Set selected year in header
-    const currentYear = new Date().getFullYear();
-    const selectedYear = $('#year').val() || currentYear;
-    $('#selectedYear').text(selectedYear);
-
-    // Update year when form is submitted
+    const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    function updateSelectedPeriod() {
+        const year = $('#year').val() || new Date().getFullYear();
+        const monthVal = $('#month').val();
+        const period = monthVal ? monthNames[parseInt(monthVal, 10)] + ' ' + year : year;
+        $('#selectedPeriod').text(period);
+    }
+    updateSelectedPeriod();
+    $('#year, #month').on('change', updateSelectedPeriod);
     $('#yearForm').on('submit', function() {
-        const yearValue = $('#year').val() || currentYear;
-        $('#selectedYear').text(yearValue);
+        updateSelectedPeriod();
     });
 
     // Print Report
     $('#printReport').on('click', function() {
-        const year = $('#selectedYear').text() || new Date().getFullYear();
+        const year = $('#selectedPeriod').text() || new Date().getFullYear();
         const printContents = document.getElementById('profitLossTable').outerHTML;
         const printWindow = window.open('', '', 'height=900,width=1000');
 
-        printWindow.document.write('<html><head><title>Profit and Loss Report - ' + year + '</title>');
+        printWindow.document.write('<html><head><title>Profit and Loss Report - ' + (year || '') + '</title>');
         printWindow.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
         printWindow.document.write('<style>@media print {body {padding: 20px;}}</style>');
         printWindow.document.write('</head><body>');
@@ -288,7 +303,7 @@ $(document).ready(function() {
 
     // Export Excel
     $('#exportExcel').on('click', function() {
-        const year = $('#selectedYear').text() || new Date().getFullYear();
+        const year = $('#selectedPeriod').text() || new Date().getFullYear();
         const table = document.getElementById('profitLossTable');
         const html = table.outerHTML;
         
@@ -309,11 +324,11 @@ $(document).ready(function() {
 
     // Export PDF (using browser print to PDF)
     $('#exportPDF').on('click', function() {
-        const year = $('#selectedYear').text() || new Date().getFullYear();
+        const year = $('#selectedPeriod').text() || new Date().getFullYear();
         const printWindow = window.open('', '', 'height=900,width=1000');
         const tableHTML = document.getElementById('profitLossTable').outerHTML;
 
-        printWindow.document.write('<html><head><title>Profit and Loss Report - ' + year + '</title>');
+        printWindow.document.write('<html><head><title>Profit and Loss Report - ' + (year || '') + '</title>');
         printWindow.document.write('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">');
         printWindow.document.write('</head><body>');
         printWindow.document.write(tableHTML);

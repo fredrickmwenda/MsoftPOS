@@ -903,10 +903,21 @@ public function profitLossData(Request $request)
 {
     // Selected year or default to current
     $selected_year = $request->input('year', date('Y'));
+    $selected_month = $request->input('month', ''); // 01-12 or empty for full year
 
     $year = $selected_year;
-    $start_date = $year . '-01-01';
-    $end_date = $year . '-12-31';
+    if (!empty($selected_month) && preg_match('/^(0[1-9]|1[0-2])$/', $selected_month)) {
+        $start_date = $year . '-' . $selected_month . '-01';
+        $end_date = date('Y-m-t', strtotime($start_date));
+        $month_name = date('F', strtotime($start_date));
+        $period_label = $month_name . ' ' . $year;
+        $period_subtitle = 'For the Month Ending ' . date('F j, Y', strtotime($end_date));
+    } else {
+        $start_date = $year . '-01-01';
+        $end_date = $year . '-12-31';
+        $period_label = $year;
+        $period_subtitle = 'For the Year Ending ' . $year;
+    }
     
     // Get active currency
     $active_currency = Currency::where('is_active', true)->first();
@@ -1007,6 +1018,9 @@ public function profitLossData(Request $request)
 
     return view('backend.report.profitloss', compact(
         'selected_year',
+        'selected_month',
+        'period_label',
+        'period_subtitle',
         'year',
         'start_date',
         'end_date',
@@ -1868,13 +1882,33 @@ public function profitLossData(Request $request)
                 }
             }
         }
+        /* Grand totals (all data) for product report footer */
+        $purchased_amount = $warehouse_id == 0
+            ? DB::table('product_purchases')->whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date)->sum('total')
+            : DB::table('product_purchases')->join('purchases', 'product_purchases.purchase_id', '=', 'purchases.id')->where('purchases.warehouse_id', $warehouse_id)->whereDate('product_purchases.created_at', '>=', $start_date)->whereDate('product_purchases.created_at', '<=', $end_date)->sum('product_purchases.total');
+        $sold_amount = $warehouse_id == 0
+            ? DB::table('product_sales')->whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date)->sum('total')
+            : DB::table('product_sales')->join('sales', 'product_sales.sale_id', '=', 'sales.id')->where('sales.warehouse_id', $warehouse_id)->whereDate('product_sales.created_at', '>=', $start_date)->whereDate('product_sales.created_at', '<=', $end_date)->sum('product_sales.total');
+        $returned_amount = $warehouse_id == 0
+            ? DB::table('product_returns')->whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date)->sum('total')
+            : DB::table('product_returns')->join('returns', 'product_returns.return_id', '=', 'returns.id')->where('returns.warehouse_id', $warehouse_id)->whereDate('product_returns.created_at', '>=', $start_date)->whereDate('product_returns.created_at', '<=', $end_date)->sum('product_returns.total');
+        $purchase_returned_amount = $warehouse_id == 0
+            ? DB::table('purchase_product_return')->whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date)->sum('total')
+            : DB::table('purchase_product_return')->join('return_purchases', 'purchase_product_return.return_id', '=', 'return_purchases.id')->where('return_purchases.warehouse_id', $warehouse_id)->whereDate('purchase_product_return.created_at', '>=', $start_date)->whereDate('purchase_product_return.created_at', '<=', $end_date)->sum('purchase_product_return.total');
+        $grand_totals = [
+            'purchased_amount' => (float) $purchased_amount,
+            'sold_amount' => (float) $sold_amount,
+            'returned_amount' => (float) $returned_amount,
+            'purchase_returned_amount' => (float) $purchase_returned_amount,
+        ];
         /*$totalData = count($data);
         $totalFiltered = $totalData;*/
         $json_data = array(
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
+            "data"            => $data,
+            "grand_totals"    => $grand_totals
         );
 
         echo json_encode($json_data);
@@ -1883,11 +1917,10 @@ public function profitLossData(Request $request)
     public function purchaseReport(Request $request)
     {
         $data = $request->all();
-        // $start_date = $data['start_date'];
-        // $end_date = $data['end_date'];
-        $start_date = $data['start_date'] ?? date('Y-m-d');
-        $end_date   = $data['end_date'] ?? date('Y-m-d');
-        $warehouse_id = $data['warehouse_id'];
+        $today = date('Y-m-d');
+        $start_date = !empty($data['start_date']) ? $data['start_date'] : $today;
+        $end_date   = !empty($data['end_date']) ? $data['end_date'] : $today;
+        $warehouse_id = $data['warehouse_id'] ?? 0;
         $product_id = [];
         $variant_id = [];
         $product_name = [];
@@ -1961,8 +1994,9 @@ public function profitLossData(Request $request)
     {
 
             $data = $request->all();
-            $start_date = $data['start_date'] ?? date('Y-m-d');
-            $end_date   = $data['end_date'] ?? date('Y-m-d');
+            $today = date('Y-m-d');
+            $start_date = !empty($data['start_date']) ? $data['start_date'] : $today;
+            $end_date   = !empty($data['end_date']) ? $data['end_date'] : $today;
             $warehouse_id = $data['warehouse_id'] ?? 0;
             $biller_id = $data['biller_id'] ?? 0;
             $user_id = $data['user_id'] ?? 0;
@@ -2173,14 +2207,13 @@ public function profitLossData(Request $request)
 
     public function warehouseReport(Request $request)
     {
-        $warehouse_id = $request->input('warehouse_id');
-        $biller_id = $request->input('biller_id') ?? 0;
+        $warehouse_id = $request->input('warehouse_id', 0);
+        $biller_id = $request->input('biller_id', 0);
 
-        if($request->input('start_date')) {
+        if($request->filled('start_date') && $request->filled('end_date')) {
             $start_date = $request->input('start_date');
             $end_date = $request->input('end_date');
-        }
-        else {
+        } else {
             $start_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
             $end_date = date("Y-m-d");
         }
@@ -2213,6 +2246,17 @@ public function profitLossData(Request $request)
 
         $totalData = $q->count();
         $totalFiltered = $totalData;
+
+        $totalsQ = DB::table('sales')->where('warehouse_id', $warehouse_id)
+            ->whereDate('created_at', '>=', $request->input('start_date'))
+            ->whereDate('created_at', '<=', $request->input('end_date'));
+        if($biller_id && $biller_id != 0) $totalsQ = $totalsQ->where('biller_id', $biller_id);
+        $totalsRow = $totalsQ->selectRaw('COALESCE(SUM(grand_total),0) as grand_total, COALESCE(SUM(paid_amount),0) as paid')->first();
+        $grand_totals = [
+            'grand_total' => (float) $totalsRow->grand_total,
+            'paid'        => (float) $totalsRow->paid,
+            'due'         => (float) $totalsRow->grand_total - (float) $totalsRow->paid,
+        ];
 
         if($request->input('length') != -1)
             $limit = $request->input('length');
@@ -2306,7 +2350,8 @@ public function profitLossData(Request $request)
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
+            "data"            => $data,
+            "grand_totals"    => $grand_totals
         );
         echo json_encode($json_data);
     }
@@ -2333,6 +2378,17 @@ public function profitLossData(Request $request)
 
         $totalData = $q->count();
         $totalFiltered = $totalData;
+
+        $totalsQ = DB::table('purchases')->where('warehouse_id', $warehouse_id)
+            ->whereDate('created_at', '>=', $request->input('start_date'))
+            ->whereDate('created_at', '<=', $request->input('end_date'));
+        if($biller_id && $biller_id != 0) $totalsQ = $totalsQ->where('biller_id', $biller_id);
+        $totalsRow = $totalsQ->selectRaw('COALESCE(SUM(grand_total),0) as grand_total, COALESCE(SUM(paid_amount),0) as paid')->first();
+        $grand_totals = [
+            'grand_total' => (float) $totalsRow->grand_total,
+            'paid'        => (float) $totalsRow->paid,
+            'due'         => (float) $totalsRow->grand_total - (float) $totalsRow->paid,
+        ];
 
         if($request->input('length') != -1)
             $limit = $request->input('length');
@@ -2431,7 +2487,8 @@ public function profitLossData(Request $request)
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
+            "data"            => $data,
+            "grand_totals"    => $grand_totals
         );
         echo json_encode($json_data);
     }
@@ -2460,6 +2517,13 @@ public function profitLossData(Request $request)
 
         $totalData = $q->count();
         $totalFiltered = $totalData;
+
+        $totalsQ = DB::table('quotations')->where('warehouse_id', $warehouse_id)
+            ->whereDate('created_at', '>=', $request->input('start_date'))
+            ->whereDate('created_at', '<=', $request->input('end_date'));
+        if($biller_id && $biller_id != 0) $totalsQ = $totalsQ->where('biller_id', $biller_id);
+        $totalsRow = $totalsQ->selectRaw('COALESCE(SUM(grand_total),0) as grand_total')->first();
+        $grand_totals = ['grand_total' => (float) $totalsRow->grand_total];
 
         if($request->input('length') != -1)
             $limit = $request->input('length');
@@ -2550,7 +2614,8 @@ public function profitLossData(Request $request)
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
+            "data"            => $data,
+            "grand_totals"    => $grand_totals
         );
         echo json_encode($json_data);
     }
@@ -2578,6 +2643,13 @@ public function profitLossData(Request $request)
 
         $totalData = $q->count();
         $totalFiltered = $totalData;
+
+        $totalsQ = DB::table('returns')->where('warehouse_id', $warehouse_id)
+            ->whereDate('created_at', '>=', $request->input('start_date'))
+            ->whereDate('created_at', '<=', $request->input('end_date'));
+        if($biller_id && $biller_id != 0) $totalsQ = $totalsQ->where('biller_id', $biller_id);
+        $totalsRow = $totalsQ->selectRaw('COALESCE(SUM(grand_total),0) as grand_total')->first();
+        $grand_totals = ['grand_total' => (float) $totalsRow->grand_total];
 
         if($request->input('length') != -1)
             $limit = $request->input('length');
@@ -2658,7 +2730,8 @@ public function profitLossData(Request $request)
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
+            "data"            => $data,
+            "grand_totals"    => $grand_totals
         );
         echo json_encode($json_data);
     }
@@ -2685,6 +2758,13 @@ public function profitLossData(Request $request)
 
         $totalData = $q->count();
         $totalFiltered = $totalData;
+
+        $totalsQ = DB::table('expenses')->where('warehouse_id', $warehouse_id)
+            ->whereDate('created_at', '>=', $request->input('start_date'))
+            ->whereDate('created_at', '<=', $request->input('end_date'));
+        if($biller_id && $biller_id != 0) $totalsQ = $totalsQ->where('biller_id', $biller_id);
+        $totalsRow = $totalsQ->selectRaw('COALESCE(SUM(amount),0) as amount')->first();
+        $grand_totals = ['amount' => (float) $totalsRow->amount];
 
         if($request->input('length') != -1)
             $limit = $request->input('length');
@@ -2748,7 +2828,8 @@ public function profitLossData(Request $request)
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
+            "data"            => $data,
+            "grand_totals"    => $grand_totals
         );
         echo json_encode($json_data);
     }
@@ -4957,15 +5038,57 @@ public function profitLossData(Request $request)
     public function supplierDueReportByDate(Request $request)
     {
         $data = $request->all();
-        $start_date = $data['start_date'];
-        $end_date = $data['end_date'];
+        $start_date = $data['start_date'] ?? now()->startOfMonth()->format('Y-m-d');
+        $end_date = $data['end_date'] ?? now()->format('Y-m-d');
         $q = Purchase::where('payment_status', 1)
             ->whereDate('created_at', '>=' , $start_date)
             ->whereDate('created_at', '<=' , $end_date);
         if($request->supplier_id)
             $q = $q->where('supplier_id', $request->supplier_id);
-        $lims_purchase_data = $q->get();
-        return view('backend.report.supplier_due_report', compact('lims_purchase_data', 'start_date', 'end_date'));
+        $lims_purchase_data = $q->orderBy('created_at', 'desc')->get();
+
+        $general_setting = cache()->get('general_setting') ?? \App\Models\GeneralSetting::first();
+
+        $supplier_summaries = [];
+        foreach ($lims_purchase_data->groupBy('supplier_id') as $supplier_id => $purchases) {
+            if (!$supplier_id) continue;
+            $supplier = Supplier::find($supplier_id);
+            if (!$supplier) continue;
+            $total_grand = 0;
+            $total_returned = 0;
+            $total_paid = 0;
+            $purchase_list = [];
+            foreach ($purchases as $p) {
+                $returned = DB::table('return_purchases')->where('purchase_id', $p->id)->sum('grand_total');
+                $due = $p->grand_total - $returned - ($p->paid_amount ?? 0);
+                $total_grand += $p->grand_total;
+                $total_returned += $returned;
+                $total_paid += ($p->paid_amount ?? 0);
+                $purchase_list[] = (object)[
+                    'id' => $p->id,
+                    'reference_no' => $p->reference_no,
+                    'created_at' => $p->created_at,
+                    'grand_total' => $p->grand_total,
+                    'returned_amount' => $returned,
+                    'paid_amount' => $p->paid_amount ?? 0,
+                    'due' => $due,
+                ];
+            }
+            $supplier_summaries[] = [
+                'supplier_id' => $supplier_id,
+                'supplier_name' => $supplier->name,
+                'supplier_phone' => $supplier->phone_number ?? '',
+                'purchases_count' => count($purchase_list),
+                'total_grand_total' => $total_grand,
+                'total_returned' => $total_returned,
+                'total_paid' => $total_paid,
+                'total_due' => $total_grand - $total_returned - $total_paid,
+                'purchases' => $purchase_list,
+            ];
+        }
+        usort($supplier_summaries, function ($a, $b) { return $b['total_due'] <=> $a['total_due']; });
+
+        return view('backend.report.supplier_due_report', compact('lims_purchase_data', 'supplier_summaries', 'start_date', 'end_date', 'general_setting'));
     }
 
     public function departmentReport()

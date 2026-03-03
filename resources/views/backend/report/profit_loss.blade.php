@@ -1,7 +1,7 @@
 @extends('backend.layout.main')
 @section('content')
 <div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
-<section>
+<section class="summary-report-section">
     <h3 class="text-center">{{trans('file.Summary Report')}}</h3>
     {!! Form::open(['route' => 'report.profitLoss', 'method' => 'post']) !!}
     <div class="container-fluid">
@@ -10,7 +10,7 @@
                 <div class="form-group">
                     <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
                     <div class="d-tc">
-                        <div class="input-group">
+                        <div class="input-group"> 
                             <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
                             <input type="hidden" name="start_date" value="{{$start_date}}" />
                             <input type="hidden" name="end_date" value="{{$end_date}}" />
@@ -77,103 +77,54 @@
                     <div class="card-body">
                         <h3><i class="fa fa-heart"></i> {{trans('file.Purchase')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.grand total')}} <span class="float-right"> {{number_format((float)$purchase[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Purchase')}} <span class="float-right">{{$total_purchase}}</span></p>
-                            <p class="mt-2">{{trans('file.Paid')}} <span class="float-right">{{number_format((float)$purchase[0]->paid_amount, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Tax')}} <span class="float-right">{{number_format((float)$purchase[0]->tax, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Discount')}} <span class="float-right">{{number_format((float)$purchase[0]->discount, $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$purchase[0]->grand_total, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-shopping-cart"></i> {{trans('file.Sale')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.grand total')}} <span class="float-right"> {{number_format((float)$sale[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Shipping Cost')}} <span class="float-right"> {{number_format((float)$sale[0]->shipping_cost, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Sale')}} <span class="float-right">{{$total_sale}}</span></p>
-                            <p class="mt-2">{{trans('file.Paid')}} <span class="float-right">{{number_format((float)$sale[0]->paid_amount, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Tax')}} <span class="float-right">{{number_format((float)$sale[0]->tax, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Discount')}} <span class="float-right">{{number_format((float)$sale[0]->discount, $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$sale[0]->grand_total, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-random "></i> {{trans('file.Sale Return')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.grand total')}} <span class="float-right"> {{number_format((float)$return[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Return')}} <span class="float-right">{{$total_return}}</span></p>
-                            <p class="mt-2">{{trans('file.Tax')}} <span class="float-right">{{number_format((float)$return[0]->tax, $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$return[0]->grand_total, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-random "></i> {{trans('file.Purchase Return')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.grand total')}} <span class="float-right"> {{number_format((float)$purchase_return[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Return')}} <span class="float-right">{{$total_purchase_return}}</span></p>
-                            <p class="mt-2">{{trans('file.Tax')}} <span class="float-right">{{number_format((float)$purchase_return[0]->tax, $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$purchase_return[0]->grand_total, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
         </div>
         <div class="row mt-2">
-            <div class="col-md-4">
-                <div class="card"> 
+            <div class="col-md-4 offset-md-2">
+                <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-money"></i> {{trans('file.profit')}} / {{trans('file.Loss')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.Sale')}} <span class="float-right">{{number_format((float)$sale[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Product Cost')}} <span class="float-right">- {{number_format((float)$product_cost, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.profit')}} <span class="float-right"> {{number_format((float)($sale[0]->grand_total - $product_cost), $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)($sale[0]->grand_total - $product_cost - $return[0]->grand_total + $purchase_return[0]->grand_total), $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card">
                     <div class="card-body">
-
-                        <h3><i class="fa fa-money"></i> {{trans('file.profit')}} / {{trans('file.Loss')}}</h3>
+                        <h3><i class="fa fa-money"></i> {{trans('file.Net Profit')}} / {{trans('file.Net Loss')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.Sale')}} <span class="float-right">{{number_format((float)$sale[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Product Cost')}} <span class="float-right">- {{number_format((float)$product_cost, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Sale Return')}} <span class="float-right">- {{number_format((float)$return[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Purchase Return')}} <span class="float-right"> {{number_format((float)$purchase_return[0]->grand_total, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.profit')}} <span class="float-right"> {{number_format((float)($sale[0]->grand_total - $product_cost - $return[0]->grand_total + $purchase_return[0]->grand_total), $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-body">
-
-                        <h3><i class="fa fa-money "></i> {{trans('file.Net Profit')}} / {{trans('file.Net Loss')}}</h3>
-                        <hr>
-                        <h4 class="text-center">{{number_format((float)(($sale[0]->grand_total-$sale[0]->shipping_cost-$sale[0]->tax) - ($product_cost-$product_tax) - ($return[0]->grand_total-$return[0]->tax) + ($purchase_return[0]->grand_total-$purchase_return[0]->tax) - $expense), $general_setting->decimal, '.', '')}}</h4>
-                        <p class="text-center">
-                            ({{trans('file.Sale')}} {{number_format((float)($sale[0]->grand_total), $general_setting->decimal, '.', '')}} - {{trans('file.Shipping Cost')}} {{number_format((float)($sale[0]->shipping_cost), $general_setting->decimal, '.', '')}}) - {{trans('file.Tax')}} {{number_format((float)($sale[0]->tax), $general_setting->decimal, '.', '')}}) - ({{trans('file.Product Cost')}} {{number_format((float)($product_cost), $general_setting->decimal, '.', '')}} - {{trans('file.Tax')}} {{number_format((float)($product_tax), $general_setting->decimal, '.', '')}}) - ({{trans('file.Return')}} {{number_format((float)($return[0]->grand_total), $general_setting->decimal, '.', '')}} - {{trans('file.Tax')}} {{number_format((float)($return[0]->tax), $general_setting->decimal, '.', '')}}) + ({{trans('file.Purchase Return')}} {{number_format((float)($purchase_return[0]->grand_total), $general_setting->decimal, '.', '')}} - {{trans('file.Tax')}} {{number_format((float)($purchase_return[0]->tax), $general_setting->decimal, '.', '')}}) - ({{trans('file.Expense')}} {{number_format((float)($expense), $general_setting->decimal, '.', '')}})
-                        </p>
+                        <div class="mt-3 summary-card-value">{{number_format((float)(($sale[0]->grand_total-$sale[0]->shipping_cost-$sale[0]->tax) - ($product_cost-$product_tax) - ($return[0]->grand_total-$return[0]->tax) + ($purchase_return[0]->grand_total-$purchase_return[0]->tax) - $expense), $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
@@ -182,61 +133,36 @@
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-dollar"></i> {{trans('file.Payment Recieved')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.Amount')}} <span class="float-right"> {{number_format((float)$payment_recieved, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Recieved')}} <span class="float-right">{{$payment_recieved_number}}</span></p>
-                            <p class="mt-2">Cash <span class="float-right">{{number_format((float)$cash_payment_sale, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Cheque <span class="float-right">{{number_format((float)$cheque_payment_sale, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Credit Card <span class="float-right">{{number_format((float)$credit_card_payment_sale, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Gift Card <span class="float-right">{{number_format((float)$gift_card_payment_sale, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Paypal <span class="float-right">{{number_format((float)$paypal_payment_sale, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Deposit <span class="float-right">{{number_format((float)$deposit_payment_sale, $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$payment_recieved, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-dollar"></i> {{trans('file.Payment Sent')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.Amount')}} <span class="float-right"> {{number_format((float)$payment_sent, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Recieved')}} <span class="float-right">{{$payment_sent_number}}</span></p>
-                            <p class="mt-2">Cash <span class="float-right">{{number_format((float)$cash_payment_purchase, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Cheque <span class="float-right">{{number_format((float)$cheque_payment_purchase, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">Credit Card <span class="float-right">{{number_format((float)$credit_card_payment_purchase, $general_setting->decimal, '.', '')}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$payment_sent, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-dollar"></i> {{trans('file.Expense')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.Amount')}} <span class="float-right"> {{number_format((float)$expense, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Expense')}} <span class="float-right">{{$total_expense}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$expense, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
-
                         <h3><i class="fa fa-dollar"></i> {{trans('file.Payroll')}}</h3>
                         <hr>
-                        <div class="mt-3">
-                            <p class="mt-2">{{trans('file.Amount')}} <span class="float-right"> {{number_format((float)$payroll, $general_setting->decimal, '.', '')}}</span></p>
-                            <p class="mt-2">{{trans('file.Payroll')}} <span class="float-right">{{$total_payroll}}</span></p>
-                        </div>
+                        <div class="mt-3 summary-card-value">{{number_format((float)$payroll, $general_setting->decimal, '.', '')}}</div>
                     </div>
                 </div>
             </div>
@@ -260,8 +186,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="row mt-2">
+       
             @foreach($warehouse_name as $key => $name)
                 <div class="col-md-4">
                     <div class="card">
@@ -287,6 +212,81 @@
         </div>
     </div>
 </section>
+
+<style>
+    .summary-report-section {
+        padding-bottom: 2rem;
+    }
+
+    .summary-report-section .row.mt-4,
+    .summary-report-section .row.mt-2 {
+        row-gap: 1.5rem;
+    }
+
+    .summary-report-section .card {
+        border-radius: 14px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.03);
+        overflow: hidden;
+    }
+
+    .summary-report-section .card-body {
+        padding: 16px 18px;
+    }
+
+    .summary-report-section h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: #111827;
+    }
+
+    .summary-report-section h3 i {
+        font-size: 1.1rem;
+        color: #13bd60;
+    }
+
+    .summary-report-section .card-body hr {
+        margin: 0.4rem 0 0.8rem;
+        border-color: #e5e7eb;
+    }
+
+    .summary-report-section .card-body .mt-3 {
+        margin-top: 0.25rem !important;
+    }
+
+    .summary-report-section .card-body p {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+        color: #4b5563;
+    }
+
+    .summary-report-section .card-body p span.float-right {
+        float: none !important;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .summary-report-section .card-body h4 {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #111827;
+    }
+
+    .summary-report-section .summary-card-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #111827;
+        text-align: center;
+        padding: 0.5rem 0;
+    }
+</style>
 
 @endsection
 
