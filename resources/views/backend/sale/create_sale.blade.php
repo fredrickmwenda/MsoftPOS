@@ -1,4 +1,4 @@
-@extends('backend.layout.top-head') 
+@extends('backend.layout.top-header') 
 @section('content')
 @if($errors->has('phone_number'))
 <div class="alert alert-danger alert-dismissible text-center">
@@ -10,16 +10,101 @@
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
-<!-- Side Navbar -->
+
+<link rel="stylesheet" href="{{ asset('css/pos-layout.css') }}" type="text/css">
+    {!! ToastMagic::styles() !!}
     <style>
-        @media screen and (max-width: 480px) {
-              .order-2 {
-                margin-top:-150px !important;
-              }
-            }
+        /* Remove all default spacing */
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            height: 100%;
+            min-height: 100vh;  
+            padding-bottom: 0 !important;
+        }
+
+        header {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: none !important;
+            height: auto !important;
+            display: block !important;
+            min-height: auto !important;
+        }
+
+        nav.navbar {
+            margin: 0 !important;
+            padding: 12px 24px !important;
+        }
+
+   
+
+        .container-fluid {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .row {
+            margin: 0 !important;
+        }
+
+        .pos-page {
+            min-height: auto !important;
+            background: white !important;
+            padding-bottom: 0 !important;
+        }
+
+        /* Sidebar toggle and main content layout handled by pos-layout.css */
+
+        /* Remove all space-creating elements */
+        .page,
+        .pos-page::before,
+        .pos-page::after {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: auto !important;
+            padding-bottom: 0 !important;
+            overflow: hidden;
+        }
+
+        /* Ensure navbar is compact */
+        header nav {
+            height: auto !important;
+            min-height: auto !important;
+        }
+
+        /* Remove all bottom spacing */
+        .card,
+        .card-body,
+        .card-footer,
+        section,
+        .container-fluid > div {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        body.pos-page {
+            padding-bottom: 0 !important;
+            overflow-y: auto;
+            background: white !important;
+        }
+
+        body {
+            padding-bottom: 0 !important;
+            padding: 0 !important;
+        }
+
         
         #product-table td p {
-              color:blue;  
+              color:green !important;  
         }
         #product-table td {
             background-color:#e6f5ff !important;
@@ -50,11 +135,53 @@
         .dripicons{
             color:#fff !important;
         }
+
+        /* Totals section: nicer labels and values */
+        .totals .col-sm-4 {
+            padding: 0.5rem 0.75rem;
+            margin-bottom: 0.25rem;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+        .totals .col-sm-4:hover {
+            background: rgba(19, 189, 96, 0.06);
+        }
+        .totals-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            letter-spacing: 0.02em;
+            color: inherit;
+            opacity: 0.95;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .totals .col-sm-4 > span:not(.totals-title) {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-left: 4px;
+        }
+        .totals-title .btn {
+            padding: 0 2px;
+            vertical-align: middle;
+        }
+        .totals-title .btn:hover {
+            opacity: 0.9;
+        }
+        /* Totals title icons: gradient color */
+        .totals-title i,
+        .totals-title .btn i {
+            background:rgb(199, 66, 33) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            color: transparent !important;
+        }
         .column-5{
             margin-bottom:15px !important;
         }
         .payment-amount h2 {
-            color: #00172D;
+            color: #058c49;
             font-size: 1.5rem;
             line-height: 2;
             margin-bottom: 0;
@@ -65,21 +192,186 @@
         .transition-all {
             transition: all 0.3s ease;
         }
-        #toggle-filters {
-            transition: all 0.3s ease;
-        }
-        #toggle-filters:hover {
-            background: #f1f1f1;
-        }
+
         /* Target only #myTable */
+       .btn svg {vertical-align: middle; width: 16px}
+       button.close svg {vertical-align: middle; width: 26px}
+
+        /* Remove white space at bottom */
+        .card-body {
+            padding-bottom: 0 !important;
+        }
+
+        .container-fluid > .row {
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        #content,
+        .animate-bottom {
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+        }
 
 
+            /* Make body a vertical flex container that fills the viewport */
+        body {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 100vh !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
 
+        /* #content stays block, but grows to fill available space */
+        #content {
+            flex: 1 0 auto !important;   /* expands to fill height */
+            display: block !important;    /* keep block layout */
+            width: 100%;
+        }
+
+        /* Make the forms section fill the expanded #content */
+        section.forms {
+            height: 100%;                  /* fill its parent (#content) */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ensure the inner container also stretches */
+        section.forms .container-fluid {
+            flex: 1 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        section.forms .row {
+            flex: 1 0 auto;
+        }
+
+        /* Ensure product search autocomplete dropdown is visible above sidebar/modal - black/dark theme */
+        .ui-autocomplete {
+            z-index: 9999 !important;
+            max-height: 280px;
+            overflow-y: auto;
+            background: #1a1a1a !important;
+            border: 1px solid #333 !important;
+            border-radius: 4px;
+        }
+        .ui-autocomplete .ui-menu-item {
+            border-color: #333 !important;
+        }
+        .ui-autocomplete .ui-menu-item-wrapper {
+            background: #1a1a1a !important;
+            color: #e0e0e0 !important;
+            padding: 8px 12px;
+        }
+        .ui-autocomplete .ui-menu-item-wrapper.ui-state-active,
+        .ui-autocomplete .ui-menu-item-wrapper:hover {
+            background: #333 !important;
+            color: #fff !important;
+            border-color: #333 !important;
+        }
+        #side-main-menu > li > a
+        {
+                color: green !important;
+        }
+        .side-navbar li ul li a {
+            color: green!important;
+        }
+        #side-main-menu i {
+            color: green !important;
+        }
+        #side-main-menu i:hover {
+            color: green !important;
+        }
+        #side-main-menu i:active {
+            color: green !important;
+        }
+        #side-main-menu i:focus {
+            color: green !important;
+        }
+
+        /* Payment buttons strip: responsive grid, good-looking */
+        .pos-payment-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            padding: 0.75rem;
+            align-content: start;
+        }
+        @media (min-width: 400px) {
+            .pos-payment-buttons { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (min-width: 576px) {
+            .pos-payment-buttons { padding: 0.5rem; gap: 0.4rem; }
+        }
+        .pos-payment-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 56px;
+            padding: 0.5rem 0.35rem;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.08);
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .pos-payment-btn i {
+            display: block;
+            font-size: 1.25rem;
+            margin-bottom: 0.2rem;
+        }
+        .pos-payment-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .pos-payment-btn:active {
+            transform: translateY(0);
+        }
+        .pos-payment-btn--method {
+            background: #f8f9fa !important;
+            color: #1a1a1a !important;
+        }
+        .pos-payment-btn--method:hover {
+            background: #e9ecef !important;
+        }
+        .pos-payment-btn--hold {
+            background: #f8f9fa !important;
+            color: #495057 !important;
+        }
+        .pos-payment-btn--cancel {
+            background: #dc3545 !important;
+            color: #fff !important;
+            border-color: #c82333;
+        }
+        .pos-payment-btn--cancel:hover {
+            background: #c82333 !important;
+            color: #fff !important;
+        }
+        .pos-payment-btn--recent {
+            background: #ffc107 !important;
+            color: #212529 !important;
+            border-color: #e0a800;
+        }
+        .pos-payment-btn--recent:hover {
+            background: #e0a800 !important;
+            color: #212529 !important;
+        }
+        .pos-payment-btn--points {
+            background: transparent !important;
+            color: #1a1a1a !important;
+            border: 1px dashed rgba(0,0,0,0.2);
+        }
 
     </style>
 
-<!-- Side Navbar -->
-<nav class="side-navbar shrink" style="background-color: #00172D !important;">
+    <!-- Side Navbar -->
+    <nav class="side-navbar shrink" style="background-color: #ecf0f4 !important;">
     <span class="brand-big mb-3">
         @if($general_setting->site_logo)
         <a href="{{url('/')}}"> <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a></a>
@@ -94,9 +386,15 @@
 
     @include('backend.layout.sidebar')
 </nav>
+ <!-- navbar-->
 <header>
-    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #62cff4, #2c67f2) !important;">
+    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+
         <a id="toggle-btn" href="#" class="menu-btn"><i class="fa fa-bars"> </i></a>
+
+        <span class="brand-big mb-3 mt-2">
+            <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+        </span>
 
         <div class="navbar-header">
             <ul class="nav-menu list-unstyled d-flex flex-md-row align-items-md-center">
@@ -289,77 +587,48 @@
 </header>
 <section class="forms pos-section">
     <div class="container-fluid">
+
         <div class="row">
             <audio id="mysoundclip1" preload="auto">
-                <source src="{{url('public/beep/beep-timber.mp3')}}"></source>
+                <source src="{{url('beep/beep-timber.mp3')}}"></source>
             </audio>
             <audio id="mysoundclip2" preload="auto">
-                <source src="{{url('public/beep/beep-07.mp3')}}"></source>
+                <source src="{{url('beep/beep-07.mp3')}}"></source>
             </audio>
-            <div class="col-md-2 order-3 order-md-1" style="background-color: #00172D !important;">
-                <div class="row mt-3">
-                     @if(in_array("cash",$options))
-                        <div class="column-5 col-6">
-                            <button  type="button" class="btn bg-success btn-sm btn-custom payment-btn text-white" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> <br> {{trans('file.Cash')}}</button>
-                        </div>
+            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #13bd60, #f5f8fe) !important;">
+                <div class="pos-payment-buttons">
+                        @if(in_array("cash",$options))
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> {{trans('file.Cash')}}</button>
                         @endif
-               
-                    @if(in_array("card",$options))
-                        <div class="column-5 col-6 ">
-                            <button style="background: #0984e3" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="credit-card-btn"><i class="fa fa-credit-card fa-2x"></i><br> {{trans('file.Card')}}</button>
-                        </div>
+                        @if(in_array("card",$options))
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="credit-card-btn"><i class="fa fa-credit-card"></i> {{trans('file.Card')}}</button>
                         @endif
-                       
-       
                         @if(in_array("paypal",$options) && $lims_pos_setting_data && (strlen($lims_pos_setting_data->paypal_live_api_username)>0) && (strlen($lims_pos_setting_data->paypal_live_api_password)>0) && (strlen($lims_pos_setting_data->paypal_live_api_secret)>0))
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="paypal-btn"><i class="fa fa-paypal fa-2x"></i><br> {{trans('file.PayPal')}}</button>
-                        </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="paypal-btn"><i class="fa fa-paypal"></i> {{trans('file.PayPal')}}</button>
                         @endif
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom" id="draft-btn"><i class="dripicons-flag"></i> <br> Hold</button>
-
-                        </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--hold" id="draft-btn"><i class="dripicons-flag"></i> Hold</button>
                         @if(in_array("cheque",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="cheque-btn"><i class="fa fa-money"></i><br> {{trans('file.Cheque')}}</button>
-                        </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="cheque-btn"><i class="fa fa-money"></i> {{trans('file.Cheque')}}</button>
                         @endif
                         @if(in_array("gift_card",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="gift-card-btn"><i class="fa fa-credit-card-alt"></i><br> {{trans('file.Gift Card')}}</button>
-                        </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="gift-card-btn"><i class="fa fa-credit-card-alt"></i> {{trans('file.Gift Card')}}</button>
                         @endif
                         @if(in_array("deposit",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i><br> {{trans('file.Deposit')}}</button>
-                        </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i> {{trans('file.Deposit')}}</button>
                         @endif
                         
                         @if(in_array("mobile_money",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-credit-card-alt"></i>
-                                <br> {{('MobileMoney')}}</button>
-                        </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-mobile"></i> Mobile Money</button>
                         @endif
-                        
-                        @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active)
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="point-btn"><i class="dripicons-rocket"></i><br> {{trans('file.Points')}}</button>
-                        </div>
+                        @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active && in_array("points",$options))
+                        <button type="button" class="pos-payment-btn pos-payment-btn--points payment-btn" data-toggle="modal" data-target="#add-payment" id="point-btn"><i class="dripicons-rocket"></i> {{trans('file.Points')}}</button>
                         @endif
-                         <div class="column-5 col-6">
-                            <button style="background-color: #d63031;" type="button" class="btn btn-sm btn-custom" id="cancel-btn" onclick="return confirmCancel()"><i class="fa fa-close"></i> <br>{{trans('file.Cancel')}}</button>
-                        </div>
-                         <div class="column-5 col-sm-12">
-                            <button style="background-color: #ffc107;" type="button" class="btn btn-sm btn-custom" data-toggle="modal" data-target="#recentTransaction"><i class="dripicons-clock"></i><br> {{trans('file.Recent Transaction')}}</button>
-                        </div>
-                       
-                       
-                         </div>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--cancel" id="cancel-btn" onclick="return confirmCancel()"><i class="fa fa-close"></i> {{trans('file.Cancel')}}</button>
+                        <button type="button" class="pos-payment-btn pos-payment-btn--recent" data-toggle="modal" data-target="#recentTransaction"><i class="dripicons-clock"></i> {{trans('file.Recent Transaction')}}</button>
+                </div>
             </div>
             <div class="col-md-10 col-lg-10 order-2 order-md-2 transition-all" id="main-column"  style="background-color:#f5f5f0 !important;">
-                <div class="card "  style="background-color:#f5f5f0 !important;">
+                <div class="card " style="margin-top: 10px; background-color:#f5f5f0 !important;">
                     <div class="card-body" style="padding-bottom: 0px !important;">
                         {!! Form::open(['route' => 'sales.store', 'method' => 'post', 'files' => true, 'class' => 'payment-form']) !!}
                         @php
@@ -930,7 +1199,8 @@
 
                                                     {{-- Container for dynamically added splits --}}
                                                     <div class="col-md-12 mt-2 ml-2" id="paymentMethodsContainer"></div>
-                                                    <div class="form-group col-md-12 mt-3">
+                                                    <div class="form-group col-md-12 mt-3 credit-card-fields">
+                                                        <label>{{trans('file.Credit Card Payment')}} *</label>
                                                         <div class="card-element form-control">
                                                         </div>
                                                         <div class="card-errors" role="alert"></div>
@@ -976,6 +1246,10 @@
                                                         <label>{{trans('file.Staff Note')}}</label>
                                                         <textarea rows="3" class="form-control" name="staff_note"></textarea>
                                                     </div>
+                                                </div>
+                                                <div id="payment-error-alert" class="alert alert-danger d-none mt-2" role="alert">
+                                                    <i class="dripicons-warning"></i>
+                                                    <strong>Error:</strong> <span id="payment-error-message"></span>
                                                 </div>
                                                 <div class="mt-3">
                                                     <button id="submit-btn" type="button" class="btn btn-primary">{{trans('file.submit')}}</button>
@@ -1817,20 +2091,14 @@ function validatePaymentMethod() {
     
     // Check each payment method for required fields
     if (paymentMethod == 2) { // Gift Card
-        var gift_card_id = $('select[name="gift_card_id_select"]').val();
+        var gift_card_id = $('select[name="gift_card_id_select"]').val() || $('input[name="gift_card_id"]').val();
         if (!gift_card_id) {
             alert('Please select a gift card');
             return false;
         }
     }
     
-    if (paymentMethod == 3) { // Credit Card
-        // Check if card element has data (Stripe validation)
-        if ($('.card-element').is(':visible') && !$('.card-element').data('stripe-card')) {
-            alert('Please enter your credit card details');
-            return false;
-        }
-    }
+    // Credit Card (3): Stripe validates card details on form submit via checkout.js
     
     if (paymentMethod == 4) { // Cheque
         var cheque_no = $('input[name="cheque_no"]').val();
@@ -1846,8 +2114,9 @@ function validatePaymentMethod() {
             alert('Please select a customer for deposit payment');
             return false;
         }
-        if (paid_amount > deposit[customer_id]) {
-            alert('Amount exceeds customer deposit! Customer deposit: ' + deposit[customer_id]);
+        var customerDeposit = parseFloat(deposit[customer_id]) || 0;
+        if (parseFloat(paid_amount) > customerDeposit) {
+            alert('Amount exceeds customer deposit! Customer deposit: ' + customerDeposit);
             return false;
         }
     }
@@ -1862,14 +2131,17 @@ function validatePaymentMethod() {
             alert('Reward point setting is not available');
             return false;
         }
-        if (paid_amount > points[customer_id]) {
-            alert('Customer does not have sufficient points. Available points: ' + points[customer_id]);
+        var customerPoints = parseInt(points[customer_id], 10) || 0;
+        var perPointAmount = parseFloat(reward_point_setting['per_point_amount']) || 1;
+        var requiredPoints = Math.ceil(parseFloat(paid_amount) / perPointAmount);
+        if (requiredPoints > customerPoints) {
+            alert('Customer does not have sufficient points. Available points: ' + customerPoints);
             return false;
         }
     }
     
     if (paymentMethod == 8) { // Mobile Money
-        var mobile_operator = $('select[name="mobile_money_operator"]').val();
+        var mobile_operator = $('#mobile_money_operator').val() || $('input[name="selected_mobile_op"]').val();
         var mobile_number = $('input[name="mobile_number"]').val();
         
         if (!mobile_operator) {
@@ -2033,6 +2305,7 @@ $('select[name="paid_by_id_select"]').on('change', function() {
 function hideAllPaymentFields() {
     $(".card-element").hide();
     $(".card-errors").hide();
+    $(".credit-card-fields").hide();
     $("#cheque").hide();
     $(".cheque").hide();
     $("#gift-card").hide();
@@ -2055,6 +2328,7 @@ function showPaymentFieldsByMethod(method) {
             giftCard();
             break;
         case 3: // Credit Card
+            $(".credit-card-fields").show();
             $(".card-element").show();
             $(".card-errors").show();
             creditCard();
@@ -3257,6 +3531,7 @@ function calculateGrandTotal() {
 function hide() {
     $(".card-element").hide();
     $(".card-errors").hide();
+    $(".credit-card-fields").hide();
     $("#cheque").hide();
     $("#gift-card").hide();
     $(".mobile_money_fields").hide();
@@ -3280,6 +3555,7 @@ function giftCard() {
             $('.selectpicker').selectpicker();
         }
     });
+    $(".credit-card-fields").hide();
     $(".card-element").hide();
     $(".card-errors").hide();
     $("#cheque").hide();
@@ -3289,6 +3565,7 @@ function giftCard() {
 function mobile_money() {
     $(".mobile_money_fields").show();
     $(".gift-card").hide();
+    $(".credit-card-fields").hide();
     $(".card-element").hide();
     $(".card-errors").hide();
     $(".cheque").hide();
@@ -3297,6 +3574,7 @@ function mobile_money() {
 
 function cheque() {
     $("#cheque").show();
+    $(".credit-card-fields").hide();
     $(".card-element").hide();
     $(".card-errors").hide();
     $("#gift-card").hide();
@@ -3304,7 +3582,8 @@ function cheque() {
 }
 
 function creditCard() {
-    $.getScript( "../../public/vendor/stripe/checkout.js" );
+    $.getScript("{{ asset('vendor/stripe/checkout.js') }}");
+    $(".credit-card-fields").show();
     $(".card-element").show();
     $(".card-errors").show();
     $("#cheque").hide();
@@ -3382,18 +3661,23 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 $(document).on('submit', '.payment-form', function(e) {
+    $('#payment-error-alert').addClass('d-none');
     var rownumber = $('table.order-list tbody tr:last').index();
     if (rownumber < 0) {
         alert("Please insert product to order table!");
         e.preventDefault();
+        return;
     }
-    else if( parseFloat( $('input[name="paying_amount"]').val() ) < parseFloat( $('input[name="paid_amount"]').val()) ){
-        alert('Paying amount cannot be bigger than recieved amount');
+    // Check if change is negative (insufficient payment)
+    var changeVal = parseFloat($("#change").text().replace(/,/g, '')) || 0;
+    if (changeVal < 0) {
         e.preventDefault();
+        $('#payment-error-message').text('Insufficient payment - the amount received is less than the total due. Please collect the full amount before submitting.');
+        $('#payment-error-alert').removeClass('d-none');
+        $('#add-payment').modal('show');
+        return;
     }
-    else{
-        $("#submit-button").prop('disabled', true);
-    }
+    $("#submit-button").prop('disabled', true);
 });
 
 

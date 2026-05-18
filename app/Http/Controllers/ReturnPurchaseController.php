@@ -20,7 +20,7 @@ use App\Models\ProductPurchase;
 use App\Models\Currency;
 use Auth;
 use DB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\UserNotification;
 use Illuminate\Support\Facades\Mail;

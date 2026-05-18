@@ -19,12 +19,13 @@ use App\Models\Product;
 use App\Models\RewardPointSetting;
 use App\Models\Product_Warehouse;
 use App\Models\Unit;
+use App\Models\GeneralSetting;
 use Cache;
 use DB;
 use Auth;
 use Printing;
 use Rawilk\Printing\Contracts\Printer;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 /*use vendor\autoload;
 use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 use Mike42\Escpos\Printer;*/
@@ -86,9 +87,16 @@ class HomeController extends Controller
         config()->set('database.connections.mysql.strict', false);
         DB::reconnect();
 
+        if (!Auth::check() || !Auth::user()) {
+            return redirect()->route('login')->with('error', __('Your session is invalid or has expired. Please log in again.'));
+        }
+
         if(Auth::user()->role_id == 5) {
             //dd(Auth::user()->role_id);
             $customer = Customer::select('id', 'points')->where('user_id', Auth::id())->first();
+            if (!$customer) {
+                return redirect()->back()->with('error', __('Customer profile not found for this user. Please contact an administrator.'));
+            }
             $lims_sale_data = Sale::with('warehouse')->where('customer_id', $customer->id)->orderBy('created_at', 'desc')->get();
             $lims_payment_data = DB::table('payments')
                            ->join('sales', 'payments.sale_id', '=', 'sales.id')
@@ -107,37 +115,96 @@ class HomeController extends Controller
         $end_date = date("Y").'-'.date("m").'-'.date('t', mktime(0, 0, 0, date("m"), 1, date("Y")));
         $yearly_sale_amount = [];
 
+        // Same check as Sale index: apply sale_percentage_filter when set (session then GeneralSetting); only if user has permission
+        $sale_percentage = session('sale_percentage_filter');
+        if ($sale_percentage === null) {
+            $settings = GeneralSetting::first();
+            $sale_percentage = $settings && $settings->sale_percentage_filter !== null ? (int) $settings->sale_percentage_filter : null;
+        } else {
+            $sale_percentage = (int) $sale_percentage;
+        }
+        $apply_sale_percentage_current = $sale_percentage !== null && $sale_percentage < 100;
+        if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+            $apply_sale_percentage_current = false;
+        }
+
         if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own')
         {
-            $product_sale_data = Sale::join('product_sales', 'sales.id','=', 'product_sales.sale_id')
-                ->select(DB::raw('product_sales.product_id, product_sales.product_batch_id, product_sales.sale_unit_id, sum(product_sales.qty) as sold_qty, sum(product_sales.return_qty) as return_qty, sum(product_sales.total) as sold_amount'))
-                ->where('sales.user_id', Auth::id())
-                ->whereDate('sales.created_at', '>=' , $start_date)
-                ->whereDate('sales.created_at', '<=' , $end_date)
-                ->groupBy('product_sales.product_id', 'product_sales.product_batch_id')
-                ->get();
-            $product_cost = $this->calculateAverageCOGS($product_sale_data);
-            $revenue = Sale::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum(DB::raw('grand_total - shipping_cost'));
-            $return = Returns::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
-            $purchase_return = ReturnPurchase::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
+            $sale_base = Sale::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date);
+            $sale_ids_current = [];
+            if ($apply_sale_percentage_current) {
+                $all_sales = (clone $sale_base)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+                $total_val = $all_sales->sum('grand_total');
+                $target_val = $total_val * ($sale_percentage / 100);
+                $run = 0;
+                foreach ($all_sales as $s) {
+                    $sale_ids_current[] = $s->id;
+                    $run += $s->grand_total;
+                    if ($run >= $target_val) break;
+                }
+            }
+            if ($apply_sale_percentage_current && count($sale_ids_current) > 0) {
+                $product_sale_data = Product_Sale::whereIn('sale_id', $sale_ids_current)
+                    ->select(DB::raw('product_id, product_batch_id, sale_unit_id, sum(qty) as sold_qty, sum(return_qty) as return_qty, sum(total) as sold_amount'))
+                    ->groupBy('product_id', 'product_batch_id', 'sale_unit_id')
+                    ->get();
+                $product_cost = $this->calculateAverageCOGS($product_sale_data);
+                $revenue = Sale::whereIn('id', $sale_ids_current)->sum(DB::raw('grand_total - shipping_cost'));
+                $return = Returns::whereIn('sale_id', $sale_ids_current)->sum('grand_total');
+            } else {
+                $product_sale_data = Sale::join('product_sales', 'sales.id','=', 'product_sales.sale_id')
+                    ->select(DB::raw('product_sales.product_id, product_sales.product_batch_id, product_sales.sale_unit_id, sum(product_sales.qty) as sold_qty, sum(product_sales.return_qty) as return_qty, sum(product_sales.total) as sold_amount'))
+                    ->where('sales.user_id', Auth::id())
+                    ->whereDate('sales.created_at', '>=' , $start_date)
+                    ->whereDate('sales.created_at', '<=' , $end_date)
+                    ->groupBy('product_sales.product_id', 'product_sales.product_batch_id')
+                    ->get();
+                $product_cost = $this->calculateAverageCOGS($product_sale_data);
+                $revenue = Sale::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum(DB::raw('grand_total - shipping_cost'));
+                $return = Returns::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
+            }
             $revenue = $revenue - $return;
+            $purchase_return = ReturnPurchase::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
             $purchase = Purchase::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
             $profit = $revenue + $purchase_return - $product_cost;
             $expense = Expense::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date)->sum('amount');
         }
         else
         {
-            $product_sale_data = Product_Sale::join('sales', 'product_sales.sale_id', '=', 'sales.id')
+            $sale_base = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date);
+            $sale_ids_current = [];
+            if ($apply_sale_percentage_current) {
+                $all_sales = (clone $sale_base)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+                $total_val = $all_sales->sum('grand_total');
+                $target_val = $total_val * ($sale_percentage / 100);
+                $run = 0;
+                foreach ($all_sales as $s) {
+                    $sale_ids_current[] = $s->id;
+                    $run += $s->grand_total;
+                    if ($run >= $target_val) break;
+                }
+            }
+            if ($apply_sale_percentage_current && count($sale_ids_current) > 0) {
+                $product_sale_data = Product_Sale::whereIn('sale_id', $sale_ids_current)
+                    ->select(DB::raw('product_id, product_batch_id, sale_unit_id, sum(qty) as sold_qty, sum(return_qty) as return_qty, sum(total) as sold_amount'))
+                    ->groupBy('product_id', 'product_batch_id', 'sale_unit_id')
+                    ->get();
+                $product_cost = $this->calculateAverageCOGS($product_sale_data);
+                $revenue = Sale::whereIn('id', $sale_ids_current)->sum(DB::raw('grand_total - shipping_cost'));
+                $return = Returns::whereIn('sale_id', $sale_ids_current)->sum('grand_total');
+            } else {
+                $product_sale_data = Product_Sale::join('sales', 'product_sales.sale_id', '=', 'sales.id')
                                 ->select(DB::raw('product_sales.product_id, product_sales.product_batch_id, product_sales.sale_unit_id, sum(product_sales.qty) as sold_qty, sum(product_sales.return_qty) as return_qty, sum(product_sales.total) as sold_amount'))
                                 ->whereDate('sales.created_at', '>=' , $start_date)
                                 ->whereDate('sales.created_at', '<=' , $end_date)
                                 ->groupBy('product_sales.product_id', 'product_sales.product_batch_id')
                                 ->get();
-            $product_cost = $this->calculateAverageCOGS($product_sale_data);
-            $revenue = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum(DB::raw('grand_total - shipping_cost'));
-            $return = Returns::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
-            $purchase_return = ReturnPurchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
+                $product_cost = $this->calculateAverageCOGS($product_sale_data);
+                $revenue = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum(DB::raw('grand_total - shipping_cost'));
+                $return = Returns::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
+            }
             $revenue = $revenue - $return;
+            $purchase_return = ReturnPurchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
             $purchase = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
             $profit = $revenue + $purchase_return - $product_cost;
             $expense = Expense::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('amount');
@@ -174,20 +241,42 @@ class HomeController extends Controller
             $payment_sent[] = number_format((float)$sent_amount, config('decimal'), '.', '');
             $month[] = date("F", strtotime($start_date));
             $start = strtotime("+1 month", $start);
-        }
-        // yearly report
+        } 
+        // yearly report (same sale_percentage from session then GeneralSetting, applied when set; only if user has permission)
+        $apply_sale_percentage = $sale_percentage !== null && $sale_percentage < 100;
+        // if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+        //     $apply_sale_percentage = false;
+        // }
+
         $start = strtotime(date("Y") .'-01-01');
         $end = strtotime(date("Y") .'-12-31');
         while($start < $end)
         {
             $start_date = date("Y").'-'.date('m', $start).'-'.'01';
             $end_date = date("Y").'-'.date('m', $start).'-'.date('t', mktime(0, 0, 0, date("m", $start), 1, date("Y", $start)));
-            if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
-                $sale_amount = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
-                $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
+
+            $sale_base = Sale::whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date);
+            if (Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
+                $sale_base->where('user_id', Auth::id());
             }
-            else{
-                $sale_amount = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
+            if ($apply_sale_percentage) {
+                $month_sales = (clone $sale_base)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+                $month_total = $month_sales->sum('grand_total');
+                $target = $month_total * ($sale_percentage / 100);
+                $sale_amount = 0;
+                foreach ($month_sales as $s) {
+                    $sale_amount += $s->grand_total;
+                    if ($sale_amount >= $target) {
+                        break;
+                    }
+                }
+            } else {
+                $sale_amount = (clone $sale_base)->sum('grand_total');
+            }
+
+            if (Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
+                $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
+            } else {
                 $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
             }
             $yearly_sale_amount[] = number_format((float)$sale_amount, config('decimal'), '.', '');

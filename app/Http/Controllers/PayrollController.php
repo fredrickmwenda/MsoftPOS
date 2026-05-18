@@ -8,7 +8,7 @@ use App\Models\Employee;
 use App\Models\Payroll;
 use Auth;
 use DB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\PayrollDetails;
 use Mail;

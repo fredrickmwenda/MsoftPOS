@@ -7,7 +7,7 @@ use App\Models\Payment;
 use App\Models\Purchase;
 use App\Models\Expense;
 use App\Models\Account;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Auth;
 use DB;
 

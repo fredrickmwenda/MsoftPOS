@@ -12,7 +12,7 @@ use Auth;
 use Illuminate\Validation\Rule;
 use App\Mail\UserNotification;
 use Illuminate\Support\Facades\Mail;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class GiftCardController extends Controller

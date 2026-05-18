@@ -7,7 +7,7 @@ use App\Models\Expense;
 use App\Models\Account;
 use App\Models\Warehouse;
 use App\Models\CashRegister;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Auth;
 use DB;

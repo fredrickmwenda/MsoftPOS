@@ -18,7 +18,7 @@ use Auth;
 use DB;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\CustomerCreate;
 use App\Mail\SupplierCreate;

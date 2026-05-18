@@ -70,25 +70,25 @@
                     </div>
                 </div>
 
-                <!-- Sales Amount Filter -->
-                <div class="col-md-3">
+                @if(in_array('sale-percentage-filter', $all_permission))
+                <!-- Filter By Percentage: show only top X% of sales by value (permission required) -->
+                <div class="col-md-2">
                     <div class="form-group">
-                        <label><strong>Filter By Sale Amount</strong></label>
-                        <div class="input-group">
-                            <input type="number" name="cumulative_total_target" class="form-control" placeholder="Enter amount" value="{{ $cumulative_total_target ?? request('cumulative_total_target') }}" step="0.01" min="0" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'readonly' : '' }}>
-                            <div class="input-group-append">
-                                <select name="cumulative_total_operator" class="form-control" style="max-width: 80px;" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'disabled' : '' }}>
-                                    <option value="equal" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'equal' ? 'selected' : '' }}>=</option>
-                                    <option value="greater" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'greater' ? 'selected' : '' }}>≥</option>
-                                    <option value="less" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'less' ? 'selected' : '' }}>≤</option>
-                                    <option value="around" {{ ($cumulative_total_operator ?? request('cumulative_total_operator')) == 'around' ? 'selected' : '' }}>≈</option>
-                                </select>
-                            </div>
-                        </div>
+                        <label><strong>Filter By Percentage</strong></label>
+                        {{-- Hidden ensures value is always submitted (disabled selects are not sent) and DataTable always has it --}}
+                        <input type="hidden" name="sale_percentage_filter" id="sale_percentage_filter_value" value="{{ $sale_percentage_filter ?? request('sale_percentage_filter') ?? '' }}" />
+                        <select id="sale_percentage_filter_select" class="form-control" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'disabled' : '' }}>
+                            <option value="">All (100%)</option>
+                            <option value="10" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 10 ? 'selected' : '' }}>10%</option>
+                            <option value="25" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 25 ? 'selected' : '' }}>25%</option>
+                            <option value="50" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 50 ? 'selected' : '' }}>50%</option>
+                            <option value="75" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 75 ? 'selected' : '' }}>75%</option>
+                            <option value="100" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 100 ? 'selected' : '' }}>100%</option>
+                        </select>
                         @if(\Auth::user()->role_id <= 2)
-                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default filter (shared with all users)' : 'Filter sales by grand total amount' }}</small>
+                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (shared)' : 'Show top X% of sales by value' }}</small>
                         @else
-                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin-set default filter (locked)' : 'Filter sales by grand total amount' }}</small>
+                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (locked)' : 'Show top X% of sales by value' }}</small>
                         @endif
                     </div>
                 </div>
@@ -101,6 +101,7 @@
                         </button>
                     </div>
                 </div>
+                @endif
                 @endif
 
                 <div class="col-md-2 mt-3">
@@ -116,6 +117,18 @@
                 </div>
             </div>
             {!! Form::close() !!}
+        </div>
+        
+        <!-- Total Sales card (shown when filtered; value filled by DataTable response) -->
+        <div class="row ml-1 mb-2">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body py-2">
+                        <span class="text-muted small">Total Sales</span>
+                        <h5 class="mb-0 mt-1" id="total-sales-card-amount">—</h5>
+                    </div>
+                </div>
+            </div>
         </div>
         
         @if(in_array("sales-add", $all_permission))
@@ -557,14 +570,13 @@
     $("ul#sale").siblings('a').attr('aria-expanded','true');
     $("ul#sale").addClass("show");
     $("ul#sale #sale-list-menu").addClass("active");
-
-    // Handle Save as Default button for admin cumulative filter
+ 
+    // Handle Save as Default button for admin percentage filter
     $('#save-admin-filter').on('click', function() {
-        var target = $('input[name="cumulative_total_target"]').val();
-        var operator = $('select[name="cumulative_total_operator"]').val();
+        var pct = $('#sale_percentage_filter_value').val() || $('#sale_percentage_filter_select').val();
         
-        if(!target) {
-            alert('Please enter a target amount before saving as default');
+        if(!pct || pct === '') {
+            alert('Please select a percentage before saving as default');
             return;
         }
         
@@ -572,8 +584,7 @@
             type: 'POST',
             url: '{{ route("sales.save-default-filter") }}',
             data: {
-                cumulative_total_target: target,
-                cumulative_total_operator: operator,
+                sale_percentage_filter: pct,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
@@ -672,12 +683,17 @@
         }
     });
 
+    // Keep hidden in sync with percentage select so form submit and DataTable always have the value
+    $('#sale_percentage_filter_select').on('change', function() {
+        $('#sale_percentage_filter_value').val($(this).val() || '');
+    });
+
     // Reset filters
     $('#reset-filters').on('click', function() {
         $('input[name="starting_date"]').val('');
         $('input[name="ending_date"]').val('');
-        $('input[name="cumulative_total_target"]').val('');
-        $('select[name="cumulative_total_operator"]').val('equal');
+        $('#sale_percentage_filter_value').val('');
+        $('#sale_percentage_filter_select').val('');
         $('#warehouse_id').val(0);
         $('#sale-status').val(0);
         $('#payment-status').val(0);
@@ -1019,8 +1035,15 @@
                 warehouse_id: function() { return $('#warehouse_id').val(); },
                 sale_status: function() { return $('#sale-status').val(); },
                 payment_status: function() { return $('#payment-status').val(); },
-                cumulative_total_target: function() { return $('input[name="cumulative_total_target"]').val(); },
-                cumulative_total_operator: function() { return $('select[name="cumulative_total_operator"]').val(); }
+                sale_percentage_filter: function() { return $('#sale_percentage_filter_value').val() || $('select#sale_percentage_filter_select').val(); }
+            },
+            dataSrc: function(json) {
+                if (json.total_sales_amount !== undefined) {
+                    $('#total-sales-card-amount').text(parseFloat(json.total_sales_amount).toFixed({{ $general_setting->decimal ?? 2 }}));
+                } else {
+                    $('#total-sales-card-amount').text('—');
+                }
+                return json.data;
             },
             dataType: "json",
             type:"post"
@@ -1028,11 +1051,6 @@
         "createdRow": function( row, data, dataIndex ) {
             $(row).addClass('sale-link');
             $(row).attr('data-sale', data['sale']);
-            
-            // Add highlight class if this sale matches the cumulative target
-            if(data.highlight_class) {
-                $(row).addClass(data.highlight_class);
-            }
         },
         "columns": columns,
         'language': {

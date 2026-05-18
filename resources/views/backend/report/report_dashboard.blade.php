@@ -15,7 +15,7 @@
                 <div class="card bg-light border-0">
                     <div class="card-body"> 
                         <small class="text-muted">Total Reports</small>
-                        <h3 class="mb-0">24</h3>
+                        <h3 class="mb-0">26</h3>
                     </div>
                 </div>
             </div>
@@ -97,6 +97,19 @@
         </a>
     </div>
 
+    <div class="report-item" data-category="sales" data-name="Sales Person Report">
+        {!! Form::open(['route' => 'report.salesPerson', 'method' => 'post', 'id' => 'sales-person-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d')}}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <input type="hidden" name="warehouse_id" value="0">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-user-id"></i></div>
+            <h6>Sales Person Report</h6>
+            <span class="badge bg-success">Sales</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
+
     <!-- Purchase Reports Section -->
     <div class="report-item" data-category="purchase" data-name="Daily Purchases">
         <a href="{{ url('report/daily_purchase/'.date('Y').'/'.date('m')) }}" class="report-link">
@@ -157,7 +170,7 @@
     {{-- Summary Report (old Profit & Loss summary) --}}
     <div class="report-item" data-category="financial" data-name="Summary Report">
         {!! Form::open(['route' => 'report.profitLoss', 'method' => 'post', 'id' => 'profitLoss-form-' . uniqid()]) !!}
-        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d') }}">
         <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
         <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
             <div class="report-icon"><i class="dripicons dripicons-pulse"></i></div>
@@ -181,7 +194,7 @@
 
     <div class="report-item" data-category="financial" data-name="Payment Report">
         {!! Form::open(['route' => 'report.paymentByDate', 'method' => 'post', 'id' => 'payment-form-' . uniqid()]) !!}
-        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d')}}">
         <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
         <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
             <div class="report-icon"><i class="dripicons dripicons-wallet"></i></div>
@@ -191,10 +204,22 @@
         {!! Form::close() !!}
     </div>
 
+    <div class="report-item" data-category="financial" data-name="Payment Method Report">
+        {!! Form::open(['route' => 'report.paymentMethod', 'method' => 'post', 'id' => 'payment-method-form-' . uniqid()]) !!}
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d') }}">
+        <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
+        <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">
+            <div class="report-icon"><i class="dripicons dripicons-card"></i></div>
+            <h6>Payment Method Report</h6>
+            <span class="badge bg-danger">Financial</span>
+        </a>
+        {!! Form::close() !!}
+    </div>
+
     <!-- Customer Reports Section -->
     <div class="report-item" data-category="customer" data-name="Customer Report">
         {!! Form::open(['route' => 'report.customer', 'method' => 'post', 'id' => 'customer-report-form']) !!}
-        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d') }}">
         <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
         <a href="#" onclick="this.closest('form').submit(); return false;" class="report-link">
             <div class="report-icon"><i class="dripicons dripicons-user"></i></div>
@@ -256,7 +281,7 @@
     <!-- Product Reports Section -->
     <div class="report-item" data-category="product" data-name="Product Report">
         {!! Form::open(['route' => 'report.product', 'method' => 'get', 'id' => 'product-report-form-' . uniqid()]) !!}
-        <input type="hidden" name="start_date" value="{{ date('Y-m').'-01' }}">
+        <input type="hidden" name="start_date" value="{{ date('Y-m-d')}}">
         <input type="hidden" name="end_date" value="{{ date('Y-m-d') }}">
         <input type="hidden" name="warehouse_id" value="0">
         <a href="#" onclick="$(this).closest('form').submit(); return false;" class="report-link">

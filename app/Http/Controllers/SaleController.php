@@ -50,7 +50,7 @@ use App\Models\MailSetting;
 use Stripe\Stripe;
 use NumberToWords\NumberToWords;
 use Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\SaleDetails;
 use App\Mail\PaymentDetails;
@@ -234,42 +234,59 @@ class SaleController extends Controller
             else
                 $payment_status = 0;
 
-            if($request->input('starting_date')) {
-                $starting_date = $request->input('starting_date');
-                $ending_date = $request->input('ending_date');
-            }
-            else {
+            $req_start = $request->input('starting_date');
+            $req_end   = $request->input('ending_date');
+            if ($req_start && $req_end) {
+                $starting_date = $req_start;
+                $ending_date = $req_end;
+                session([
+                    'sale_filter_starting_date' => $starting_date,
+                    'sale_filter_ending_date'   => $ending_date,
+                ]);
+            } elseif ($request->has('starting_date') && $request->has('ending_date')) {
+                // Reset was clicked (form submitted with empty dates)
+                session()->forget(['sale_filter_starting_date', 'sale_filter_ending_date']);
                 $starting_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
                 $ending_date = date("Y-m-d");
+            } else {
+                $starting_date = session('sale_filter_starting_date') ?? date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
+                $ending_date   = session('sale_filter_ending_date') ?? date("Y-m-d");
             }
 
-            // Handle cumulative total filter
+            // Handle sale percentage filter (show only top X% of sales by value)
             // Priority: User input > Session > Admin default settings
-            $cumulative_total_target = null;
-            $cumulative_total_operator = 'equal';
+            $sale_percentage_filter = null;
             $is_admin_filter = false;
             
-            if($request->input('cumulative_total_target')) {
-                // User manually set the filter
-                $cumulative_total_target = $request->input('cumulative_total_target');
-                $cumulative_total_operator = $request->input('cumulative_total_operator') ?: 'equal';
-                session([
-                    'cumulative_total_target' => $cumulative_total_target,
-                    'cumulative_total_operator' => $cumulative_total_operator
-                ]);
-            } else if (session('cumulative_total_target')) {
-                // Load from session if previously set by user
-                $cumulative_total_target = session('cumulative_total_target');
-                $cumulative_total_operator = session('cumulative_total_operator', 'equal');
+            if ($request->has('sale_percentage_filter')) {
+                $req_pct = $request->input('sale_percentage_filter');
+                if ($req_pct !== '' && $req_pct !== null) {
+                    $sale_percentage_filter = (int) $req_pct;
+                    if ($sale_percentage_filter >= 0 && $sale_percentage_filter <= 100) {
+                        session(['sale_percentage_filter' => $sale_percentage_filter]);
+                    } else {
+                        $sale_percentage_filter = null;
+                    }
+                } else {
+                    // User chose "All (100%)" - clear filter and session
+                    $sale_percentage_filter = null;
+                    session()->forget('sale_percentage_filter');
+                }
+            } else if (session('sale_percentage_filter') !== null) {
+                $sale_percentage_filter = (int) session('sale_percentage_filter');
             } else {
-                // Load admin-set default filters from settings
                 $settings = GeneralSetting::first();
-                if($settings && $settings->sale_cumulative_total_target) {
-                    $cumulative_total_target = $settings->sale_cumulative_total_target;
-                    $cumulative_total_operator = $settings->sale_cumulative_total_operator ?: 'equal';
+                if($settings && $settings->sale_percentage_filter !== null) {
+                    $sale_percentage_filter = (int) $settings->sale_percentage_filter;
                     $is_admin_filter = true;
                 }
-                session(['cumulative_total_target' => null]);
+                session(['sale_percentage_filter' => null]);
+            }
+
+            // Only users with sale-percentage-filter permission may use the filter
+            if (!$role->hasPermissionTo('sale-percentage-filter')) {
+                $sale_percentage_filter = null;
+                $is_admin_filter = false;
             }
 
             $lims_gift_card_list = GiftCard::where("is_active", true)->get();
@@ -292,7 +309,7 @@ class SaleController extends Controller
                 $field_name[] = str_replace(" ", "_", strtolower($fieldName));
             }
             
-            return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list', 'cumulative_total_target', 'cumulative_total_operator', 'is_admin_filter'));
+            return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list', 'sale_percentage_filter', 'is_admin_filter'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
@@ -4142,31 +4159,45 @@ public function limsProductSearch(Request $request)
     $warehouse_id = $request->input('warehouse_id');
     $sale_status = $request->input('sale_status');
     $payment_status = $request->input('payment_status');
-    $grand_total_target = $request->input('cumulative_total_target');
-    $grand_total_operator = $request->input('cumulative_total_operator') ?: 'equal';
-    
-    // If cumulative filter not provided in request, check for admin-set defaults
-    if (!$grand_total_target) {
-        $settings = GeneralSetting::first();
-        if($settings && $settings->sale_cumulative_total_target) {
-            $grand_total_target = $settings->sale_cumulative_total_target;
-            $grand_total_operator = $settings->sale_cumulative_total_operator ?: 'equal';
-        }
+
+    // Date range: use request (from form/DataTable) or session or default (same as index)
+    $starting_date = $request->input('starting_date');
+    $ending_date = $request->input('ending_date');
+    if (empty($starting_date) || empty($ending_date)) {
+        $starting_date = session('sale_filter_starting_date');
+        $ending_date = session('sale_filter_ending_date');
     }
-    
-    // Check if user is admin (role_id <= 2 typically means admin/super admin)
-    $is_admin = Auth::user()->role_id <= 2;
-    $filter_by_amount = false;
-    $matched_sales = [];
-    
-    // Allow filtering by grand total if target is set (for all users if admin default is set)
-    if ($grand_total_target) {
-        $filter_by_amount = true;
+    if (empty($starting_date) || empty($ending_date)) {
+        $ending_date = date('Y-m-d');
+        $starting_date = date('Y-m-d', strtotime('-1 year', strtotime($ending_date)));
     }
 
+    $sale_percentage = $request->input('sale_percentage_filter');
+    if ($sale_percentage === null || $sale_percentage === '') {
+        if (session('sale_percentage_filter') !== null) {
+            $sale_percentage = (int) session('sale_percentage_filter');
+        } else {
+            $settings = GeneralSetting::first();
+            $sale_percentage = $settings && $settings->sale_percentage_filter !== null ? (int) $settings->sale_percentage_filter : null;
+        }
+    } else {
+        $sale_percentage = (int) $sale_percentage;
+    }
+    if ($sale_percentage !== null && ($sale_percentage < 0 || $sale_percentage > 100)) {
+        $sale_percentage = null;
+    }
+
+    // Only apply percentage filter if user has permission
+    if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+        $sale_percentage = null;
+    }
+    $filter_by_percentage = $sale_percentage !== null && $sale_percentage < 100;
+    $filtered_sale_ids = [];
+    $filtered_total_sales = 0;
+
     // Base query for all sales in the date range
-    $baseQuery = Sale::whereDate('created_at', '>=', $request->input('starting_date'))
-                     ->whereDate('created_at', '<=', $request->input('ending_date'));
+    $baseQuery = Sale::whereDate('created_at', '>=', $starting_date)
+                     ->whereDate('created_at', '<=', $ending_date);
 
     if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
         $baseQuery = $baseQuery->where('user_id', Auth::id());
@@ -4176,96 +4207,32 @@ public function limsProductSearch(Request $request)
         $baseQuery = $baseQuery->where('sale_status', $sale_status);
     if($payment_status)
         $baseQuery = $baseQuery->where('payment_status', $payment_status);
-    
-    // For cumulative total filtering, get all matching sales and calculate running sum
-    $all_sales_for_cumulative = $baseQuery->orderBy('created_at', 'asc')->get(['id', 'grand_total']);
-    $filtered_sale_ids = [];
-    
-    if ($filter_by_amount && $grand_total_target) {
-        $target = (float)$grand_total_target;
-        $cumulative_sum = 0;
-        $in_range = false;
-        $started_range = false;
-        
-        // Calculate the range for "equal" operator
-        $target_float = (float)$target;
-        $magnitude = 1;
-        if ($target_float > 0) {
-            // Calculate magnitude to match first 2 significant digits
-            // For 10000: mag = 1000 (range 10000-10999)
-            // For 1000: mag = 100 (range 1000-1099)
-            // For 100: mag = 10 (range 100-109)
-            $log_val = log10($target_float);
-            $magnitude = pow(10, max(0, floor($log_val) - 1));
-        }
-        
-        $lower = floor($target_float / $magnitude) * $magnitude;
-        $upper = $lower + $magnitude - 1;
-        
-        foreach ($all_sales_for_cumulative as $sale) {
-            $cumulative_sum += $sale->grand_total;
-            $cumulative_float = (float)$cumulative_sum;
-            
-            $should_include = false;
-            switch($grand_total_operator) {
-                case 'equal':
-                    // Include sales as long as cumulative doesn't exceed upper bound
-                    // Start including once cumulative >= lower bound
-                    if ($cumulative_float <= $upper) {
-                        $should_include = true;
-                        if ($cumulative_float >= $lower) {
-                            $started_range = true;
-                        }
-                        // Include if we've started in range, or if this sale brings us into range
-                        if ($started_range || ($cumulative_float >= $lower && $cumulative_float <= $upper)) {
-                            $in_range = true;
-                        }
-                    } else {
-                        // Exceeded upper bound, stop including
-                        if ($in_range) {
-                            break;
-                        }
-                    }
-                    break;
-                case 'greater':
-                    // Include all sales where cumulative >= target
-                    if ($cumulative_sum >= $target) {
-                        $should_include = true;
-                    }
-                    break;
-                case 'less':
-                    // Include sales while cumulative <= target
-                    if ($cumulative_sum <= $target) {
-                        $should_include = true;
-                    }
-                    break;
-                case 'around':
-                    // Include sales within ±10% of target
-                    if ($cumulative_sum >= $target * 0.9 && $cumulative_sum <= $target * 1.1) {
-                        $should_include = true;
-                    }
-                    break;
-            }
-            
-            if ($should_include) {
-                $filtered_sale_ids[] = $sale->id;
-            } else if ($grand_total_operator === 'equal' && $cumulative_float > $upper) {
-                // Stop processing once we exceed the range
+
+    // Percentage filter: show only the top X% of sales by value (largest sales first until we reach X% of total)
+    if ($filter_by_percentage) {
+        $all_sales = (clone $baseQuery)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+        $total_value = $all_sales->sum('grand_total');
+        $target_value = $total_value * ($sale_percentage / 100);
+        $running_sum = 0;
+        foreach ($all_sales as $sale) {
+            $filtered_sale_ids[] = $sale->id;
+            $running_sum += $sale->grand_total;
+            $filtered_total_sales = $running_sum;
+            if ($running_sum >= $target_value) {
                 break;
             }
         }
-    }
-    
-    // Apply the cumulative filter to baseQuery if it was used
-    if ($filter_by_amount && count($filtered_sale_ids) > 0) {
         $baseQuery = $baseQuery->whereIn('id', $filtered_sale_ids);
-    } elseif ($filter_by_amount && count($filtered_sale_ids) == 0) {
-        // If filter is active but no sales matched, return empty result
-        $baseQuery = $baseQuery->whereIn('id', []);
     }
 
     $totalData = $baseQuery->count();
     $totalFiltered = $totalData;
+    // Total sales amount for the filtered set (for the summary card)
+    if ($filter_by_percentage) {
+        $total_sales_amount = $filtered_total_sales;
+    } else {
+        $total_sales_amount = (clone $baseQuery)->sum('grand_total');
+    }
 
     if($request->input('length') != -1)
         $limit = $request->input('length');
@@ -4288,8 +4255,8 @@ public function limsProductSearch(Request $request)
     if(empty($request->input('search.value'))) {
         // Get paginated results
         $q = Sale::with('biller', 'customer', 'warehouse', 'user')
-            ->whereDate('created_at', '>=', $request->input('starting_date'))
-            ->whereDate('created_at', '<=', $request->input('ending_date'))
+            ->whereDate('created_at', '>=', $starting_date)
+            ->whereDate('created_at', '<=', $ending_date)
             ->offset($start)
             ->limit($limit)
             ->orderBy($order, $dir);
@@ -4303,10 +4270,10 @@ public function limsProductSearch(Request $request)
         if($payment_status)
             $q = $q->where('payment_status', $payment_status);
         
-        // Apply filtered sale IDs from cumulative filter
-        if ($filter_by_amount && count($filtered_sale_ids) > 0) {
+        // Apply filtered sale IDs from percentage filter
+        if ($filter_by_percentage && count($filtered_sale_ids) > 0) {
             $q = $q->whereIn('id', $filtered_sale_ids);
-        } elseif ($filter_by_amount && count($filtered_sale_ids) == 0) {
+        } elseif ($filter_by_percentage && count($filtered_sale_ids) == 0) {
             $q = $q->whereIn('id', []);
         }
             
@@ -4317,8 +4284,8 @@ public function limsProductSearch(Request $request)
         $search = $request->input('search.value');
         $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
             ->join('billers', 'sales.biller_id', '=', 'billers.id')
-            ->whereDate('sales.created_at', '>=', $request->input('starting_date'))
-            ->whereDate('sales.created_at', '<=', $request->input('ending_date'))
+            ->whereDate('sales.created_at', '>=', $starting_date)
+            ->whereDate('sales.created_at', '<=', $ending_date)
             ->where(function($query) use ($search, $field_names) {
                 $query->where('sales.reference_no', 'LIKE', "%{$search}%")
                       ->orWhere('customers.name', 'LIKE', "%{$search}%")
@@ -4345,10 +4312,10 @@ public function limsProductSearch(Request $request)
         if($payment_status)
             $q = $q->where('sales.payment_status', $payment_status);
         
-        // Apply filtered sale IDs from cumulative filter
-        if ($filter_by_amount && count($filtered_sale_ids) > 0) {
+        // Apply filtered sale IDs from percentage filter
+        if ($filter_by_percentage && count($filtered_sale_ids) > 0) {
             $q = $q->whereIn('sales.id', $filtered_sale_ids);
-        } elseif ($filter_by_amount && count($filtered_sale_ids) == 0) {
+        } elseif ($filter_by_percentage && count($filtered_sale_ids) == 0) {
             $q = $q->whereIn('sales.id', []);
         }
             
@@ -4408,13 +4375,6 @@ public function limsProductSearch(Request $request)
             else
                 $nestedData['delivery_status'] = 'N/A';
 
-            // Add highlight class if this sale matches the target
-            $highlight_class = '';
-            $match_badge = '';
-            if($filter_by_amount && isset($matched_sales[$sale->id])) {
-                $highlight_class = 'highlighted-sale';
-            }
-            
             $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal'));
             
             $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
@@ -4485,9 +4445,6 @@ public function limsProductSearch(Request $request)
             $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status_text.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
             );
             
-            // Add highlight class to the row data
-            $nestedData['highlight_class'] = $highlight_class;
-            
             $data[] = $nestedData;
         }
     }
@@ -4496,7 +4453,8 @@ public function limsProductSearch(Request $request)
         "draw"            => intval($request->input('draw')),
         "recordsTotal"    => intval($totalData),
         "recordsFiltered" => intval($totalFiltered),
-        "data"            => $data
+        "data"            => $data,
+        "total_sales_amount" => $total_sales_amount
     );
     
     echo json_encode($json_data);
@@ -4677,21 +4635,19 @@ public function limsProductSearch(Request $request)
     }
 
     /**
-     * Save cumulative total filter as default for all users
+     * Save sale percentage filter as default for all users
      */
     public function saveDefaultFilter(Request $request)
     {
-        // Check if user is admin (role_id <= 2)
-        if (Auth::user()->role_id > 2) {
+        if (Auth::user()->role_id > 2 || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
             return response()->json([
                 'success' => false,
-                'message' => 'Only administrators can set default filters.'
+                'message' => 'Only administrators with Sale Filter permission can set default filters.'
             ], 403);
         }
 
         $request->validate([
-            'cumulative_total_target' => 'required|numeric|min:0',
-            'cumulative_total_operator' => 'required|in:equal,greater,less,around'
+            'sale_percentage_filter' => 'required|integer|min:0|max:100'
         ]);
 
         try {
@@ -4700,13 +4656,12 @@ public function limsProductSearch(Request $request)
                 $settings = new GeneralSetting();
             }
 
-            $settings->sale_cumulative_total_target = $request->input('cumulative_total_target');
-            $settings->sale_cumulative_total_operator = $request->input('cumulative_total_operator');
+            $settings->sale_percentage_filter = (int) $request->input('sale_percentage_filter');
             $settings->save();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Default filter saved successfully'
+                'message' => 'Default percentage filter saved successfully'
             ]);
         } catch (\Exception $e) {
             return response()->json([

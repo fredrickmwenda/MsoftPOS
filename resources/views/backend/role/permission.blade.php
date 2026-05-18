@@ -297,6 +297,25 @@
 						            </td>
 						        </tr>
 
+						        <tr>
+						            <td>{{trans('file.Sale Filter')}} <small class="text-muted">({{trans('file.View')}})</small></td>
+						            <td class="text-center">
+						                <div class="icheckbox_square-blue" aria-checked="false" aria-disabled="false">
+							                <div class="checkbox">
+								                @if(in_array("sale-percentage-filter", $all_permission))
+								                <input type="checkbox" value="1" id="sale-percentage-filter" name="sale-percentage-filter" checked />
+								                @else
+								                <input type="checkbox" value="1" id="sale-percentage-filter" name="sale-percentage-filter">
+								                @endif
+								                <label for="sale-percentage-filter"></label>
+								            </div>
+						            	</div>
+						            </td>
+						            <td class="text-center">—</td>
+						            <td class="text-center">—</td>
+						            <td class="text-center">—</td>
+						        </tr>
+
 						        <tr class="expense-row">
 						            <td>{{trans('file.Expense')}}</td>
 						            <td class="text-center">
@@ -347,6 +366,25 @@
 								            </div>
 						            	</div>
 						            </td>
+						        </tr>
+
+						        <tr>
+						            <td>{{trans('file.Approvals')}} <small class="text-muted">({{trans('file.View')}})</small></td>
+						            <td class="text-center">
+						                <div class="icheckbox_square-blue" aria-checked="false" aria-disabled="false">
+							                <div class="checkbox">
+								                @if(in_array("approvals-index", $all_permission))
+								                <input type="checkbox" value="1" id="approvals-index" name="approvals-index" checked />
+								                @else
+								                <input type="checkbox" value="1" id="approvals-index" name="approvals-index">
+								                @endif
+								                <label for="approvals-index"></label>
+								            </div>
+						            	</div>
+						            </td>
+						            <td class="text-center">—</td>
+						            <td class="text-center">—</td>
+						            <td class="text-center">—</td>
 						        </tr>
 
 						        <tr class="quotation-row">

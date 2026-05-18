@@ -20,7 +20,7 @@
                             />
                         </div>
                     </div>
-                </div>
+                </div>    
                 <div class="col-md-3 mt-3 mb-3">
                     <div class="form-group">
                         <label class="control-label"><strong>End Date</strong> &nbsp;</label>

@@ -12,7 +12,7 @@ use DB;
 use App\Models\StockCount;
 use App\Models\ProductVariant;
 use Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class AdjustmentController extends Controller

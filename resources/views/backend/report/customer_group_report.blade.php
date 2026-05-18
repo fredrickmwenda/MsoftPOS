@@ -271,7 +271,7 @@
             {"data": "grand_total"},
             {"data": "paid"},
             {"data": "due"},
-            {"data": "sale_status"}
+            {"data": "status"}
         ],
         'language': {
 

@@ -7,7 +7,7 @@ use App\Models\Biller;
 use App\Models\MailSetting;
 use Illuminate\Validation\Rule;
 use Intervention\Image\Facades\Image;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Auth;
 use App\Mail\BillerCreate;

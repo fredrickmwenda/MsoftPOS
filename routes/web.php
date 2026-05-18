@@ -527,6 +527,10 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
             Route::post('supplier-due-report', 'supplierDueReportByDate')->name('report.supplierDueByDate');
             Route::post('supplier-due-report-data', 'supplierDueReportData');
             Route::get('department', 'departmentReport')->name('report.department');
+            Route::match(['get', 'post'], 'sales-person', 'salesPersonReport')->name('report.salesPerson');
+            Route::post('sales-person-details', 'salesPersonReportDetails')->name('report.salesPersonDetails');
+            Route::match(['get', 'post'], 'payment-method', 'paymentMethodReport')->name('report.paymentMethod');
+            Route::post('payment-method-details', 'paymentMethodReportDetails')->name('report.paymentMethodDetails');
         });
     });
 

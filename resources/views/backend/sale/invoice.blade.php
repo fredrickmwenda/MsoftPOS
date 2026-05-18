@@ -143,6 +143,7 @@
             ?>
 
         </p>
+        <!-- the product table -->
         <table class="table-data">
             <thead>
                 <tr>
@@ -200,7 +201,7 @@
                 </tr>
                 @endforeach
 
-            <!-- <tfoot> -->
+                <!-- <tfoot> -->
                 <tr>
                     <th colspan="3" style="text-align:right">{{trans('file.Total')}}</th>
                     <th colspan="2" style="text-align:right">{{number_format((float)($lims_sale_data->total_price), $general_setting->decimal, '.', ',')}}</th>
@@ -221,73 +222,71 @@
                 </tr>
                 @endif
                 <tr><td colspan="5"><hr style="border-top: 1px dotted #000;"></td></tr>
-            <tr>
-                <td colspan="3" style="text-align:right">Total Qty</td>
-                <td colspan="2" style="text-align:right">{{$lims_sale_data->total_qty}}</td>
-            </tr>
-            <tr>
-                <td colspan="3"style="text-align:right">{{trans('file.Subtotal')}}</td>
-                <td colspan="2" style="text-align:right">{{number_format((float)($lims_sale_data->total_price), $general_setting->decimal, '.', ',')}}</td>
-            </tr>
-            @if($lims_sale_data->order_tax)
-            <tr>
-                <td colspan="3"style="text-align:right">VAT Tax</td>
-                <td colspan="2" style="text-align:right">{{number_format((float)($lims_sale_data->order_tax), $general_setting->decimal, '.', ',')}}</td>
-            </tr>
-            @endif
 
-            {{-- ✅ PRODUCT TAXES FROM PIVOT TABLE (AFTER ORDER TAX) --}}
-@php
-    $taxTotals = []; // Initialize the array
-@endphp
+                <tr>
+                    <td colspan="3" style="text-align:right">Total Qty</td>
+                    <td colspan="2" style="text-align:right">{{$lims_sale_data->total_qty}}</td>
+                </tr>
+                <tr>
+                    <td colspan="3"style="text-align:right">{{trans('file.Subtotal')}}</td>
+                    <td colspan="2" style="text-align:right">{{number_format((float)($lims_sale_data->total_price), $general_setting->decimal, '.', ',')}}</td>
+                </tr>
+                @if($lims_sale_data->order_tax)
+                <tr>
+                    <td colspan="3"style="text-align:right">VAT Tax</td>
+                    <td colspan="2" style="text-align:right">{{number_format((float)($lims_sale_data->order_tax), $general_setting->decimal, '.', ',')}}</td>
+                </tr>
+                @endif
 
-@foreach($lims_product_sale_data as $product_sale_data)
-    @php
-        $product = \App\Models\Product::find($product_sale_data->product_id);
-    @endphp
-
-    @if($product && $product->product_taxes)
-        {{-- Filter only active taxes --}}
-        @php
-            $activeTaxes = $product->product_taxes->where('is_active', 1);
-        @endphp
-        
-        @if($activeTaxes->count())
-            @foreach($activeTaxes as $tax)
+                {{-- PRODUCT TAXES FROM PIVOT TABLE (AFTER ORDER TAX) --}}
                 @php
-                    $taxKey = $tax->id; // Use ID as key for uniqueness
-
-                    $taxAmount = ($product_sale_data->total * $tax->rate) / 100;
-
-                    if (!isset($taxTotals[$taxKey])) {
-                        $taxTotals[$taxKey] = [
-                            'name'   => $tax->name,
-                            'rate'   => $tax->rate,
-                            'amount' => 0
-                        ];
-                    }
-
-                    $taxTotals[$taxKey]['amount'] += $taxAmount;
+                    $taxTotals = []; // Initialize the array
                 @endphp
-            @endforeach
-        @endif
-    @endif
-@endforeach
 
-{{-- Display the tax totals --}}
-@foreach($taxTotals as $tax)
-    <tr>
-        <td colspan="3" style="text-align:right">
-            {{ $tax['name'] }} ({{ $tax['rate'] }}%)
-        </td>
-        <td colspan="2" style="text-align:right">
-            {{ number_format($tax['amount'], $general_setting->decimal ?? 2, '.', ',') }}
-        </td>
-    </tr>
-@endforeach
+                @foreach($lims_product_sale_data as $product_sale_data)
+                    @php
+                        $product = \App\Models\Product::find($product_sale_data->product_id);
+                    @endphp
 
+                    @if($product && $product->product_taxes)
+                        {{-- Filter only active taxes --}}
+                        @php
+                            $activeTaxes = $product->product_taxes->where('is_active', 1);
+                        @endphp
+                        
+                        @if($activeTaxes->count())
+                            @foreach($activeTaxes as $tax)
+                                @php
+                                    $taxKey = $tax->id; // Use ID as key for uniqueness
 
+                                    $taxAmount = ($product_sale_data->total * $tax->rate) / 100;
 
+                                    if (!isset($taxTotals[$taxKey])) {
+                                        $taxTotals[$taxKey] = [
+                                            'name'   => $tax->name,
+                                            'rate'   => $tax->rate,
+                                            'amount' => 0
+                                        ];
+                                    }
+
+                                    $taxTotals[$taxKey]['amount'] += $taxAmount;
+                                @endphp
+                            @endforeach
+                        @endif
+                    @endif
+                @endforeach
+
+                {{-- Display the tax totals --}}
+                @foreach($taxTotals as $tax)
+                    <tr>
+                        <td colspan="3" style="text-align:right">
+                            {{ $tax['name'] }} ({{ $tax['rate'] }}%)
+                        </td>
+                        <td colspan="2" style="text-align:right">
+                            {{ number_format($tax['amount'], $general_setting->decimal ?? 2, '.', ',') }}
+                        </td>
+                    </tr>
+                @endforeach
 
                 @if($lims_sale_data->order_discount)
                 <tr>
@@ -311,73 +310,67 @@
                     <th colspan="3" style="text-align:right">{{trans('file.grand total')}}</th>
                     <th colspan="2" style="text-align:right">{{number_format((float)($lims_sale_data->grand_total), $general_setting->decimal, '.', ',')}}</th>
                 </tr>
-                <!-- <tr>
-                    @if($general_setting->currency_position == 'prefix')
-                    <th class="centered" colspan="3">{{trans('file.In Words')}}: <span>{{$currency_code}}</span> <span>{{str_replace("-"," ",$numberInWords)}}</span></th>
-                    @else
-                    <th class="centered" colspan="3">{{trans('file.In Words')}}: <span>{{str_replace("-"," ",$numberInWords)}}</span> <span>{{$currency_code}}</span></th>
-                    @endif
-                </tr> -->
+                
             </tbody>
             <!-- </tfoot> -->
         </table>
+
+
         <table>
             <tbody>
-    @php
-    $total_paid = 0;
-    $total_change = 0;
-@endphp
+                @php
+                    $total_paid = 0;
+                    $total_change = 0;
+                @endphp
 
-@foreach($lims_payment_data as $payment_data)
-    @php
-        $total_paid += $payment_data->amount;
+                @foreach($lims_payment_data as $payment_data)
+                    @php
+                        $total_paid += $payment_data->amount;
+                        
 
-        // Change for this payment ONLY if cash
-        $change = 0;
-        if($payment_data->paying_method == 'Cash') {
-            $change = max($total_paid - $lims_sale_data->grand_total, 0);
-        }
-    @endphp
-    <tr style="background-color:#ddd;">
-        <td style="padding: 5px;width:30%">
-            {{ trans('file.Paid By') }}: {{ $payment_data->paying_method }}
-        </td>
-        <td style="padding: 5px;width:40%">
-            {{ trans('file.Amount') }}: {{ number_format($payment_data->amount, $general_setting->decimal, '.', ',') }}
-        </td>
-        <td style="padding: 5px;width:30%">
-            {{ trans('file.Change') }}: {{ number_format($change , $general_setting->decimal, '.', ',') }}
-        </td>
-    </tr>
-@endforeach
+                        // Change for this payment ONLY if cash
+                        $change = 0;
+                        if($payment_data->paying_method == 'Cash') {
+                            $change = max($total_paid - $lims_sale_data->grand_total, 0);
+                        }
+                    @endphp
+                    <tr style="background-color:#ddd;">
+                        <td style="padding: 5px;width:30%">
+                            {{ trans('file.Paid By') }}: {{ $payment_data->paying_method }}
+                        </td>
+                        <td style="padding: 5px;width:40%">
+                            {{ trans('file.Amount') }}: {{ number_format($payment_data->amount, $general_setting->decimal, '.', ',') }}
+                        </td>
+                        <td style="padding: 5px;width:30%">
+                            {{ trans('file.Change') }}: {{ number_format($change , $general_setting->decimal, '.', ',') }}
+                        </td>
+                    </tr>
+                @endforeach
 
 
-{{-- 🔹 Show summary row --}}
-<tr style="background-color:#ccc;">
-    <td style="padding: 5px;"><strong>Total Paid</strong></td>
-    <td style="padding: 5px;" colspan="2">
-        <strong>{{ number_format($total_paid, $general_setting->decimal, '.', ',') }}</strong>
-    </td>
-</tr>
+                {{-- 🔹 Show summary row --}}
+                <tr style="background-color:#ccc;">
+                    <td style="padding: 5px;"><strong>Total Paid</strong></td>
+                    <td style="padding: 5px;" colspan="2">
+                        <strong>{{ number_format($total_paid, $general_setting->decimal, '.', ',') }}</strong>
+                    </td>
+                </tr>
 
-@if($total_change > 0)
-<tr style="background-color:#ccc;">
-    <td style="padding: 5px;"><strong>{{ trans('file.Total Change') }}</strong></td>
-    <td style="padding: 5px;" colspan="2">
-        <strong>{{ number_format($total_change, $general_setting->decimal, '.', ',') }}</strong>
-    </td>
-</tr>
-@endif
+                @if($total_change > 0)
+                <tr style="background-color:#ccc;">
+                    <td style="padding: 5px;"><strong>{{ trans('file.Total Change') }}</strong></td>
+                    <td style="padding: 5px;" colspan="2">
+                        <strong>{{ number_format($total_change, $general_setting->decimal, '.', ',') }}</strong>
+                    </td>
+                </tr>
+                @endif
 
                 <tr><td class="centered" colspan="3">{{trans('file.Thank you for shopping with us. Please come again')}}</td></tr>
             
 
             </tbody>
         </table>
-        <!-- <div class="centered" style="margin:30px 0 50px">
-            <small>{{trans('file.Invoice Generated By')}} {{$general_setting->site_title}}.
-            {{trans('file.Developed By')}} LionCoders</strong></small>
-        </div> -->
+        
     </div>
 </div>
 

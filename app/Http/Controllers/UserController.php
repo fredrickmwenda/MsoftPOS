@@ -14,7 +14,7 @@ use Auth;
 use Hash;
 use Keygen;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\UserDetails;
 use Mail;

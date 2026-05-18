@@ -646,6 +646,8 @@ return [
 	"Purchase Return Details" => "Purchase Return Details",
 	"Purchase Payment" => "Purchase Payment",
 	"Sale Payment" => "Sale Payment",
+	"Sale Filter" => "Sale Filter",
+	"Approvals" => "Approvals",
 	"Sale Report Chart" => "Sale Report Chart",
 	"Time Period" => "Time Period",
 	"Notification List" => "Notification List",

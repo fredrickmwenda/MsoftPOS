@@ -23,7 +23,7 @@ use App\Models\Sale;
 use App\Models\Product_Sale;
 use App\Models\Currency;
 use Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\ReturnDetails;
 use Mail;

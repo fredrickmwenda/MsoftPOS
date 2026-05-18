@@ -7,7 +7,7 @@ use App\Models\Discount;
 use App\Models\DiscountPlan;
 use App\Models\Product;
 use App\Models\DiscountPlanDiscount;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Auth;
 
 class DiscountController extends Controller

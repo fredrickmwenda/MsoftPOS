@@ -10,7 +10,7 @@ use App\Models\Product;
 use DB;
 use App\Models\StockCount;
 use Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class StockCountController extends Controller

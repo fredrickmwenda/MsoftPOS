@@ -15,7 +15,7 @@ use App\Models\MoneyTransfer;
 use App\Models\Sale;
 use DB;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Auth;
 

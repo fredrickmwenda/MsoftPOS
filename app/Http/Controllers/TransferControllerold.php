@@ -14,7 +14,7 @@ use App\Models\ProductVariant;
 use App\Models\ProductBatch;
 use Auth;
 use DB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Validator;
 

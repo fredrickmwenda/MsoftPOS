@@ -9,7 +9,7 @@ use App\Models\Attendance;
 use Carbon\Carbon;
 use Auth;
 use DB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class AttendanceController extends Controller

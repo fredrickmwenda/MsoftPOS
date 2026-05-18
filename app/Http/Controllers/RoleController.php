@@ -7,7 +7,7 @@ use App\Models\Roles;
 use App\Models\User;
 use Auth;
 use Illuminate\Validation\Rule;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
@@ -75,9 +75,43 @@ class RoleController extends Controller
     {
         if(Auth::user()->role_id <= 2) {
             $lims_role_data = Roles::find($id);
-            $permissions = Role::findByName($lims_role_data->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
+            $all_permission = [];
+            try {
+                // Load by id so we don't depend on name/guard matching
+                $role = Role::find($id);
+                if ($role) {
+                    $permissions = $role->permissions;
+                    foreach ($permissions as $permission)
+                        $all_permission[] = $permission->name;
+                }
+            } catch (\Throwable $e) {
+                // Fallback: load from role_has_permissions + permissions if tables exist
+                try {
+                    $all_permission = \DB::table('role_has_permissions')
+                        ->join('permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
+                        ->where('role_has_permissions.role_id', $id)
+                        ->pluck('permissions.name')
+                        ->toArray();
+                } catch (\Throwable $e2) {
+                    // Permission tables not used or missing
+                }
+            }
+            // Ensure new permissions (approvals-index, sale-percentage-filter) exist and are assigned to this role
+            $newPermissions = ['approvals-index', 'sale-percentage-filter'];
+            foreach ($newPermissions as $permName) {
+                if (!in_array($permName, $all_permission)) {
+                    try {
+                        $perm = Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
+                        $role = Role::find($id);
+                        if ($role) {
+                            $role->givePermissionTo($perm);
+                            $all_permission[] = $permName;
+                        }
+                    } catch (\Throwable $e) {
+                        // Skip if permission tables not used
+                    }
+                }
+            }
             if(empty($all_permission))
                 $all_permission[] = 'dummy text';
             return view('backend.role.permission', compact('lims_role_data', 'all_permission'));
@@ -308,6 +342,15 @@ class RoleController extends Controller
         else
             $role->revokePermissionTo('sale-payment-delete');
 
+        if($request->has('sale-percentage-filter')){
+            $permission = Permission::firstOrCreate(['name' => 'sale-percentage-filter']);
+            if(!$role->hasPermissionTo('sale-percentage-filter')){
+                $role->givePermissionTo($permission);
+            }
+        }
+        else
+            $role->revokePermissionTo('sale-percentage-filter');
+
         if($request->has('expenses-index')){
             $permission = Permission::firstOrCreate(['name' => 'expenses-index']);
             if(!$role->hasPermissionTo('expenses-index')){
@@ -343,6 +386,15 @@ class RoleController extends Controller
         }
         else
             $role->revokePermissionTo('expenses-delete');
+
+        if($request->has('approvals-index')){
+            $permission = Permission::firstOrCreate(['name' => 'approvals-index']);
+            if(!$role->hasPermissionTo('approvals-index')){
+                $role->givePermissionTo($permission);
+            }
+        }
+        else
+            $role->revokePermissionTo('approvals-index');
 
         if($request->has('quotes-index')){
             $permission = Permission::firstOrCreate(['name' => 'quotes-index']);
@@ -1203,6 +1255,7 @@ class RoleController extends Controller
         }
 
         cache()->forget('permissions');
+        cache()->forget('role_has_permissions_list' . $role->id);
 
         return redirect('role')->with('message', 'Permission updated successfully');
     }

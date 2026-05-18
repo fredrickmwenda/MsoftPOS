@@ -26,20 +26,20 @@
     .welcome-section {
         background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
         border-radius: var(--border-radius);
-        padding: 30px;
+        padding: 16px 24px;
         margin-bottom: 30px;
         color: var(--white);
         box-shadow: var(--shadow);
     }
 
     .welcome-title {
-        font-size: 2.2rem;
+        font-size: 1.75rem;
         font-weight: 600;
-        margin-bottom: 5px;
+        margin-bottom: 2px;
     }
 
     .welcome-subtitle {
-        font-size: 1rem;
+        font-size: 0.9rem;
         opacity: 0.9;
         margin-bottom: 0;
     }
@@ -471,19 +471,7 @@
     $revenue_profit_summary = $role_has_permissions_list->where('name', 'revenue_profit_summary')->first();
 @endphp
 
-<!-- Welcome Section -->
-<div class="welcome-section animate">
-    <div class="row align-items-center">
-        <div class="col-md-8">
-            <h1 class="welcome-title"><span id="greeting">Welcome</span>, {{Auth::user()->name}}!</h1>
-            <p class="welcome-subtitle">Ready to pick it up from where you left? Here's what's happening with your business today.</p>
-        </div>
-        <div class="col-md-4 text-right">
-            <i class="dripicons-calendar" style="font-size: 2.5rem; opacity: 0.5;"></i>
-            <div class="mt-1">{{date('l, F d, Y')}}</div>
-        </div>
-    </div>
-</div>
+
 <div class="ml-5 mr-5">
 <!-- Quick Actions Row -->
 <div class="row mb-4 quick-actions-widgets">
@@ -868,16 +856,6 @@ $(document).ready(function() {
     // Dynamic Greeting
     var today = new Date();
     var curHr = today.getHours();
-    
-    if (curHr >= 0 && curHr < 4) {
-        document.getElementById("greeting").innerHTML = 'Good Night';
-    } else if (curHr >= 4 && curHr < 12) {
-        document.getElementById("greeting").innerHTML = 'Good Morning';
-    } else if (curHr >= 12 && curHr < 16) {
-        document.getElementById("greeting").innerHTML = 'Good Afternoon';
-    } else {
-        document.getElementById("greeting").innerHTML = 'Good Evening';
-    }
 
     // Load all tables
     loadYearlyBestSellingPrice();

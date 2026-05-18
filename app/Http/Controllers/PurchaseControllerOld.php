@@ -25,7 +25,7 @@ use Auth;
 use App\Models\User;
 use App\Models\ProductVariant;
 use App\Models\ProductBatch;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Validator;
 use App\Traits\TenantInfo;

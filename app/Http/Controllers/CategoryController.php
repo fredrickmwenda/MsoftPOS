@@ -9,7 +9,7 @@ use App\Models\CategoryDepartment;
 use App\Models\Product;
 use DB;
 use Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
 use App\Traits\TenantInfo;

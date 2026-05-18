@@ -900,7 +900,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -936,7 +936,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -972,7 +972,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -1008,7 +1008,7 @@
                         </select>
                     </div>
 
-                    <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                    <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                     <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                     <div class="form-group">
@@ -1044,7 +1044,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">

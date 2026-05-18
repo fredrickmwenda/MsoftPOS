@@ -312,6 +312,25 @@
         margin-right: 6px;
       }
 
+      /* Header right-sidebar: compact, curvy bottom, no extra whitespace */
+      nav.navbar .right-sidebar {
+        height: auto !important;
+        min-height: 0 !important;
+        top: 56px !important;
+        padding: 8px 0 14px 0 !important;
+        border-radius: 0 0 16px 16px !important;
+        max-height: calc(100vh - 72px);
+        overflow-y: auto;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
+      nav.navbar .right-sidebar li {
+        line-height: 40px !important;
+        padding: 0 20px !important;
+      }
+      nav.navbar .right-sidebar li:last-child {
+        border-bottom: none !important;
+      }
+
       /* Navbar Toggle */
       .navbar-toggler {
         border: none;
@@ -538,20 +557,34 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
+        gap: 16px;
+        flex-wrap: wrap;
         min-width: 0;
+        margin-bottom: 0.5rem;
       }
 
       .dataTables_wrapper > .row:first-child > * {
         flex-shrink: 0;
       }
 
+      /* Last column (dt-buttons): only as wide as the buttons, no extra space */
+      .dataTables_wrapper > .row:first-child > *:last-child {
+        flex: 0 0 auto;
+        width: auto;
+        max-width: none;
+      }
+
+      /* dt-buttons btn-group: end right after the last button */
+      .dataTables_wrapper .dt-buttons.btn-group {
+        width: fit-content;
+        max-width: 100%;
+        flex-wrap: nowrap;
+      }
+
       /* Let the filter (middle) column shrink so length + buttons + search stay in one row */
       .dataTables_wrapper > .row:first-child > *:nth-child(2) {
         flex-shrink: 1;
-        min-width: 0;
+        min-width: 140px;
       }
 
       .dataTables_wrapper .dataTables_filter input {
@@ -570,7 +603,35 @@
         flex-wrap: nowrap;
       }
 
-      .dataTables_wrapper .dataTables_length label,
+      /* Length: prevent select overlapping "records per page" text and avoid header distortion */
+      .dataTables_wrapper .dataTables_length label {
+        display: inline-flex;
+        align-items: center;
+        flex-wrap: nowrap;
+        gap: 8px;
+        margin-bottom: 0;
+        white-space: nowrap;
+      }
+      .dataTables_wrapper .dataTables_length select,
+      .dataTables_wrapper .dataTables_length .bootstrap-select {
+        width: auto !important;
+        min-width: 60px;
+        max-width: 80px;
+        margin: 0 2px;
+      }
+      .dataTables_wrapper .dataTables_length .bootstrap-select .dropdown-toggle {
+        min-width: 60px;
+        max-width: 80px;
+      }
+      .dataTables_wrapper .dataTables_length .filter-option-inner-inner {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* Keep length dropdown above other controls when open */
+      .dataTables_wrapper .dataTables_length .bootstrap-select.open .dropdown-menu {
+        z-index: 1060;
+      }
+
       .dataTables_wrapper .dataTables_filter label {
         display: flex;
         align-items: center;
@@ -713,6 +774,17 @@
         nav.navbar {
           padding: 10px 12px;
         }
+
+        .sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.sidebar .side-menu {
+  flex: 1;
+  overflow-y: auto;
+}
 
         nav.navbar.navbar-main {
           gap: 8px 12px;
@@ -1510,7 +1582,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -1541,7 +1613,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -1573,7 +1645,7 @@
                           </select>
                       </div>
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -1604,8 +1676,8 @@
 
                           </select>
                       </div>
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">
@@ -1640,7 +1712,7 @@
                         </div>
                     
 
-                      <input type="hidden" name="start_date" value="{{date('Y-m').'-'.'01'}}" />
+                      <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
 
                       <div class="form-group">

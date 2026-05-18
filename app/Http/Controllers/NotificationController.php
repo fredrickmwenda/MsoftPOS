@@ -8,7 +8,7 @@ use App\Notifications\SendNotification;
 use Auth;
 use Illuminate\Support\Facades\Validator;
 use DB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 
 class NotificationController extends Controller
 {

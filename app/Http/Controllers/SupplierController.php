@@ -14,7 +14,7 @@ use App\Models\MailSetting;
 use Illuminate\Validation\Rule;
 use Auth;
 use DB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\SupplierCreate;
 use App\Mail\CustomerCreate;

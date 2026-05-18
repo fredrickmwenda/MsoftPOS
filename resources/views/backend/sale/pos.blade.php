@@ -13,304 +13,445 @@
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
  
-    <style>
-        /* Remove all default spacing */
-        * {
-            margin: 0;
-            padding: 0;
-        }
+<style>
+    /* Remove all default spacing */
+    * {
+        margin: 0;
+        padding: 0;
+    }
 
-        html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-            height: 100%;
-            min-height: 100vh;  
-            padding-bottom: 0 !important;
-        }
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        height: 100%;
+        min-height: 100vh;  
+        padding-bottom: 0 !important;
+    }
 
-        header {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: transparent !important;
-            border: none !important;
-            height: auto !important;
-            display: block !important;
-            min-height: auto !important;
-        }
+    header {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        height: auto !important;
+        display: block !important;
+        min-height: auto !important;
+    }
 
-        nav.navbar {
-            margin: 0 !important;
-            padding: 12px 24px !important;
-        }
-
-   
-
-        .container-fluid {
-            padding: 0 !important;
-            margin: 0 !important;
-        }
-
-        .row {
-            margin: 0 !important;
-        }
-
-        .pos-page {
-            min-height: auto !important;
-            background: white !important;
-            padding-bottom: 0 !important;
-        }
-
-        /* Sidebar toggle and main content layout handled by pos-layout.css */
-
-        /* Remove all space-creating elements */
-        .page,
-        .pos-page::before,
-        .pos-page::after {
-            margin: 0 !important;
-            padding: 0 !important;
-            height: auto !important;
-            min-height: auto !important;
-            padding-bottom: 0 !important;
-            overflow: hidden;
-        }
-
-        /* Ensure navbar is compact */
-        header nav {
-            height: auto !important;
-            min-height: auto !important;
-        }
-
-        /* Remove all bottom spacing */
-        .card,
-        .card-body,
-        .card-footer,
-        section,
-        .container-fluid > div {
-            padding-bottom: 0 !important;
-            margin-bottom: 0 !important;
-        }
-
-        body.pos-page {
-            padding-bottom: 0 !important;
-            overflow-y: auto;
-            background: white !important;
-        }
-
-        body {
-            padding-bottom: 0 !important;
-            padding: 0 !important;
-        }
-
-        
-        #product-table td p {
-              color:green !important;  
-        }
-        #product-table td {
-            background-color:#e6f5ff !important;
-
-            border: none;
-            border-top-width: medium;
-            border-top-style: none;
-            border-top-color: currentcolor;
-            border-right-width: medium;
-            border-right-style: none;
-            border-right-color: currentcolor;
-            border-bottom-width: medium;
-            border-bottom-style: none;
-            border-bottom-color: currentcolor;
-            border-left-width: medium;
-            border-left-style: none;
-            border-left-color: currentcolor;
-            border-right: 1px solid #e4e6fc;
-            border-bottom: 1px solid #e4e6fc;
-        }
-
-        .form-control{
-          box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px;
-        }
-        select{
-            color:red !important;
-        }
-        .dripicons{
-            color:#fff !important;
-        }
-
-        /* Totals section: nicer labels and values */
-        .totals .col-sm-4 {
-            padding: 0.5rem 0.75rem;
-            margin-bottom: 0.25rem;
-            border-radius: 8px;
-            transition: background 0.2s ease;
-        }
-        .totals .col-sm-4:hover {
-            background: rgba(19, 189, 96, 0.06);
-        }
-        .totals-title {
-            font-weight: 600;
-            font-size: 0.875rem;
-            letter-spacing: 0.02em;
-            color: inherit;
-            opacity: 0.95;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .totals .col-sm-4 > span:not(.totals-title) {
-            font-weight: 700;
-            font-size: 1rem;
-            margin-left: 4px;
-        }
-        .totals-title .btn {
-            padding: 0 2px;
-            vertical-align: middle;
-        }
-        .totals-title .btn:hover {
-            opacity: 0.9;
-        }
-        /* Totals title icons: gradient color */
-        .totals-title i,
-        .totals-title .btn i {
-            background:rgb(199, 66, 33) !important;
-            -webkit-background-clip: text !important;
-            background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            color: transparent !important;
-        }
-        .column-5{
-            margin-bottom:15px !important;
-        }
-        .payment-amount h2 {
-            color: #058c49;
-            font-size: 1.5rem;
-            line-height: 2;
-            margin-bottom: 0;
-        }
-        :root {
-            --theme-color:#00172D;
-        }
-        .transition-all {
-            transition: all 0.3s ease;
-        }
-
-        /* Target only #myTable */
-       .btn svg {vertical-align: middle; width: 16px}
-       button.close svg {vertical-align: middle; width: 26px}
-
-        /* Remove white space at bottom */
-        .card-body {
-            padding-bottom: 0 !important;
-        }
-
-        .container-fluid > .row {
-            margin-bottom: 0 !important;
-            padding-bottom: 0 !important;
-        }
-
-        #content,
-        .animate-bottom {
-            padding-bottom: 0 !important;
-            margin-bottom: 0 !important;
-        }
+    nav.navbar {
+        margin: 0 !important;
+        padding: 12px 24px !important;
+    }
 
 
-            /* Make body a vertical flex container that fills the viewport */
-        body {
-            display: flex !important;
-            flex-direction: column !important;
-            min-height: 100vh !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
 
-        /* #content stays block, but grows to fill available space */
-        #content {
-            flex: 1 0 auto !important;   /* expands to fill height */
-            display: block !important;    /* keep block layout */
-            width: 100%;
-        }
+    .container-fluid {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
 
-        /* Make the forms section fill the expanded #content */
-        section.forms {
-            height: 100%;                  /* fill its parent (#content) */
-            display: flex;
-            flex-direction: column;
-        }
+    .row {
+        margin: 0 !important;
+    }
 
-        /* Ensure the inner container also stretches */
-        section.forms .container-fluid {
-            flex: 1 0 auto;
-            display: flex;
-            flex-direction: column;
-        }
+    .pos-page {
+        min-height: auto !important;
+        background: white !important;
+        padding-bottom: 0 !important;
+    }
 
-        section.forms .row {
-            flex: 1 0 auto;
-        }
+    /* Sidebar toggle and main content layout handled by pos-layout.css */
 
-        /* Ensure product search autocomplete dropdown is visible above sidebar/modal - black/dark theme */
-        .ui-autocomplete {
-            z-index: 9999 !important;
-            max-height: 280px;
-            overflow-y: auto;
-            background: #1a1a1a !important;
-            border: 1px solid #333 !important;
-            border-radius: 4px;
-        }
-        .ui-autocomplete .ui-menu-item {
-            border-color: #333 !important;
-        }
-        .ui-autocomplete .ui-menu-item-wrapper {
-            background: #1a1a1a !important;
-            color: #e0e0e0 !important;
-            padding: 8px 12px;
-        }
-        .ui-autocomplete .ui-menu-item-wrapper.ui-state-active,
-        .ui-autocomplete .ui-menu-item-wrapper:hover {
-            background: #333 !important;
-            color: #fff !important;
-            border-color: #333 !important;
-        }
-        #side-main-menu > li > a
-        {
-                color: green !important;
-        }
-        .side-navbar li ul li a {
-            color: green!important;
-        }
-        #side-main-menu i {
+    /* Remove all space-creating elements */
+    .page,
+    .pos-page::before,
+    .pos-page::after {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: auto !important;
+        padding-bottom: 0 !important;
+        overflow: hidden;
+    }
+
+    /* Ensure navbar is compact */
+    header nav {
+        height: auto !important;
+        min-height: auto !important;
+    }
+
+    /* Remove all bottom spacing */
+    .card,
+    .card-body,
+    .card-footer,
+    section,
+    .container-fluid > div {
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    body.pos-page {
+        padding-bottom: 0 !important;
+        overflow-y: auto;
+        background: white !important;
+    }
+
+    body {
+        padding-bottom: 0 !important;
+        padding: 0 !important;
+    }
+
+    
+    #product-table td p {
+            color:green !important;  
+    }
+    #product-table td {
+        background-color:#e6f5ff !important;
+
+        border: none;
+        border-top-width: medium;
+        border-top-style: none;
+        border-top-color: currentcolor;
+        border-right-width: medium;
+        border-right-style: none;
+        border-right-color: currentcolor;
+        border-bottom-width: medium;
+        border-bottom-style: none;
+        border-bottom-color: currentcolor;
+        border-left-width: medium;
+        border-left-style: none;
+        border-left-color: currentcolor;
+        border-right: 1px solid #e4e6fc;
+        border-bottom: 1px solid #e4e6fc;
+    }
+
+    .form-control{
+        box-shadow: rgba(0, 0, 0, 0.05) 0px 0px 0px 1px;
+    }
+    select{
+        color:red !important;
+    }
+    .dripicons{
+        color:#fff !important;
+    }
+
+    /* Totals section: nicer labels and values */
+    .totals .col-sm-4 {
+        padding: 0.5rem 0.75rem;
+        margin-bottom: 0.25rem;
+        border-radius: 8px;
+        transition: background 0.2s ease;
+    }
+    .totals .col-sm-4:hover {
+        background: rgba(19, 189, 96, 0.06);
+    }
+    .totals-title {
+        font-weight: 600;
+        font-size: 0.875rem;
+        letter-spacing: 0.02em;
+        color: inherit;
+        opacity: 0.95;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+    .totals .col-sm-4 > span:not(.totals-title) {
+        font-weight: 700;
+        font-size: 1rem;
+        margin-left: 4px;
+    }
+    .totals-title .btn {
+        padding: 0 2px;
+        vertical-align: middle;
+    }
+    .totals-title .btn:hover {
+        opacity: 0.9;
+    }
+    /* Totals title icons: gradient color */
+    .totals-title i,
+    .totals-title .btn i {
+        background:rgb(199, 66, 33) !important;
+        -webkit-background-clip: text !important;
+        background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        color: transparent !important;
+    }
+    .column-5{
+        margin-bottom:15px !important;
+    }
+    .payment-amount h2 {
+        color: #058c49;
+        font-size: 1.5rem;
+        line-height: 2;
+        margin-bottom: 0;
+    }
+    :root {
+        --theme-color:#00172D;
+    }
+    .transition-all {
+        transition: all 0.3s ease;
+    }
+
+    /* Target only #myTable */
+    .btn svg {vertical-align: middle; width: 16px}
+    button.close svg {vertical-align: middle; width: 26px}
+
+    /* Remove white space at bottom */
+    .card-body {
+        padding-bottom: 0 !important;
+    }
+
+    .container-fluid > .row {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+
+    #content,
+    .animate-bottom {
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+
+        /* Make body a vertical flex container that fills the viewport */
+    body {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* #content stays block, but grows to fill available space */
+    #content {
+        flex: 1 0 auto !important;   /* expands to fill height */
+        display: block !important;    /* keep block layout */
+        width: 100%;
+    }
+
+    /* Make the forms section fill the expanded #content */
+    section.forms {
+        height: 100%;                  /* fill its parent (#content) */
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Ensure the inner container also stretches */
+    section.forms .container-fluid {
+        flex: 1 0 auto;
+        display: flex;
+        flex-direction: column;
+    }
+
+    section.forms .row {
+        flex: 1 0 auto;
+    }
+
+    /* Ensure product search autocomplete dropdown is visible above sidebar/modal - black/dark theme */
+    .ui-autocomplete {
+        z-index: 9999 !important;
+        max-height: 280px;
+        overflow-y: auto;
+        background: #1a1a1a !important;
+        border: 1px solid #333 !important;
+        border-radius: 4px;
+    }
+    .ui-autocomplete .ui-menu-item {
+        border-color: #333 !important;
+    }
+    .ui-autocomplete .ui-menu-item-wrapper {
+        background: #1a1a1a !important;
+        color: #e0e0e0 !important;
+        padding: 8px 12px;
+    }
+    .ui-autocomplete .ui-menu-item-wrapper.ui-state-active,
+    .ui-autocomplete .ui-menu-item-wrapper:hover {
+        background: #333 !important;
+        color: #fff !important;
+        border-color: #333 !important;
+    }
+    #side-main-menu > li > a
+    {
             color: green !important;
-        }
-        #side-main-menu i:hover {
-            color: green !important;
-        }
-        #side-main-menu i:active {
-            color: green !important;
-        }
-        #side-main-menu i:focus {
-            color: green !important;
-        }
-        
+    }
+    .side-navbar li ul li a {
+        color: green!important;
+    }
+    #side-main-menu i {
+        color: green !important;
+    }
+    #side-main-menu i:hover {
+        color: green !important;
+    }
+    #side-main-menu i:active {
+        color: green !important;
+    }
+    #side-main-menu i:focus {
+        color: green !important;
+    }
 
-    </style>
-    {!! ToastMagic::styles() !!}
-    <!-- Side Navbar -->
-    <nav class="side-navbar shrink" style="background-color: #ecf0f4 !important;">
-        <span class="brand-big mb-3">
-            @if($general_setting->site_logo)
-            <a href="{{url('/')}}"> <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a></a>
-            @else
-            <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
-            @endif
-            
-        <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
-        
-        
-        </span>
+    /* Payment buttons strip: responsive grid, good-looking */
+    .pos-payment-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+        padding: 0.75rem;
+        align-content: start;
+    }
+    @media (min-width: 400px) {
+        .pos-payment-buttons { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (min-width: 576px) {
+        .pos-payment-buttons { padding: 0.5rem; gap: 0.4rem; }
+    }
+    .pos-payment-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 56px;
+        padding: 0.5rem 0.35rem;
+        border-radius: 10px;
+        border: 1px solid rgba(0,0,0,0.08);
+        font-size: 0.75rem;
+        font-weight: 600;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        cursor: pointer;
+        text-align: center;
+        line-height: 1.2;
+    }
+    .pos-payment-btn i {
+        display: block;
+        font-size: 1.25rem;
+        margin-bottom: 0.2rem;
+    }
+    .pos-payment-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .pos-payment-btn:active {
+        transform: translateY(0);
+    }
+    .pos-payment-btn--method {
+        background: #f8f9fa !important;
+        color: #1a1a1a !important;
+    }
+    .pos-payment-btn--method:hover {
+        background: #e9ecef !important;
+    }
+    .pos-payment-btn--hold {
+        background: #f8f9fa !important;
+        color: #495057 !important;
+    }
+    .pos-payment-btn--cancel {
+        background: #dc3545 !important;
+        color: #fff !important;
+        border-color: #c82333;
+    }
+    .pos-payment-btn--cancel:hover {
+        background: #c82333 !important;
+        color: #fff !important;
+    }
+    .pos-payment-btn--recent {
+        background: #ffc107 !important;
+        color: #212529 !important;
+        border-color: #e0a800;
+    }
+    .pos-payment-btn--recent:hover {
+        background: #e0a800 !important;
+        color: #212529 !important;
+    }
+    .pos-payment-btn--points {
+        background: transparent !important;
+        color: #1a1a1a !important;
+        border: 1px dashed rgba(0,0,0,0.2);
+    }
 
-        @include('backend.layout.sidebar')
-    </nav>
- <!-- navbar-->
+    /* Payment Modal Styling */
+    #add-payment .modal-dialog.modal-lg {
+        max-width: 900px !important;
+    }
+
+    #add-payment .modal-body {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+
+    .payment-methods-wrapper {
+        background-color: #f8f9fa;
+        border-left: 4px solid #007bff !important;
+        overflow: visible !important;
+    }
+
+    .payment-methods-wrapper .selectpicker {
+        position: relative;
+        z-index: 1050 !important;
+    }
+
+    .payment-methods-wrapper + .selectpicker-dropdown {
+        z-index: 1051 !important;
+    }
+
+    .bootstrap-select > .dropdown-toggle:after {
+        z-index: 1050 !important;
+    }
+
+    .payment-row {
+        background-color: #ffffff;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+    }
+
+    .payment-row:hover {
+        background-color: #f0f7ff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .cheque-split, .giftcard-split, .mobile_money_fields {
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .modal-lg .col-md-2, .modal-lg .col-md-3, .modal-lg .col-md-4 {
+        padding-right: 8px;
+        padding-left: 8px;
+    }
+
+    .split-cheque-field, .split-gift-card-select {
+        font-size: 13px;
+    }
+
+</style>
+{!! ToastMagic::styles() !!}
+
+<!-- Side Navbar -->
+<nav class="side-navbar shrink" style="background-color: #ecf0f4 !important;">
+    <span class="brand-big mb-3">
+        @if($general_setting->site_logo)
+        <a href="{{url('/')}}"> <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a></a>
+        @else
+        <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+        @endif
+        
+    <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
+    
+    
+    </span>
+
+    @include('backend.layout.sidebar')
+</nav>
+<!-- navbar-->
 <header>
     <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
 
@@ -457,73 +598,40 @@
             <audio id="mysoundclip2" preload="auto">
                 <source src="{{url('beep/beep-07.mp3')}}"></source>
             </audio>
-            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #13bd60, #f5f8fe) !important;">
-                <div class="row" style="padding: 10px;"> 
-                     
-                        @if(in_array("cash",$options))
-                        <div class="column-5 col-6">
-                            <button  style="background: #f5f5f0 !important; color:black !important;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> <br> {{trans('file.Cash')}}</button>
-                        </div>
-                        @endif
-               
-                        @if(in_array("card",$options))
-                        <div class="column-5 col-6 ">
-                            <button style="background: #f5f5f0 !important; color:black !important;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="credit-card-btn"><i class="fa fa-credit-card fa-2x"></i><br> {{trans('file.Card')}}</button>
-                        </div>
-                        @endif
-                        
-                       
-       
-                        @if(in_array("paypal",$options) && $lims_pos_setting_data && (strlen($lims_pos_setting_data->paypal_live_api_username)>0) && (strlen($lims_pos_setting_data->paypal_live_api_password)>0) && (strlen($lims_pos_setting_data->paypal_live_api_secret)>0))
-                        <div class="column-5 col-6">
-                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="paypal-btn"><i class="fa fa-paypal fa-2x"></i><br> {{trans('file.PayPal')}}</button>
-                        </div>
-                        @endif
-                        <div class="column-5 col-6">
-                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom" id="draft-btn"><i class="dripicons-flag"></i> <br> Hold</button>
 
-                        </div>
-                        @if(in_array("cheque",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="cheque-btn"><i class="fa fa-money"></i><br> {{trans('file.Cheque')}}</button>
-                        </div>
+            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #13bd60, #f5f8fe) !important;">
+                <div class="pos-payment-buttons">
+                        @if(in_array("cash",$options))
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> {{trans('file.Cash')}}</button>
                         @endif
-                        
-                        @if(in_array("gift_card",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="gift-card-btn"><i class="fa fa-credit-card-alt"></i><br> {{trans('file.Gift Card')}}</button>
-                        </div>
+                        @if(in_array("card",$options))
+                        <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="credit-card-btn"><i class="fa fa-credit-card"></i> {{trans('file.Card')}}</button>
                         @endif
-                        
-                        @if(in_array("deposit",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i><br> {{trans('file.Deposit')}}</button>
-                        </div>
-                        @endif
-                        
-                        @if(in_array("mobile_money",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: #f5f5f0 !important; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-credit-card-alt"></i>
-                                Mobile
-                                <br> 
-                                Money</button>
-                        </div>
-                        @endif
-                        
-                        @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active && in_array("points",$options))
-                        <div class="column-5 col-6">
-                            <button style="background: transparent; color:black !important; border-color:#99b3e6;" type="button" class="btn btn-sm btn-custom payment-btn" data-toggle="modal" data-target="#add-payment" id="point-btn"><i class="dripicons-rocket"></i><br> {{trans('file.Points')}}</button>
-                        </div>
-                        @endif
-                         <div class="column-5 col-6">
-                            <button style="background-color: #d63031;" type="button" class="btn btn-sm btn-custom" id="cancel-btn" onclick="return confirmCancel()"><i class="fa fa-close"></i> <br>{{trans('file.Cancel')}}</button>
-                        </div>
-                         <div class="column-5 col-sm-12">
-                            <button style="background-color: #ffc107;" type="button" class="btn btn-sm btn-custom" data-toggle="modal" data-target="#recentTransaction"><i class="dripicons-clock"></i><br> {{trans('file.Recent Transaction')}}</button>
-                        </div>
+                    @if(in_array("paypal",$options) && $lims_pos_setting_data && (strlen($lims_pos_setting_data->paypal_live_api_username)>0) && (strlen($lims_pos_setting_data->paypal_live_api_password)>0) && (strlen($lims_pos_setting_data->paypal_live_api_secret)>0))
+                    <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="paypal-btn"><i class="fa fa-paypal"></i> {{trans('file.PayPal')}}</button>
+                    @endif
+                    <button type="button" class="pos-payment-btn pos-payment-btn--hold" id="draft-btn"><i class="dripicons-flag"></i> Hold</button>
+                    @if(in_array("cheque",$options))
+                    <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="cheque-btn"><i class="fa fa-money"></i> {{trans('file.Cheque')}}</button>
+                    @endif
+                    @if(in_array("gift_card",$options))
+                    <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="gift-card-btn"><i class="fa fa-credit-card-alt"></i> {{trans('file.Gift Card')}}</button>
+                    @endif
+                    @if(in_array("deposit",$options))
+                    <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i> {{trans('file.Deposit')}}</button>
+                    @endif
                     
+                    @if(in_array("mobile_money",$options))
+                    <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-mobile"></i> Mobile Money</button>
+                    @endif
+                    @if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active && in_array("points",$options))
+                    <button type="button" class="pos-payment-btn pos-payment-btn--points payment-btn" data-toggle="modal" data-target="#add-payment" id="point-btn"><i class="dripicons-rocket"></i> {{trans('file.Points')}}</button>
+                    @endif
+                    <button type="button" class="pos-payment-btn pos-payment-btn--cancel" id="cancel-btn" onclick="return confirmCancel()"><i class="fa fa-close"></i> {{trans('file.Cancel')}}</button>
+                    <button type="button" class="pos-payment-btn pos-payment-btn--recent" data-toggle="modal" data-target="#recentTransaction"><i class="dripicons-clock"></i> {{trans('file.Recent Transaction')}}</button>
                 </div>
             </div>
+              
             <div class="col-md-10 col-lg-10 order-2 order-md-2 transition-all" id="main-column"  style="background-color:#f5f5f0 !important;">
                 <div class="card " style="margin-top: 10px;"  style="background-color:#f5f5f0 !important;">
                     <div class="card-body" style="padding-bottom: 0px !important;">
@@ -804,7 +912,7 @@
         
                         <!-- payment modal -->
                         <div id="add-payment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-                            <div role="document" class="modal-dialog">
+                            <div role="document" class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 id="exampleModalLabel" class="modal-title">{{trans('file.Finalize Sale')}}</h5>
@@ -846,8 +954,9 @@
 
 
                                                     {{-- Container for dynamically added splits --}}
-                                                    <div class="col-md-12 mt-2 ml-2" id="paymentMethodsContainer"></div>
-                                                    <div class="form-group col-md-12 mt-3">
+                                                    <div class="col-md-12 mt-2 ml-2 payment-methods-wrapper" id="paymentMethodsContainer" style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 4px; display: none;"></div>
+                                                    <div class="form-group col-md-12 mt-3 credit-card-fields">
+                                                        <label>{{trans('file.Credit Card Payment')}} *</label>
                                                         <div class="card-element form-control">
                                                         </div>
                                                         <div class="card-errors" role="alert"></div>
@@ -893,6 +1002,10 @@
                                                         <label>{{trans('file.Staff Note')}}</label>
                                                         <textarea rows="3" class="form-control" name="staff_note"></textarea>
                                                     </div>
+                                                </div>
+                                                <div id="payment-error-alert" class="alert alert-danger d-none mt-2" role="alert">
+                                                    <i class="dripicons-warning"></i>
+                                                    <strong>Error:</strong> <span id="payment-error-message"></span>
                                                 </div>
                                                 <div class="mt-3">
                                                     <button id="submit-btn" type="button" class="btn btn-primary">{{trans('file.submit')}}</button>
@@ -2095,6 +2208,11 @@ $(document).ready(function () {
 
         // Update change
         change(payingAmount, totalPaid);
+        
+        // Hide the container if no more split payments
+        if ($('#paymentMethodsContainer').children().length === 0) {
+            $('#paymentMethodsContainer').hide();
+        }
     });
 
     function refreshPaymentMethodOptions() {
@@ -2587,6 +2705,109 @@ $(".coupon-check").on("click",function() {
     couponDiscount();
 });
 
+// Validate payment method and required fields before submit
+function validatePaymentMethod() {
+    var paid_amount = $('input[name="paid_amount"]').val();
+    var paymentMethod = $('select[name="paid_by_id"]').val();
+    
+    if (!paid_amount || parseFloat(paid_amount) <= 0) {
+        alert('Please enter a valid paid amount');
+        return false;
+    }
+    
+    if (paymentMethod == 2) { // Gift Card
+        var gift_card_id = $('select[name="gift_card_id_select"]').val() || $('input[name="gift_card_id"]').val();
+        if (!gift_card_id) {
+            alert('Please select a gift card');
+            return false;
+        }
+    }
+    
+    if (paymentMethod == 4) { // Cheque
+        var cheque_no = $('input[name="cheque_no"]').val();
+        if (!cheque_no) {
+            alert('Please enter the cheque number');
+            return false;
+        }
+    }
+    
+    // Validate split payment methods
+    var splitValidationPassed = true;
+    $('select[name="paid_by_id_select[]"]').each(function() {
+        let splitMethod = $(this).val();
+        let row = $(this).closest('.payment-row');
+        
+        if (splitMethod == 4) { // Cheque
+            let cheque_no = row.find('input[name="split_cheque_no[]"]').val();
+            if (!cheque_no) {
+                alert('Please enter the cheque number for all cheque payments in split payments');
+                splitValidationPassed = false;
+                return false;
+            }
+        }
+        
+        if (splitMethod == 2) { // Gift Card
+            let gift_card_id = row.find('select[name="split_gift_card_id[]"]').val();
+            if (!gift_card_id) {
+                alert('Please select a gift card for all gift card payments in split payments');
+                splitValidationPassed = false;
+                return false;
+            }
+        }
+    });
+    
+    if (!splitValidationPassed) {
+        return false;
+    }
+    
+    if (paymentMethod == 6) { // Deposit
+        var customer_id = $('#customer_id').val();
+        if (!customer_id) {
+            alert('Please select a customer for deposit payment');
+            return false;
+        }
+        var customerDeposit = parseFloat(deposit[customer_id]) || 0;
+        if (parseFloat(paid_amount) > customerDeposit) {
+            alert('Amount exceeds customer deposit! Customer deposit: ' + customerDeposit);
+            return false;
+        }
+    }
+    
+    if (paymentMethod == 7) { // Points
+        var customer_id = $('#customer_id').val();
+        if (!customer_id) {
+            alert('Please select a customer for points payment');
+            return false;
+        }
+        if (typeof reward_point_setting === 'undefined') {
+            alert('Reward point setting is not available');
+            return false;
+        }
+        var customerPoints = parseInt(points[customer_id], 10) || 0;
+        var perPointAmount = parseFloat(reward_point_setting['per_point_amount']) || 1;
+        var requiredPoints = Math.ceil(parseFloat(paid_amount) / perPointAmount);
+        if (requiredPoints > customerPoints) {
+            alert('Customer does not have sufficient points. Available points: ' + customerPoints);
+            return false;
+        }
+    }
+    
+    if (paymentMethod == 8) { // Mobile Money
+        var mobile_operator = $('#mobile_money_operator').val() || $('input[name="selected_mobile_op"]').val();
+        var mobile_number = $('input[name="mobile_number"]').val();
+        if (!mobile_operator) {
+            alert('Please select a mobile money operator');
+            return false;
+        }
+        if (!mobile_number) {
+            alert('Please enter a mobile number');
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 $(".payment-btn").on("click", function() {
     var audio = $("#mysoundclip2")[0];
     audio.play();
@@ -2606,13 +2827,15 @@ $("#draft-btn").on("click",function(){
     if (rownumber < 0) {
         alert("Please insert product to order table!")
     }
-    else
-      console.log('submit');
+    else {
         $('.payment-form').submit();
+    }
 });
 
 $("#submit-btn").on("click", function() {
-    $('.payment-form').submit();
+    if(validatePaymentMethod()) {
+        $('.payment-form').submit();
+    }
 });
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -2632,6 +2855,19 @@ document.addEventListener("DOMContentLoaded", function () {
     // ✅ Listen to change event on all current & future selects
     $(document).on("change", 'select[name="paid_by_id_select[]"].payment-method-select', function () {
         toggleGlobalMobileMoneyFields();
+        // Show/hide cheque field based on selected payment method
+        let row = $(this).closest('.payment-row');
+        let methodValue = $(this).val();
+        row.find('.cheque-split').toggle(methodValue === '4');
+        row.find('.giftcard-split').toggle(methodValue === '2');
+        
+        // Clear cheque number when toggling away from cheque
+        if (methodValue !== '4') {
+            row.find('input[name="split_cheque_no[]"]').val('');
+        }
+        if (methodValue !== '2') {
+            row.find('select[name="split_gift_card_id[]"]').val('');
+        }
     });
 
     // ✅ Initialize state on load
@@ -2661,23 +2897,35 @@ document.addEventListener("DOMContentLoaded", function () {
         let selectOptions = availableOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
 
         let paymentRow = `
-            <div class="row mt-2 payment-row align-items-center">
-                <div class="col-md-4">
-                    <label>Payment Amount *</label>
+            <div class="row mt-2 payment-row align-items-end" style="border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                <div class="col-md-2">
+                    <label class="font-weight-bold" style="font-size: 12px;">Amount *</label>
                     <input type="number" name="split_amount[]" class="form-control numkey" step="any" required>
                 </div>
-                <div class="col-md-4">
-                    <label>Payment Method</label>
+                <div class="col-md-3">
+                    <label class="font-weight-bold" style="font-size: 12px;">Method</label>
                     <div class="d-flex align-items-center">
-                        <select name="paid_by_id_select[]" class="form-control selectpicker payment-method-select">
+                        <select name="paid_by_id_select[]" class="form-control selectpicker payment-method-select" style="width: calc(100% - 35px);">
                             ${selectOptions}
                         </select>
-                        <button type="button" class="btn btn-danger ml-2 remove-payment"><i class="fa fa-trash"></i></button>
+                        <button type="button" class="btn btn-sm btn-danger ml-2 remove-payment"><i class="fa fa-trash"></i></button>
                     </div>
+                </div>
+                <div class="col-md-3 cheque-split" style="display: none;">
+                    <label class="font-weight-bold" style="font-size: 12px;">Cheque # *</label>
+                    <input type="text" name="split_cheque_no[]" class="form-control split-cheque-field" placeholder="Cheque #">
+                </div>
+                <div class="col-md-4 giftcard-split" style="display: none;">
+                    <label class="font-weight-bold" style="font-size: 12px;">Gift Card</label>
+                    <select name="split_gift_card_id[]" class="form-control selectpicker split-gift-card-select" data-live-search="true" data-live-search-style="begins" title="Select..." style="width: 100%;"></select>
                 </div>
             </div>
         `;
 
+        // Show the container when first payment method is added
+        if ($('#paymentMethodsContainer').children().length === 0) {
+            $('#paymentMethodsContainer').show();
+        }
         $("#paymentMethodsContainer").append(paymentRow);
         $('.selectpicker').selectpicker('refresh');
         toggleGlobalMobileMoneyFields();
@@ -2687,10 +2935,10 @@ document.addEventListener("DOMContentLoaded", function () {
 function getSelectedPaymentMethods() {
     let methods = [];
 
-    let mainMethod = $("select[name='paid_by_id_select']").val();
+    let mainMethod = $("select[name='paid_by_id']").val();
     if (mainMethod) methods.push(parseInt(mainMethod));
 
-    $("select[name='paid_by_id[]']").each(function () {
+    $("select[name='paid_by_id_select[]']").each(function () {
         let val = $(this).val();
         if (val) methods.push(parseInt(val));
     });
@@ -2716,7 +2964,7 @@ $("#credit-card-btn").on("click",function() {
 });
 
 $("#cheque-btn").on("click",function() {
-    $('select[name="paid_by_id_select"]').val(4);
+    $('select[name="paid_by_id"]').val(4);
     $('.selectpicker').selectpicker('refresh');
     $('div.qc').hide();
     cheque();
@@ -2794,7 +3042,7 @@ $('select[name="paid_by_id"]').on("change", function() {
             pointCalculation();
         }
     }
-        $("#paymentMethodsContainer").empty();
+        $("#paymentMethodsContainer").empty().hide();
     refreshPaymentMethodOptions();
 });
 
@@ -2900,6 +3148,7 @@ document.addEventListener("DOMContentLoaded", function () {
 });
     
 $(document).on('submit', '.payment-form', function(e) {
+    $('#payment-error-alert').addClass('d-none');
     $("table.order-list tbody .qty").each(function(index) {
         if ($(this).val() == '') {
             alert('One of products has no quantity!');
@@ -2910,18 +3159,23 @@ $(document).on('submit', '.payment-form', function(e) {
     if (rownumber < 0) {
         alert("Please insert product to order table!")
         e.preventDefault();
+        return; 
     }
     else if(parseFloat($('input[name="total_qty"]').val()) <= 0) {
         alert('Product quantity is 0');
         e.preventDefault();
+        return;
     }
-    // else if( parseFloat( $('input[name="paying_amount"]').val() ) < parseFloat( $('input[name="paid_amount"]').val() ) ){
-    //     alert('Paying amount cannot be bigger than recieved amount');
-    //     e.preventDefault();
-    // }
-    else {
-        $("#submit-button").prop('disabled', true);
+    // Check if change is negative (insufficient payment)
+    var changeVal = parseFloat($("#change").text().replace(/,/g, '')) || 0;
+    if (changeVal < 0) {
+        e.preventDefault();
+        $('#payment-error-message').text('Insufficient payment - the amount received is less than the total due. Please collect the full amount before submitting.');
+        $('#payment-error-alert').removeClass('d-none');
+        $('#add-payment').modal('show');
+        return;
     }
+    $("#submit-button").prop('disabled', true);
     $('input[name="paid_by_id"]').val($('select[name="paid_by_id"]').val());
     $('input[name="order_tax_rate"]').val($('select[name="order_tax_rate_select"]').val());
 
@@ -3509,6 +3763,7 @@ function calculateGrandTotal() {
 function hide() {
     $(".card-element").hide();
     $(".card-errors").hide();
+    $(".credit-card-fields").hide();
     $(".cheque").hide();
     $(".gift-card").hide();
     $(".mobile_money_fields").hide();
@@ -3533,6 +3788,7 @@ function giftCard() {
             $('.selectpicker').selectpicker();
         }
     });
+    $(".credit-card-fields").hide();
     $(".card-element").hide();
     $(".card-errors").hide();
     $(".cheque").hide();
@@ -3543,6 +3799,7 @@ function giftCard() {
 function mobile_money() {
     $(".mobile_money_fields").show();
     $(".gift-card").hide();
+    $(".credit-card-fields").hide();
     $(".card-element").hide();
     $(".card-errors").hide();
     $(".cheque").hide();
@@ -3552,6 +3809,7 @@ function mobile_money() {
 function cheque() {
     $(".cheque").show();
     $('input[name="cheque_no"]').attr('required', true);
+    $(".credit-card-fields").hide();
     $(".card-element").hide();
     $(".card-errors").hide();
     $(".gift-card").hide();
@@ -3559,7 +3817,8 @@ function cheque() {
 
 function creditCard() {
     @if($lims_pos_setting_data && (strlen($lims_pos_setting_data->stripe_public_key)>0) && (strlen($lims_pos_setting_data->stripe_secret_key )>0))
-    $.getScript( "vendor/stripe/checkout.js" );
+    $.getScript("{{ asset('vendor/stripe/checkout.js') }}");
+    $(".credit-card-fields").show();
     $(".card-element").show();
     $(".card-errors").show();
     @endif

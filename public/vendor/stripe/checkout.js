@@ -48,7 +48,7 @@ card.addEventListener('change', function(event) {
   } else {
     displayError[index].textContent = '';
   }
-});
+}); 
 
 // Handle form submission.
 $('.payment-form').on("submit", function(event) {
@@ -58,7 +58,9 @@ $('.payment-form').on("submit", function(event) {
     var rownumber2 = $('table.sale-list tbody tr:last').index();
     var rownumber3 = $('table.purchase-list tbody tr:last').index();
     if (result.error) {
-      if($('select[name="paid_by_id"]').val() == 3){
+      // Check paid_by_id from select (pos) or input (create_sale) or paid_by_id_select
+      var paidById = $('select[name="paid_by_id"]').val() || $('input[name="paid_by_id"]').val() || $('select[name="paid_by_id_select"]').val();
+      if(paidById == 3 || paidById == '3'){
           // Inform the user if there was an error.
           var errorElement = document.getElementsByClassName('card-errors');
           errorElement[index].textContent = result.error.message;

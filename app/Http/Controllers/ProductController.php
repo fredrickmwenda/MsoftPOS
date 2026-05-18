@@ -18,7 +18,7 @@ use App\Models\Product_Supplier;
 use App\Models\CustomField;
 
 use DNS1D;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Validation\Rule;
 

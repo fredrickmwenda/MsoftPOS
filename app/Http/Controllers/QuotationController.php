@@ -22,7 +22,7 @@ use App\Models\Variant;
 use DB;
 use NumberToWords\NumberToWords;
 use Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\QuotationDetails;
 use Mail;

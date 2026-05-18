@@ -11,7 +11,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductBatch;
 use App\Models\Delivery;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use DB;
 use Auth;

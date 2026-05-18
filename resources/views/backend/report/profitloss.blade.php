@@ -118,7 +118,7 @@
                 <tbody>
                     <tr>
                         <td>Cost of Products Sold (Purchases)</td>
-                        <td class="text-end">{{ $currency_code }}</td>
+                        <td class="text-end">{{ $currency_code }}</td> 
                         <td class="text-end">{{ number_format($product_cost, 2) }}</td>
                     </tr>
                     

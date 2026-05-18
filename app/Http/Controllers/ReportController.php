@@ -32,16 +32,53 @@ use App\Models\ProductVariant;
 use App\Models\Unit;
 use App\Models\CustomerGroup;
 use App\Models\CategoryDepartment;
+use App\Models\GeneralSetting;
 // use DB;
 use Illuminate\Support\Facades\DB;
 use Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB as FacadesDB;
-use Spatie\Permission\Models\Role;
+use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 
 class ReportController extends Controller
 {
+    /**
+     * Get sale_percentage_filter from GeneralSetting model. Returns null if not set or 100.
+     */
+    private function getSalePercentageFromSetting()
+    {
+        $settings = GeneralSetting::first();
+        if (!$settings || $settings->sale_percentage_filter === null) {
+            return null;
+        }
+        $pct = (int) $settings->sale_percentage_filter;
+        return ($pct >= 0 && $pct <= 100) ? $pct : null;
+    }
+
+    /**
+     * Given a base Sale query and a percentage (0-99), return sale IDs that form the top X% of sales by value.
+     * Returns empty array if percentage is null or 100 (no filter).
+     */
+    private function getSaleIdsForPercentageFilter($baseQuery, $percentage)
+    {
+        if ($percentage === null || $percentage >= 100) {
+            return [];
+        }
+        $all_sales = (clone $baseQuery)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+        $total_value = $all_sales->sum('grand_total');
+        $target_value = $total_value * ($percentage / 100);
+        $ids = [];
+        $running = 0;
+        foreach ($all_sales as $s) {
+            $ids[] = $s->id;
+            $running += $s->grand_total;
+            if ($running >= $target_value) {
+                break;
+            }
+        }
+        return $ids;
+    }
 
     public function reportDashboard()
     {
@@ -185,8 +222,8 @@ class ReportController extends Controller
     public function warehouseStockReport(Request $request)
     {
         // ✅ If no dates are set, default to yesterday → today
-        $start_date = $request->input('start_date');
-        $end_date   = $request->input('end_date');
+        $start_date = $request->input('start_date') ?? now()->subDay()->toDateString();
+        $end_date   = $request->input('end_date') ?? now()->toDateString();
         $warehouse_id = $request->input('warehouse_id');
 
         if (!$start_date && !$end_date) {
@@ -245,8 +282,8 @@ class ReportController extends Controller
 
     public function warehouseStockReportData(Request $request)
     {
-        $start_date = $request->input('start_date');
-        $end_date   = $request->input('end_date');
+        $start_date = $request->input('start_date')  ?? now()->subDay()->toDateString();
+        $end_date   = $request->input('end_date') ?? now()->toDateString();
         $warehouse_id = $request->input('warehouse_id');
 
         // Handle default date range
@@ -362,6 +399,12 @@ class ReportController extends Controller
     {
         $role = Role::find(Auth::user()->role_id);
         if($role->hasPermissionTo('daily-sale')){
+            $sale_percentage = $this->getSalePercentageFromSetting();
+            $apply_percentage = $sale_percentage !== null && $sale_percentage < 100;
+            if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+                $apply_percentage = false;
+            }
+
             $start = 1;
             $number_of_day = date('t', mktime(0, 0, 0, $month, 1, $year));
             while($start <= $number_of_day)
@@ -370,21 +413,40 @@ class ReportController extends Controller
                     $date = $year.'-'.$month.'-0'.$start;
                 else
                     $date = $year.'-'.$month.'-'.$start;
-                $query1 = array(
-                    'SUM(total_discount) AS total_discount',
-                    'SUM(order_discount) AS order_discount',
-                    'SUM(total_tax) AS total_tax',
-                    'SUM(order_tax) AS order_tax',
-                    'SUM(shipping_cost) AS shipping_cost',
-                    'SUM(grand_total) AS grand_total'
-                );
-                $sale_data = Sale::whereDate('created_at', $date)->selectRaw(implode(',', $query1))->get();
-                $total_discount[$start] = $sale_data[0]->total_discount;
-                $order_discount[$start] = $sale_data[0]->order_discount;
-                $total_tax[$start] = $sale_data[0]->total_tax;
-                $order_tax[$start] = $sale_data[0]->order_tax;
-                $shipping_cost[$start] = $sale_data[0]->shipping_cost;
-                $grand_total[$start] = $sale_data[0]->grand_total;
+
+                $baseQuery = Sale::whereDate('created_at', $date);
+                if ($apply_percentage) {
+                    $sale_ids = $this->getSaleIdsForPercentageFilter($baseQuery, $sale_percentage);
+                    if (count($sale_ids) > 0) {
+                        $sale_data = Sale::whereIn('id', $sale_ids)->selectRaw(
+                            'SUM(total_discount) AS total_discount, SUM(order_discount) AS order_discount, SUM(total_tax) AS total_tax, SUM(order_tax) AS order_tax, SUM(shipping_cost) AS shipping_cost, SUM(grand_total) AS grand_total'
+                        )->first();
+                        $total_discount[$start] = $sale_data->total_discount ?? 0;
+                        $order_discount[$start] = $sale_data->order_discount ?? 0;
+                        $total_tax[$start] = $sale_data->total_tax ?? 0;
+                        $order_tax[$start] = $sale_data->order_tax ?? 0;
+                        $shipping_cost[$start] = $sale_data->shipping_cost ?? 0;
+                        $grand_total[$start] = $sale_data->grand_total ?? 0;
+                    } else {
+                        $total_discount[$start] = $order_discount[$start] = $total_tax[$start] = $order_tax[$start] = $shipping_cost[$start] = $grand_total[$start] = 0;
+                    }
+                } else {
+                    $query1 = array(
+                        'SUM(total_discount) AS total_discount',
+                        'SUM(order_discount) AS order_discount',
+                        'SUM(total_tax) AS total_tax',
+                        'SUM(order_tax) AS order_tax',
+                        'SUM(shipping_cost) AS shipping_cost',
+                        'SUM(grand_total) AS grand_total'
+                    );
+                    $sale_data = Sale::whereDate('created_at', $date)->selectRaw(implode(',', $query1))->get();
+                    $total_discount[$start] = $sale_data[0]->total_discount;
+                    $order_discount[$start] = $sale_data[0]->order_discount;
+                    $total_tax[$start] = $sale_data[0]->total_tax;
+                    $order_tax[$start] = $sale_data[0]->order_tax;
+                    $shipping_cost[$start] = $sale_data[0]->shipping_cost;
+                    $grand_total[$start] = $sale_data[0]->grand_total;
+                }
                 $start++;
             }
             $start_day = date('w', strtotime($year.'-'.$month.'-01')) + 1;
@@ -407,6 +469,12 @@ class ReportController extends Controller
         $data = $request->all();
         if($data['warehouse_id'] == 0)
             return redirect()->back();
+        $sale_percentage = $this->getSalePercentageFromSetting();
+        $apply_percentage = $sale_percentage !== null && $sale_percentage < 100;
+        if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+            $apply_percentage = false;
+        }
+
         $start = 1;
         $number_of_day = date('t', mktime(0, 0, 0, $month, 1, $year));
         while($start <= $number_of_day)
@@ -415,29 +483,45 @@ class ReportController extends Controller
                 $date = $year.'-'.$month.'-0'.$start;
             else
                 $date = $year.'-'.$month.'-'.$start;
-            $query1 = array(
-                'SUM(total_discount) AS total_discount',
-                'SUM(order_discount) AS order_discount',
-                'SUM(total_tax) AS total_tax',
-                'SUM(order_tax) AS order_tax',
-                'SUM(shipping_cost) AS shipping_cost',
-                'SUM(grand_total) AS grand_total'
-            );
-            // Build query with warehouse filter
+
             $sale_query = Sale::where('warehouse_id', $data['warehouse_id']);
-            
-            // Add biller/cashier filter if specified
             if(isset($data['biller_id']) && $data['biller_id'] != 0) {
                 $sale_query->where('biller_id', $data['biller_id']);
             }
-            
-            $sale_data = $sale_query->whereDate('created_at', $date)->selectRaw(implode(',', $query1))->get();
-            $total_discount[$start] = $sale_data[0]->total_discount;
-            $order_discount[$start] = $sale_data[0]->order_discount;
-            $total_tax[$start] = $sale_data[0]->total_tax;
-            $order_tax[$start] = $sale_data[0]->order_tax;
-            $shipping_cost[$start] = $sale_data[0]->shipping_cost;
-            $grand_total[$start] = $sale_data[0]->grand_total;
+            $baseQuery = (clone $sale_query)->whereDate('created_at', $date);
+
+            if ($apply_percentage) {
+                $sale_ids = $this->getSaleIdsForPercentageFilter($baseQuery, $sale_percentage);
+                if (count($sale_ids) > 0) {
+                    $sale_data = Sale::whereIn('id', $sale_ids)->selectRaw(
+                        'SUM(total_discount) AS total_discount, SUM(order_discount) AS order_discount, SUM(total_tax) AS total_tax, SUM(order_tax) AS order_tax, SUM(shipping_cost) AS shipping_cost, SUM(grand_total) AS grand_total'
+                    )->first();
+                    $total_discount[$start] = $sale_data->total_discount ?? 0;
+                    $order_discount[$start] = $sale_data->order_discount ?? 0;
+                    $total_tax[$start] = $sale_data->total_tax ?? 0;
+                    $order_tax[$start] = $sale_data->order_tax ?? 0;
+                    $shipping_cost[$start] = $sale_data->shipping_cost ?? 0;
+                    $grand_total[$start] = $sale_data->grand_total ?? 0;
+                } else {
+                    $total_discount[$start] = $order_discount[$start] = $total_tax[$start] = $order_tax[$start] = $shipping_cost[$start] = $grand_total[$start] = 0;
+                }
+            } else {
+                $query1 = array(
+                    'SUM(total_discount) AS total_discount',
+                    'SUM(order_discount) AS order_discount',
+                    'SUM(total_tax) AS total_tax',
+                    'SUM(order_tax) AS order_tax',
+                    'SUM(shipping_cost) AS shipping_cost',
+                    'SUM(grand_total) AS grand_total'
+                );
+                $sale_data = $sale_query->whereDate('created_at', $date)->selectRaw(implode(',', $query1))->get();
+                $total_discount[$start] = $sale_data[0]->total_discount;
+                $order_discount[$start] = $sale_data[0]->order_discount;
+                $total_tax[$start] = $sale_data[0]->total_tax;
+                $order_tax[$start] = $sale_data[0]->order_tax;
+                $shipping_cost[$start] = $sale_data[0]->shipping_cost;
+                $grand_total[$start] = $sale_data[0]->grand_total;
+            }
             $start++;
         }
         $start_day = date('w', strtotime($year.'-'.$month.'-01')) + 1;
@@ -540,29 +624,45 @@ class ReportController extends Controller
     {
         $role = Role::find(Auth::user()->role_id);
         if($role->hasPermissionTo('monthly-sale')){
+            $sale_percentage = $this->getSalePercentageFromSetting();
+            $apply_percentage = $sale_percentage !== null && $sale_percentage < 100;
+            if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+                $apply_percentage = false;
+            }
+
             $start = strtotime($year .'-01-01');
             $end = strtotime($year .'-12-31');
             while($start <= $end)
             {
                 $start_date = $year . '-'. date('m', $start).'-'.'01';
-                $end_date = $year . '-'. date('m', $start).'-'.'31';
+                $end_date = $year . '-'. date('m', $start).'-'.date('t', mktime(0, 0, 0, (int)date('m', $start), 1, (int)$year));
 
-                $temp_total_discount = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total_discount');
+                $baseQuery = Sale::whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date);
+                if ($apply_percentage) {
+                    $sale_ids = $this->getSaleIdsForPercentageFilter($baseQuery, $sale_percentage);
+                    if (count($sale_ids) > 0) {
+                        $temp_total_discount = Sale::whereIn('id', $sale_ids)->sum('total_discount');
+                        $temp_order_discount = Sale::whereIn('id', $sale_ids)->sum('order_discount');
+                        $temp_total_tax = Sale::whereIn('id', $sale_ids)->sum('total_tax');
+                        $temp_order_tax = Sale::whereIn('id', $sale_ids)->sum('order_tax');
+                        $temp_shipping_cost = Sale::whereIn('id', $sale_ids)->sum('shipping_cost');
+                        $temp_total = Sale::whereIn('id', $sale_ids)->sum('grand_total');
+                    } else {
+                        $temp_total_discount = $temp_order_discount = $temp_total_tax = $temp_order_tax = $temp_shipping_cost = $temp_total = 0;
+                    }
+                } else {
+                    $temp_total_discount = $baseQuery->sum('total_discount');
+                    $temp_order_discount = (clone $baseQuery)->sum('order_discount');
+                    $temp_total_tax = (clone $baseQuery)->sum('total_tax');
+                    $temp_order_tax = (clone $baseQuery)->sum('order_tax');
+                    $temp_shipping_cost = (clone $baseQuery)->sum('shipping_cost');
+                    $temp_total = (clone $baseQuery)->sum('grand_total');
+                }
                 $total_discount[] = number_format((float)$temp_total_discount, config('decimal'), '.', '');
-
-                $temp_order_discount = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('order_discount');
                 $order_discount[] = number_format((float)$temp_order_discount, config('decimal'), '.', '');
-
-                $temp_total_tax = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total_tax');
                 $total_tax[] = number_format((float)$temp_total_tax, config('decimal'), '.', '');
-
-                $temp_order_tax = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('order_tax');
                 $order_tax[] = number_format((float)$temp_order_tax, config('decimal'), '.', '');
-
-                $temp_shipping_cost = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('shipping_cost');
                 $shipping_cost[] = number_format((float)$temp_shipping_cost, config('decimal'), '.', '');
-
-                $temp_total = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
                 $total[] = number_format((float)$temp_total, config('decimal'), '.', '');
                 $start = strtotime("+1 month", $start);
             }
@@ -580,29 +680,45 @@ class ReportController extends Controller
         if($data['warehouse_id'] == 0)
             return redirect()->back();
 
+        $sale_percentage = $this->getSalePercentageFromSetting();
+        $apply_percentage = $sale_percentage !== null && $sale_percentage < 100;
+        if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+            $apply_percentage = false;
+        }
+
         $start = strtotime($year .'-01-01');
         $end = strtotime($year .'-12-31');
         while($start <= $end)
         {
             $start_date = $year . '-'. date('m', $start).'-'.'01';
-            $end_date = $year . '-'. date('m', $start).'-'.'31';
+            $end_date = $year . '-'. date('m', $start).'-'.date('t', mktime(0, 0, 0, (int)date('m', $start), 1, (int)$year));
 
-            $temp_total_discount = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total_discount');
+            $baseQuery = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date);
+            if ($apply_percentage) {
+                $sale_ids = $this->getSaleIdsForPercentageFilter($baseQuery, $sale_percentage);
+                if (count($sale_ids) > 0) {
+                    $temp_total_discount = Sale::whereIn('id', $sale_ids)->sum('total_discount');
+                    $temp_order_discount = Sale::whereIn('id', $sale_ids)->sum('order_discount');
+                    $temp_total_tax = Sale::whereIn('id', $sale_ids)->sum('total_tax');
+                    $temp_order_tax = Sale::whereIn('id', $sale_ids)->sum('order_tax');
+                    $temp_shipping_cost = Sale::whereIn('id', $sale_ids)->sum('shipping_cost');
+                    $temp_total = Sale::whereIn('id', $sale_ids)->sum('grand_total');
+                } else {
+                    $temp_total_discount = $temp_order_discount = $temp_total_tax = $temp_order_tax = $temp_shipping_cost = $temp_total = 0;
+                }
+            } else {
+                $temp_total_discount = $baseQuery->sum('total_discount');
+                $temp_order_discount = (clone $baseQuery)->sum('order_discount');
+                $temp_total_tax = (clone $baseQuery)->sum('total_tax');
+                $temp_order_tax = (clone $baseQuery)->sum('order_tax');
+                $temp_shipping_cost = (clone $baseQuery)->sum('shipping_cost');
+                $temp_total = (clone $baseQuery)->sum('grand_total');
+            }
             $total_discount[] = number_format((float)$temp_total_discount, config('decimal'), '.', '');
-
-            $temp_order_discount = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('order_discount');
             $order_discount[] = number_format((float)$temp_order_discount, config('decimal'), '.', '');
-
-            $temp_total_tax = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total_tax');
             $total_tax[] = number_format((float)$temp_total_tax, config('decimal'), '.', '');
-
-            $temp_order_tax = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('order_tax');
             $order_tax[] = number_format((float)$temp_order_tax, config('decimal'), '.', '');
-
-            $temp_shipping_cost = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('shipping_cost');
             $shipping_cost[] = number_format((float)$temp_shipping_cost, config('decimal'), '.', '');
-
-            $temp_total = Sale::where('warehouse_id', $data['warehouse_id'])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
             $total[] = number_format((float)$temp_total, config('decimal'), '.', '');
             $start = strtotime("+1 month", $start);
         }
@@ -684,39 +800,79 @@ class ReportController extends Controller
         return view('backend.report.monthly_purchase', compact('year', 'total_discount', 'order_discount', 'total_tax', 'order_tax', 'shipping_cost', 'grand_total', 'lims_warehouse_list', 'warehouse_id'));
     }
 
-    public function bestSeller()
-    {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('best-seller')){
-            $start = strtotime(date("Y-m", strtotime("-2 months")).'-01');
-            $end = strtotime(date("Y").'-'.date("m").'-31');
+    // public function bestSeller()
+    // {
+    //     $role = Role::find(Auth::user()->role_id);
+    //     if($role->hasPermissionTo('best-seller')){
+    //         $start = strtotime(date("Y-m", strtotime("-2 months")).'-01');
+    //         $end = strtotime(date("Y").'-'.date("m").'-31');
 
-            while($start <= $end)
-            {
-                $start_date = date("Y-m", $start).'-'.'01';
-                $end_date = date("Y-m", $start).'-'.'31';
+    //         while($start <= $end)
+    //         {
+    //             $start_date = date("Y-m", $start).'-'.'01';
+    //             $end_date = date("Y-m", $start).'-'.'31';
 
-                $best_selling_qty = Product_Sale::select(DB::raw('product_id, sum(qty) as sold_qty'))->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->groupBy('product_id')->orderBy('sold_qty', 'desc')->take(10)->get();
-                if(!count($best_selling_qty)){
-                    $product[] = '';
-                    $sold_qty[] = 0;
-                }
-                foreach ($best_selling_qty as $best_seller) {
-                    $product_data = Product::find($best_seller->product_id);
-                    $product[] = $product_data->name.': '.$product_data->code;
-                    $sold_qty[] = $best_seller->sold_qty;
-                }
-                $start = strtotime("+1 month", $start);
-            }
-            $start_month = date("F Y", strtotime('-2 month'));
-            $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-            $warehouse_id = 0;
-            //return $product;
-            return view('backend.report.best_seller', compact('product', 'sold_qty', 'start_month', 'lims_warehouse_list', 'warehouse_id'));
-        }
-        else
-            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+    //             $best_selling_qty = Product_Sale::select(DB::raw('product_id, sum(qty) as sold_qty'))->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->groupBy('product_id')->orderBy('sold_qty', 'desc')->take(10)->get();
+    //             if(!count($best_selling_qty)){
+    //                 $product[] = '';
+    //                 $sold_qty[] = 0;
+    //             }
+    //             foreach ($best_selling_qty as $best_seller) {
+    //                 $product_data = Product::find($best_seller->product_id);
+    //                 $product[] = $product_data->name.': '.$product_data->code;
+    //                 $sold_qty[] = $best_seller->sold_qty;
+    //             }
+    //             $start = strtotime("+1 month", $start);
+    //         }
+    //         $start_month = date("F Y", strtotime('-2 month'));
+    //         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+    //         $warehouse_id = 0;
+    //         //return $product;
+    //         return view('backend.report.best_seller', compact('product', 'sold_qty', 'start_month', 'lims_warehouse_list', 'warehouse_id'));
+    //     }
+    //     else
+    //         return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+    // }
+
+    public function bestSeller(Request $request)
+{
+    $role = Role::find(Auth::user()->role_id);
+    if (!$role->hasPermissionTo('best-seller')) {
+        return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
+
+    // Default to today’s date if no input is provided
+    $start_date = $request->input('start_date', date('Y-m-d'));
+    $end_date   = $request->input('end_date', date('Y-m-d'));
+
+    // Single query for the date range (default = today)
+    $best_selling_qty = Product_Sale::select(DB::raw('product_id, sum(qty) as sold_qty'))
+        ->whereDate('created_at', '>=', $start_date)
+        ->whereDate('created_at', '<=', $end_date)
+        ->groupBy('product_id')
+        ->orderByDesc('sold_qty')
+        ->take(10)
+        ->get();
+
+    $product  = [];
+    $sold_qty = [];
+
+    foreach ($best_selling_qty as $best_seller) {
+        $product_data = Product::find($best_seller->product_id);
+        $product[]  = $product_data->name . ': ' . $product_data->code;
+        $sold_qty[] = $best_seller->sold_qty;
+    }
+
+    // If no sales, pass empty arrays (view can handle)
+    $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+    $warehouse_id = 0;
+    $start_month = date("F Y"); // For display, now just current month/day context
+
+    return view('backend.report.best_seller', compact(
+        'product', 'sold_qty', 'start_month', 'lims_warehouse_list', 'warehouse_id',
+        'start_date', 'end_date' // pass to view if needed for form inputs
+    ));
+}
 
     public function bestSellerByWarehouse(Request $request)
     {
@@ -779,40 +935,10 @@ class ReportController extends Controller
         $data = $this->calculateAverageCOGS($product_sale_data);
         $product_cost = $data[0];
         $product_tax = $data[1];
-        /*$product_revenue = 0;
-        $product_cost = 0;
-        $product_tax = 0;
-        $profit = 0;
-        foreach ($product_sale_data as $key => $product_sale) {
-            if($product_sale->product_batch_id)
-                $product_purchase_data = ProductPurchase::where([
-                    ['product_id', $product_sale->product_id],
-                    ['product_batch_id', $product_sale->product_batch_id]
-                ])->get();
-            else
-                $product_purchase_data = ProductPurchase::where('product_id', $product_sale->product_id)->get();
 
-            $purchased_qty = 0;
-            $purchased_amount = 0;
-            $purchased_tax = 0;
-            $sold_qty = $product_sale->sold_qty;
-            $product_revenue += $product_sale->sold_amount;
-            foreach ($product_purchase_data as $key => $product_purchase) {
-                $purchased_qty += $product_purchase->qty;
-                $purchased_amount += $product_purchase->total;
-                $purchased_tax += $product_purchase->tax;
-                if($purchased_qty >= $sold_qty) {
-                    $qty_diff = $purchased_qty - $sold_qty;
-                    $unit_cost = $product_purchase->total / $product_purchase->qty;
-                    $unit_tax = $product_purchase->tax / $product_purchase->qty;
-                    $purchased_amount -= ($qty_diff * $unit_cost);
-                    $purchased_tax -= ($qty_diff * $unit_tax);
-                    break;
-                }
-            }
-            $product_cost += $purchased_amount;
-            $product_tax += $purchased_tax;
-        }*/
+
+        
+
         $purchase = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query1))->get();
         $total_purchase = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
         $sale = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query1))->get();
@@ -897,168 +1023,173 @@ class ReportController extends Controller
     }
 
     
-    
-    
-public function profitLossData(Request $request)
-{
-    // Selected year or default to current
-    $selected_year = $request->input('year', date('Y'));
-    $selected_month = $request->input('month', ''); // 01-12 or empty for full year
+    public function profitLossData(Request $request)
+    {
+        // Selected year or default to current
+        $selected_year = $request->input('year', date('Y'));
+        $selected_month = $request->input('month', ''); // 01-12 or empty for full year
 
-    $year = $selected_year;
-    if (!empty($selected_month) && preg_match('/^(0[1-9]|1[0-2])$/', $selected_month)) {
-        $start_date = $year . '-' . $selected_month . '-01';
-        $end_date = date('Y-m-t', strtotime($start_date));
-        $month_name = date('F', strtotime($start_date));
-        $period_label = $month_name . ' ' . $year;
-        $period_subtitle = 'For the Month Ending ' . date('F j, Y', strtotime($end_date));
-    } else {
-        $start_date = $year . '-01-01';
-        $end_date = $year . '-12-31';
-        $period_label = $year;
-        $period_subtitle = 'For the Year Ending ' . $year;
+        $year = $selected_year;
+        if (!empty($selected_month) && preg_match('/^(0[1-9]|1[0-2])$/', $selected_month)) {
+            $start_date = $year . '-' . $selected_month . '-01';
+            $end_date = date('Y-m-t', strtotime($start_date));
+            $month_name = date('F', strtotime($start_date));
+            $period_label = $month_name . ' ' . $year;
+            $period_subtitle = 'For the Month Ending ' . date('F j, Y', strtotime($end_date));
+        } else {
+            $start_date = $year . '-01-01';
+            $end_date = $year . '-12-31';
+            $period_label = $year;
+            $period_subtitle = 'For the Year Ending ' . $year;
+        }
+        
+        // Get active currency
+        $active_currency = Currency::where('is_active', true)->first();
+        $currency_code = $active_currency ? $active_currency->code : '$';
+        
+        // Query arrays for aggregations
+        $query1 = [
+            'SUM(grand_total) AS grand_total',
+            'SUM(shipping_cost) AS shipping_cost',
+            'SUM(paid_amount) AS paid_amount',
+            'SUM(total_tax + order_tax) AS tax',
+            'SUM(total_discount + order_discount) AS discount'
+        ];
+        
+        $query2 = [
+            'SUM(grand_total) AS grand_total',
+            'SUM(total_tax + order_tax) AS tax'
+        ];
+
+        // Handle strict mode for aggregated grouping
+        config()->set('database.connections.mysql.strict', false);
+        DB::reconnect();
+
+        // Get product sale data for calculating product cost and tax
+        $product_sale_data = Product_Sale::select(DB::raw('product_id, product_batch_id, sale_unit_id, variant_id, 
+            sum(qty) as sold_qty, 
+            sum(product_sales.return_qty) as return_qty, 
+            sum(total) as sold_amount'))
+            ->whereBetween('created_at', [$start_date, $end_date])
+            ->groupBy('product_id', 'product_batch_id', 'variant_id')
+            ->get();
+
+        config()->set('database.connections.mysql.strict', true);
+        DB::reconnect();
+
+        // Calculate COGS (Cost of Goods Sold) using average cost method
+        // This gives us the actual cost of products sold, not total purchases
+        $data = $this->calculateAverageCOGS($product_sale_data);
+        $product_cost = $data[0] ?? 0; // This is the "Purchases" amount in P&L
+        $product_tax = $data[1] ?? 0;  // Tax on sold products
+
+        // Calculate total product revenue from the sale data
+        $product_revenue = $product_sale_data->sum('sold_amount');
+
+        // Gross profit = selling price – cost price
+        $product_profit = $product_revenue - $product_cost;
+        $product_cost =$product_profit;
+
+        // Get total purchases (for reference, not used in P&L calculations)
+        $purchase = Purchase::whereBetween('created_at', [$start_date, $end_date])
+            ->selectRaw(implode(',', $query1))
+            ->first();
+
+        // Get total sales revenue
+        $sale = Sale::whereBetween('created_at', [$start_date, $end_date])
+            ->selectRaw(implode(',', $query1))
+            ->first();
+        $total_sale = $sale->grand_total ?? 0;
+
+        // Get sale returns
+        $return = Returns::whereBetween('created_at', [$start_date, $end_date])
+            ->selectRaw(implode(',', $query2))
+            ->first();
+        $sale_return_amount = $return->grand_total ?? 0;
+
+        // Get purchase returns
+        $purchase_return = ReturnPurchase::whereBetween('created_at', [$start_date, $end_date])
+            ->selectRaw(implode(',', $query2))
+            ->first();
+        $purchase_return_amount = $purchase_return->grand_total ?? 0;
+
+        // Get all expenses
+        $expenses = Expense::whereBetween('created_at', [$start_date, $end_date])->get();
+        $total_expense = $expenses->sum('amount');
+
+        // Filtered expenses (operating expenses only)
+        // Exclude payroll if it's included as separate direct labor
+        $filtered_expenses = $expenses->filter(function($expense) {
+            // Remove any expense that might be duplicate of payroll
+            // Adjust based on your actual expense categories
+            $exclude_categories = ['payroll', 'salary', 'wages', 'labour'];
+            return !in_array(strtolower($expense->name), $exclude_categories);
+        });
+        $total_operating_expenses = $filtered_expenses->sum('amount');
+
+        // Get payroll (direct labor costs)
+        $payroll = Payroll::whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $total_payroll_count = Payroll::whereBetween('created_at', [$start_date, $end_date])->count();
+
+        // Calculate P&L metrics
+        // Option 1: Simple calculation
+        $total_cogs = $product_cost + $payroll; // Cost of Goods Sold = Purchases + Direct Labor
+        $gross_profit = $total_sale - $total_cogs;
+        $operating_profit = $gross_profit - $total_operating_expenses;
+        $net_profit_before_tax = $operating_profit;
+        $net_profit = $net_profit_before_tax - $product_tax;
+
+        // Option 2: More detailed calculation including returns (if you want to include them)
+        // $net_sales = $total_sale - $sale_return_amount;
+        // $adjusted_cogs = $product_cost - $purchase_return_amount;
+        // $total_cogs_detailed = $adjusted_cogs + $payroll;
+        // $gross_profit_detailed = $net_sales - $total_cogs_detailed;
+        // $operating_profit_detailed = $gross_profit_detailed - $total_operating_expenses;
+        // $net_profit_detailed = $operating_profit_detailed - $product_tax;
+
+        return view('backend.report.profitloss', compact(
+            'selected_year',
+            'selected_month',
+            'period_label',
+            'period_subtitle',
+            'year',
+            'start_date',
+            'end_date',
+            'currency_code',
+            
+            // Sales data
+            'sale',
+            'total_sale',
+            
+            // Purchase data (for reference)
+            'purchase',
+            
+            // Returns data
+            'return',
+            'sale_return_amount',
+            'purchase_return',
+            'purchase_return_amount',
+            
+            // COGS data
+            'product_cost', // This is the "Purchases" amount in your P&L
+            'product_tax',
+            'payroll',
+            'total_payroll_count',
+            'total_cogs',
+            
+            // Expense data
+            'expenses',
+            'filtered_expenses',
+            'total_expense',
+            'total_operating_expenses',
+            
+            // Calculated profits
+            'gross_profit',
+            'operating_profit',
+            'net_profit_before_tax',
+            'net_profit'
+        ));
     }
-    
-    // Get active currency
-    $active_currency = Currency::where('is_active', true)->first();
-    $currency_code = $active_currency ? $active_currency->code : '$';
-    
-    // Query arrays for aggregations
-    $query1 = [
-        'SUM(grand_total) AS grand_total',
-        'SUM(shipping_cost) AS shipping_cost',
-        'SUM(paid_amount) AS paid_amount',
-        'SUM(total_tax + order_tax) AS tax',
-        'SUM(total_discount + order_discount) AS discount'
-    ];
-    
-    $query2 = [
-        'SUM(grand_total) AS grand_total',
-        'SUM(total_tax + order_tax) AS tax'
-    ];
-
-    // Handle strict mode for aggregated grouping
-    config()->set('database.connections.mysql.strict', false);
-    DB::reconnect();
-
-    // Get product sale data for calculating product cost and tax
-    $product_sale_data = Product_Sale::select(DB::raw('product_id, product_batch_id, sale_unit_id, variant_id, 
-        sum(qty) as sold_qty, 
-        sum(product_sales.return_qty) as return_qty, 
-        sum(total) as sold_amount'))
-        ->whereBetween('created_at', [$start_date, $end_date])
-        ->groupBy('product_id', 'product_batch_id', 'variant_id')
-        ->get();
-
-    config()->set('database.connections.mysql.strict', true);
-    DB::reconnect();
-
-    // Calculate COGS (Cost of Goods Sold) using average cost method
-    // This gives us the actual cost of products sold, not total purchases
-    $data = $this->calculateAverageCOGS($product_sale_data);
-    $product_cost = $data[0] ?? 0; // This is the "Purchases" amount in P&L
-    $product_tax = $data[1] ?? 0;  // Tax on sold products
-
-    // Get total purchases (for reference, not used in P&L calculations)
-    $purchase = Purchase::whereBetween('created_at', [$start_date, $end_date])
-        ->selectRaw(implode(',', $query1))
-        ->first();
-
-    // Get total sales revenue
-    $sale = Sale::whereBetween('created_at', [$start_date, $end_date])
-        ->selectRaw(implode(',', $query1))
-        ->first();
-    $total_sale = $sale->grand_total ?? 0;
-
-    // Get sale returns
-    $return = Returns::whereBetween('created_at', [$start_date, $end_date])
-        ->selectRaw(implode(',', $query2))
-        ->first();
-    $sale_return_amount = $return->grand_total ?? 0;
-
-    // Get purchase returns
-    $purchase_return = ReturnPurchase::whereBetween('created_at', [$start_date, $end_date])
-        ->selectRaw(implode(',', $query2))
-        ->first();
-    $purchase_return_amount = $purchase_return->grand_total ?? 0;
-
-    // Get all expenses
-    $expenses = Expense::whereBetween('created_at', [$start_date, $end_date])->get();
-    $total_expense = $expenses->sum('amount');
-
-    // Filtered expenses (operating expenses only)
-    // Exclude payroll if it's included as separate direct labor
-    $filtered_expenses = $expenses->filter(function($expense) {
-        // Remove any expense that might be duplicate of payroll
-        // Adjust based on your actual expense categories
-        $exclude_categories = ['payroll', 'salary', 'wages', 'labour'];
-        return !in_array(strtolower($expense->name), $exclude_categories);
-    });
-    $total_operating_expenses = $filtered_expenses->sum('amount');
-
-    // Get payroll (direct labor costs)
-    $payroll = Payroll::whereBetween('created_at', [$start_date, $end_date])->sum('amount');
-    $total_payroll_count = Payroll::whereBetween('created_at', [$start_date, $end_date])->count();
-
-    // Calculate P&L metrics
-    // Option 1: Simple calculation
-    $total_cogs = $product_cost + $payroll; // Cost of Goods Sold = Purchases + Direct Labor
-    $gross_profit = $total_sale - $total_cogs;
-    $operating_profit = $gross_profit - $total_operating_expenses;
-    $net_profit_before_tax = $operating_profit;
-    $net_profit = $net_profit_before_tax - $product_tax;
-
-    // Option 2: More detailed calculation including returns (if you want to include them)
-    // $net_sales = $total_sale - $sale_return_amount;
-    // $adjusted_cogs = $product_cost - $purchase_return_amount;
-    // $total_cogs_detailed = $adjusted_cogs + $payroll;
-    // $gross_profit_detailed = $net_sales - $total_cogs_detailed;
-    // $operating_profit_detailed = $gross_profit_detailed - $total_operating_expenses;
-    // $net_profit_detailed = $operating_profit_detailed - $product_tax;
-
-    return view('backend.report.profitloss', compact(
-        'selected_year',
-        'selected_month',
-        'period_label',
-        'period_subtitle',
-        'year',
-        'start_date',
-        'end_date',
-        'currency_code',
-        
-        // Sales data
-        'sale',
-        'total_sale',
-        
-        // Purchase data (for reference)
-        'purchase',
-        
-        // Returns data
-        'return',
-        'sale_return_amount',
-        'purchase_return',
-        'purchase_return_amount',
-        
-        // COGS data
-        'product_cost', // This is the "Purchases" amount in your P&L
-        'product_tax',
-        'payroll',
-        'total_payroll_count',
-        'total_cogs',
-        
-        // Expense data
-        'expenses',
-        'filtered_expenses',
-        'total_expense',
-        'total_operating_expenses',
-        
-        // Calculated profits
-        'gross_profit',
-        'operating_profit',
-        'net_profit_before_tax',
-        'net_profit'
-    ));
-}
 
  
     public function calculateAverageCOGS($product_sale_data)
@@ -1992,122 +2123,168 @@ public function profitLossData(Request $request)
 
     public function saleReport(Request $request)
     {
-
-            $data = $request->all();
-            $today = date('Y-m-d');
-            $start_date = !empty($data['start_date']) ? $data['start_date'] : $today;
-            $end_date   = !empty($data['end_date']) ? $data['end_date'] : $today;
-            $warehouse_id = $data['warehouse_id'] ?? 0;
-            $biller_id = $data['biller_id'] ?? 0;
-            $user_id = $data['user_id'] ?? 0;
-            $category_id = $data['category_id'] ?? 0;
-            $department_id = $data['department_id'] ?? 0; // ✅ New filter
-            $payment_mode = $data['payment_mode'] ?? 0;
-
-            $product_id = [];
-            $variant_id = [];
-            $product_name = [];
-            $product_qty = [];
-
-            // Get products based on category if specified
-            $lims_product_query = Product::select('id', 'name', 'qty', 'is_variant')
-                ->where('is_active', true);
-            
-            if($category_id) {
-                $lims_product_query->where('category_id', $category_id);
+        $data = $request->all();
+        $today = date('Y-m-d');
+        $start_date = !empty($data['start_date']) ? $data['start_date'] : $today;
+        $end_date   = !empty($data['end_date']) ? $data['end_date'] : $today;
+        $warehouse_id = (int) ($data['warehouse_id'] ?? 0);
+        $biller_id = (int) ($data['biller_id'] ?? 0);
+        $user_id = (int) ($data['user_id'] ?? 0);
+        $category_id = (int) ($data['category_id'] ?? 0);
+        $department_id = (int) ($data['department_id'] ?? 0);
+        $payment_mode = $data['payment_mode'] ?? '0';
+        // Same check as Sale index: request (form) > session > GeneralSetting, so filtering keeps percentage in sync
+        $sale_percentage_filter = null;
+        if (isset($data['sale_percentage_filter']) && $data['sale_percentage_filter'] !== '' && $data['sale_percentage_filter'] !== null) {
+            $sale_percentage_filter = (int) $data['sale_percentage_filter'];
+            if ($sale_percentage_filter < 0 || $sale_percentage_filter > 100) {
+                $sale_percentage_filter = null;
             }
+        }
+        if ($sale_percentage_filter === null && session('sale_percentage_filter') !== null) {
+            $sale_percentage_filter = (int) session('sale_percentage_filter');
+        }
+        if ($sale_percentage_filter === null) {
+            $sale_percentage_filter = $this->getSalePercentageFromSetting();
+        }
+        $filter_by_percentage = $sale_percentage_filter !== null && $sale_percentage_filter < 100;
+        if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+            $filter_by_percentage = false;
+        }
+        $sale_ids_for_percentage = [];
 
-             if ($department_id) {
-                // filter products via category's department
-                    $lims_product_query->whereHas('category', function ($q) use ($department_id) {
-                        $q->where('department_id', $department_id);
+        if ($filter_by_percentage) {
+            $baseSalesQuery = Sale::whereDate('created_at', '>=', $start_date)
+                ->whereDate('created_at', '<=', $end_date);
+            if ($warehouse_id > 0) {
+                $baseSalesQuery->where('warehouse_id', $warehouse_id);
+            }
+            if ($biller_id > 0) {
+                $baseSalesQuery->where('biller_id', $biller_id);
+            }
+            if ($user_id > 0) {
+                $baseSalesQuery->where('user_id', $user_id);
+            }
+            $sale_ids_for_percentage = $this->getSaleIdsForPercentageFilter($baseSalesQuery, $sale_percentage_filter);
+        }
+
+        // Sale-first: one aggregated query for product_sales + sales in date range
+        $aggregatedQuery = DB::table('product_sales')
+            ->join('sales', 'product_sales.sale_id', '=', 'sales.id')
+            ->leftJoin('units', 'product_sales.sale_unit_id', '=', 'units.id')
+            ->join('products', 'product_sales.product_id', '=', 'products.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->where('products.is_active', true)
+            ->whereDate('sales.created_at', '>=', $start_date)
+            ->whereDate('sales.created_at', '<=', $end_date)
+            ->when($warehouse_id > 0, function ($q) use ($warehouse_id) {
+                $q->where('sales.warehouse_id', $warehouse_id);
+            })
+            ->when($biller_id > 0, function ($q) use ($biller_id) {
+                $q->where('sales.biller_id', $biller_id);
+            })
+            ->when($user_id > 0, function ($q) use ($user_id) {
+                $q->where('sales.user_id', $user_id);
+            })
+            ->when($category_id > 0, function ($q) use ($category_id) {
+                $q->where('products.category_id', $category_id);
+            })
+            ->when($department_id > 0, function ($q) use ($department_id) {
+                $q->where('categories.department_id', $department_id);
+            })
+            ->when($payment_mode !== '0', function ($q) use ($payment_mode) {
+                $q->whereExists(function ($sub) use ($payment_mode) {
+                    $sub->select(DB::raw(1))
+                        ->from('payments')
+                        ->whereColumn('payments.sale_id', 'sales.id')
+                        ->where('payments.paying_method', $payment_mode);
+                });
+            })
+            ->when($filter_by_percentage, function ($q) use ($sale_ids_for_percentage) {
+                if (count($sale_ids_for_percentage) > 0) {
+                    $q->whereIn('sales.id', $sale_ids_for_percentage);
+                } else {
+                    $q->whereIn('sales.id', [0]);
+                }
+            });
+        $aggregated = $aggregatedQuery
+            ->selectRaw(
+                'product_sales.product_id, product_sales.variant_id, ' .
+                'SUM(product_sales.total) as sold_amount, ' .
+                'SUM(CASE ' .
+                'WHEN units.operator = ? THEN product_sales.qty * COALESCE(units.operation_value, 1) ' .
+                'WHEN units.operator = ? THEN product_sales.qty / NULLIF(COALESCE(units.operation_value, 1), 0) ' .
+                'ELSE product_sales.qty END) as sold_qty',
+                ['*', '/']
+            )
+            ->groupBy('product_sales.product_id', 'product_sales.variant_id')
+            ->get();
+
+        $report_rows = [];
+
+        if ($aggregated->isNotEmpty()) {
+            $productIds = $aggregated->pluck('product_id')->unique()->values()->all();
+            $variantIds = $aggregated->whereNotNull('variant_id')->pluck('variant_id')->unique()->values()->all();
+
+            $products = Product::whereIn('id', $productIds)
+                ->with(['category.department'])
+                ->get()
+                ->keyBy('id');
+
+            $variants = $variantIds
+                ? Variant::whereIn('id', $variantIds)->get()->keyBy('id')
+                : collect();
+
+            $productVariants = collect();
+            if (!empty($variantIds)) {
+                $productVariants = ProductVariant::whereIn('product_id', $productIds)
+                    ->whereIn('variant_id', $variantIds)
+                    ->get()
+                    ->keyBy(function ($pv) {
+                        return $pv->product_id . '_' . $pv->variant_id;
                     });
             }
-                    
-            $lims_product_all = $lims_product_query->get();
 
-            foreach ($lims_product_all as $product) {
-                $sale_query = FacadesDB::table('product_sales')
-                             ->join('sales', 'product_sales.sale_id', '=', 'sales.id');
-                
-                // Apply date filter
-                if($start_date && $end_date) {
-                    $sale_query->whereDate('sales.created_at', '>=', $start_date)
-                              ->whereDate('sales.created_at', '<=', $end_date);
-                }
-
-                // Apply warehouse filter through sales table
-                if($warehouse_id) {
-                    $sale_query->where('sales.warehouse_id', $warehouse_id);
-                }
-
-                // Apply biller filter
-                if($biller_id) {
-                    $sale_query->where('sales.biller_id', $biller_id);
-                }
-
-                // Apply user filter
-                if($user_id) {
-                    $sale_query->where('sales.user_id', $user_id);
-                }
-
-                // Apply payment mode filter
-                if($payment_mode != '0') {
-                    $sale_query->join('payments', 'sales.id', '=', 'payments.sale_id')
-                              ->where('payments.paying_method', $payment_mode);
-                }
-
-                if($product->is_variant) {
-                    $variant_data = ProductVariant::where('product_id', $product->id)->get();
-                    foreach ($variant_data as $variant) {
-                        $sale_query_variant = clone $sale_query;
-                        $sale_data = $sale_query_variant->where([
-                            ['product_id', $product->id],
-                            ['variant_id', $variant->id]
-                        ])->get();
-
-                        if(count($sale_data) > 0) {
-                            $product_name[] = $product->name.' ['.$variant->name.']';
-                            $product_id[] = $product->id;
-                            $variant_id[] = $variant->id;
-                            $product_qty[] = $variant->qty;
-                        }
-                    }
+            foreach ($aggregated as $row) {
+                $product = $products->get($row->product_id);
+                $product_name = $product ? $product->name : 'N/A';
+                if ($row->variant_id) {
+                    $variant = $variants->get($row->variant_id);
+                    $product_name .= ' [' . ($variant ? $variant->name : '') . ']';
+                    $pv = $productVariants->get($row->product_id . '_' . $row->variant_id);
+                    $in_stock = $pv ? (float) $pv->qty : 0;
                 } else {
-                    $sale_data = $sale_query->where('product_id', $product->id)->get();
-                    if(count($sale_data) > 0) {
-                        $product_name[] = $product->name;
-                        $product_id[] = $product->id;
-                        $variant_id[] = null;
-                        $product_qty[] = $product->qty;
-                    }
+                    $in_stock = $product ? (float) $product->qty : 0;
                 }
+                $category = $product && $product->relationLoaded('category') ? $product->category : null;
+                $department = $category && $category->relationLoaded('department') ? $category->department : null;
+
+                $report_rows[] = [
+                    'product_name'   => $product_name,
+                    'department_name' => $department ? $department->name : 'N/A',
+                    'category_name'  => $category ? $category->name : 'N/A',
+                    'sold_amount'    => (float) $row->sold_amount,
+                    'sold_qty'       => (float) $row->sold_qty,
+                    'in_stock'       => $in_stock,
+                ];
             }
+        }
 
-            $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-            $lims_biller_list = User::where('is_active', true)
-                                    ->where('role_id', 5)
-                                    ->get();
-            $lims_user_list = User::where('is_active', true)
-                                ->whereIn('role_id', array( 2, 4, 6))
-                                ->get();
-                                
-            $lims_category_list = Category::where('is_active', true)->get();
-            $lims_department_list = CategoryDepartment::where('is_active', true)->get(); // ✅ Added
+        $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+        $lims_biller_list = User::where('is_active', true)->where('role_id', 5)->get();
+        $lims_user_list = User::where('is_active', true)->whereIn('role_id', [2, 4, 6])->get();
+        $lims_category_list = Category::where('is_active', true)->get();
+        $lims_department_list = CategoryDepartment::where('is_active', true)->get();
 
-
-            return view('backend.report.sale_report', compact(
-                'product_id', 'variant_id', 'product_name', 'product_qty',
-                'start_date', 'end_date', 'warehouse_id', 'lims_warehouse_list',
-                'lims_biller_list', 'lims_user_list', 'lims_category_list','lims_department_list',
-                'biller_id', 'user_id', 'category_id', 'payment_mode'
-            ));
-        
-
-
-    
+        return view('backend.report.sale_report', compact(
+            'report_rows',
+            'start_date', 'end_date', 'warehouse_id', 'lims_warehouse_list',
+            'lims_biller_list', 'lims_user_list', 'lims_category_list', 'lims_department_list',
+            'biller_id', 'user_id', 'category_id', 'department_id', 'payment_mode',
+            'sale_percentage_filter'
+        ));
     }
-
+ 
     public function saleReportChart(Request $request)
     {
         $start_date = $request->start_date;
@@ -2147,22 +2324,7 @@ public function profitLossData(Request $request)
         return view('backend.report.sale_report_chart', compact('start_date', 'end_date', 'warehouse_id', 'time_period', 'sold_qty', 'date_points', 'lims_warehouse_list'));
     }
 
-    // public function paymentReportByDate(Request $request)
-    // {
-    //     $data = $request->all();
-    //     $start_date = $data['start_date'] ?? '';
-    //     $end_date = $data['end_date'] ?? '';
-    //     $method =$request->payment_methods ?? null;
-    //     if(!empty($request->payment_methods))
-    //     {
-    //         $lims_payment_data = Payment::where('paying_method',$request->payment_methods)->get();
-    //     }
-    //     else{
-    //         $lims_payment_data = Payment::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->get();
-    //     }
-        
-    //     return view('backend.report.payment_report',compact('lims_payment_data', 'start_date', 'end_date','method'));
-    // }
+  
      public function paymentReportByDate(Request $request)
     {
         $data = $request->all();
@@ -2837,9 +2999,12 @@ public function profitLossData(Request $request)
     public function userReport(Request $request)
     {
         $data = $request->all();
+      // dd($data);
+
         $user_id = $data['user_id'];
-        $start_date = $data['start_date'];
-        $end_date = $data['end_date'];
+        $start_date = $request->input('start_date') ?? date('Y-m-d');
+        // dd($start_date);
+        $end_date = $request->input('end_date') ?? date('Y-m-d');
         $lims_product_sale_data = [];
         $lims_product_purchase_data = [];
         $lims_product_quotation_data = [];
@@ -4476,8 +4641,6 @@ public function profitLossData(Request $request)
         echo json_encode($json_data);
     }
 
-   
-
     public function supplierReport(Request $request)
     {
         $company_name = $request->input('company_name');
@@ -5093,26 +5256,25 @@ public function profitLossData(Request $request)
 
     public function departmentReport()
     {
+        $dateFrom = request('date_from') ?? date('Y-m-d');
+        $dateTo = request('date_to') ?? date('Y-m-d');
         $departments = CategoryDepartment::where('is_active', true)->get();
         $department_data = [];
-        
         foreach($departments as $department) {
             $categories = Category::where('department_id', $department->id)->pluck('id');
-             
             $total_products = Product::whereIn('category_id', $categories)->count();
-            
-            $total_sales = DB::table('product_sales')
+            $salesQuery = DB::table('product_sales')
                 ->join('products', 'product_sales.product_id', '=', 'products.id')
                 ->whereIn('products.category_id', $categories)
-                ->sum('product_sales.qty');
-            
-            $total_revenue = DB::table('product_sales')
-                ->join('products', 'product_sales.product_id', '=', 'products.id')
-                ->whereIn('products.category_id', $categories)
-                ->sum('product_sales.total');
-            
+                ->whereBetween('product_sales.created_at', [
+                    $dateFrom . ' 00:00:00',
+                    $dateTo . ' 23:59:59'
+                ]);
+            $total_sales = $salesQuery->sum('product_sales.qty');
+            $total_revenue = $salesQuery->sum('product_sales.total');
+            // Cost calculation: sum of (qty * net_unit_price)
+            $total_cost = $salesQuery->sum(DB::raw('product_sales.qty * product_sales.net_unit_price'));
             $categories_count = Category::where('department_id', $department->id)->count();
-            
             $department_data[] = [
                 'id' => $department->id,
                 'name' => $department->name,
@@ -5120,10 +5282,198 @@ public function profitLossData(Request $request)
                 'categories_count' => $categories_count,
                 'products_count' => $total_products,
                 'total_sales' => $total_sales ?? 0,
-                'total_revenue' => $total_revenue ?? 0
+                'total_revenue' => $total_revenue ?? 0,
+                'total_cost' => $total_cost ?? 0
             ];
         }
-        
         return view('backend.report.department_report', compact('department_data'));
+    }
+
+    /**
+     * Sales Person Report – show form and aggregated data by sales person.
+     */ 
+    public function salesPersonReport(Request $request)
+    {
+        $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+        $lims_user_list = User::where('is_active', true)->whereIn('role_id', [2, 4, 6])->get();
+            $start_date = $request->input('start_date', date('Y-m-d')); // was: date('Y-m').'-01'
+            $end_date   = $request->input('end_date',   date('Y-m-d')); //
+        $warehouse_id = (int) $request->input('warehouse_id', 0);
+        $user_id = (int) $request->input('user_id', 0);
+       
+
+        $query = DB::table('sales')
+            ->join('users', 'sales.user_id', '=', 'users.id')
+            ->whereDate('sales.created_at', '>=', $start_date)
+            ->whereDate('sales.created_at', '<=', $end_date)
+            ->select(
+                'sales.user_id',
+                'users.name as sales_person_name',
+                DB::raw('COUNT(sales.id) as sale_count'),
+                DB::raw('COALESCE(SUM(sales.grand_total), 0) as total_sales'),
+                DB::raw('COALESCE(SUM(sales.paid_amount), 0) as total_paid')
+            )
+            ->groupBy('sales.user_id', 'users.name');
+
+        if ($warehouse_id > 0) {
+            $query->where('sales.warehouse_id', $warehouse_id);
+        }
+        if ($user_id > 0) {
+            $query->where('sales.user_id', $user_id);
+        }
+
+        $report_rows = $query->orderByDesc('total_sales')->get();
+
+        return view('backend.report.sales_person_report', compact(
+            'report_rows',
+            'start_date',
+            'end_date',
+            'warehouse_id',
+            'user_id',
+            'lims_warehouse_list',
+            'lims_user_list'
+        ));
+    }
+
+    /**
+     * AJAX: Return sales details for Sales Person Report modal (date, products, amount).
+     */
+    public function salesPersonReportDetails(Request $request)
+    {
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
+        $user_id = (int) $request->input('user_id', 0);
+        $warehouse_id = (int) $request->input('warehouse_id', 0);
+        if (empty($start_date) || empty($end_date) || $user_id <= 0) {
+            return response()->json(['rows' => [], 'message' => 'Missing parameters.']);
+        }
+
+        $sales = Sale::with(['product_sales.product', 'product_sales.variant'])
+            ->where('user_id', $user_id)
+            ->whereDate('created_at', '>=', $start_date)
+            ->whereDate('created_at', '<=', $end_date);
+        if ($warehouse_id > 0) {
+            $sales->where('warehouse_id', $warehouse_id);
+        }
+        $sales = $sales->orderBy('created_at', 'desc')->get();
+
+        $rows = [];
+        foreach ($sales as $sale) {
+            $date = $sale->created_at ? $sale->created_at->format('Y-m-d H:i') : '';
+            $amount = (float) $sale->grand_total;
+            $lines = [];
+            foreach ($sale->product_sales ?? [] as $ps) {
+                $name = $ps->product ? $ps->product->name : 'Product #' . $ps->product_id;
+                if ($ps->variant_id && $ps->relationLoaded('variant') && $ps->variant) {
+                    $name .= ' (' . $ps->variant->name . ')';
+                }
+                $lines[] = $name . ' × ' . (int) $ps->qty;
+            }
+            $products = $lines ? implode(', ', $lines) : '—';
+            $rows[] = [
+                'date' => $date,
+                'products' => $products,
+                'amount' => $amount,
+            ];
+        }
+
+        return response()->json(['rows' => $rows]);
+    }
+
+    /**
+     * Payment Method Report – show form and aggregated data by payment method.
+     */
+    public function paymentMethodReport(Request $request)
+    {
+        // dd('paymentMethodReport', $request->all());
+        $start_date = $request->input('start_date', date('Y-m-d'));
+        $end_date = $request->input('end_date', date('Y-m-d'));
+        $payment_method = $request->input('payment_method', '');
+        $user_id = (int) $request->input('user_id', 0);
+
+        $query = DB::table('payments')
+            ->whereDate('payments.created_at', '>=', $start_date)
+            ->whereDate('payments.created_at', '<=', $end_date);
+        
+        //sales officer here are the users who made the payments, so we filter by payments.user_id
+        // get the list of user ids FROM Payment Model
+        $list_of_user_id = Payment::select('user_id')->distinct()->pluck('user_id');
+        
+        if (!empty($payment_method)) {
+            $query->where('payments.paying_method', $payment_method);
+        }
+        if ($user_id > 0) {
+            $query->where('payments.user_id', $user_id);
+        }
+
+        $report_rows = $query
+            ->select(
+                'payments.paying_method',
+                DB::raw('COUNT(payments.id) as transaction_count'),
+                DB::raw('COALESCE(SUM(payments.amount), 0) as total_amount')
+            )
+            ->groupBy('payments.paying_method')
+            ->orderByDesc('total_amount')
+            ->get();
+
+        return view('backend.report.payment_method_report', compact(
+            'report_rows',
+            'start_date',
+            'end_date',
+            'payment_method'
+        ));
+    }
+
+    /**
+     * AJAX: Return payment/sale details for Payment Method Report modal (date, products, amount).
+     */
+    public function paymentMethodReportDetails(Request $request)
+    {
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
+        $paying_method = $request->input('payment_method');
+        if (empty($start_date) || empty($end_date) || $paying_method === null || $paying_method === '') {
+            return response()->json(['rows' => [], 'message' => 'Missing parameters.']);
+        }
+
+        $query = Payment::with(['sale.product_sales.product', 'sale.product_sales.variant', 'purchase'])
+            ->whereDate('created_at', '>=', $start_date)
+            ->whereDate('created_at', '<=', $end_date);
+        if ($paying_method === 'N/A' || $paying_method === '') {
+            $query->where(function ($q) {
+                $q->whereNull('paying_method')->orWhere('paying_method', '');
+            });
+        } else {
+            $query->where('paying_method', $paying_method);
+        }
+        $payments = $query->orderBy('created_at', 'desc')->get();
+
+        $rows = [];
+        foreach ($payments as $payment) {
+            $date = $payment->created_at ? $payment->created_at->format('Y-m-d H:i') : '';
+            $amount = (float) $payment->amount;
+            $products = '—';
+            if ($payment->sale_id && $payment->sale) {
+                $date = $payment->sale->created_at ? $payment->sale->created_at->format('Y-m-d H:i') : $date;
+                $lines = [];
+                foreach ($payment->sale->product_sales ?? [] as $ps) {
+                    $name = $ps->product ? $ps->product->name : 'Product #' . $ps->product_id;
+                    if ($ps->variant_id && $ps->relationLoaded('variant') && $ps->variant) {
+                        $name .= ' (' . $ps->variant->name . ')';
+                    }
+                    $lines[] = $name . ' × ' . (int) $ps->qty;
+                }
+                $products = $lines ? implode(', ', $lines) : '—';
+            } elseif ($payment->purchase_id && $payment->purchase) {
+                $products = 'Purchase #' . ($payment->purchase->reference_no ?? $payment->purchase_id);
+            }
+            $rows[] = [
+                'date' => $date,
+                'products' => $products,
+                'amount' => $amount,
+            ];
+        }
+
+        return response()->json(['rows' => $rows]);
     }
 }

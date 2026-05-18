@@ -1,6 +1,6 @@
 @extends('backend.layout.main') @section('content')
 <div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
-@if(empty($product_name))
+@if(empty($report_rows))
 <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{'No Data exist between this date range!'}}</div>
 @endif
 
@@ -65,8 +65,10 @@
                     </div>
                 </div>
             </div>
-
+ 
             {!! Form::open(['route' => 'report.sale', 'method' => 'post']) !!}
+            {{-- Ensures sale_percentage_filter is always submitted when filtering (same as Sale index) --}}
+            <input type="hidden" name="sale_percentage_filter" value="{{ isset($sale_percentage_filter) ? $sale_percentage_filter : '' }}" />
             <div class="card-body">
                 <div class="row">
                     <!-- Date Range Filter -->
@@ -112,11 +114,11 @@
                     <div class="col-md-4 mb-3">
                         <div class="form-group">
                             <label class="control-label"><strong>{{trans('file.Choose Warehouse')}}</strong></label>
-                            <input type="hidden" name="warehouse_id_hidden" value="{{$warehouse_id}}" />
+                            <input type="hidden" name="warehouse_id_hidden" value="{{ $warehouse_id ?? 0 }}" />
                             <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">{{trans('file.All Warehouse')}}</option>
+                                <option value="0" {{ (isset($warehouse_id) && $warehouse_id == 0) ? 'selected' : '' }}>{{trans('file.All Warehouse')}}</option>
                                 @foreach($lims_warehouse_list as $warehouse)
-                                <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                <option value="{{$warehouse->id}}" {{ (isset($warehouse_id) && $warehouse_id == $warehouse->id) ? 'selected' : '' }}>{{$warehouse->name}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -127,9 +129,9 @@
                         <div class="form-group">
                             <label class="control-label"><strong>Cashier/Biller</strong></label>
                             <select name="biller_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">All Biller</option>
+                                <option value="0" {{ (isset($biller_id) && $biller_id == 0) ? 'selected' : '' }}>All Biller</option>
                                 @foreach($lims_biller_list as $biller)
-                                <option value="{{$biller->id}}">{{$biller->name}}</option>
+                                <option value="{{$biller->id}}" {{ (isset($biller_id) && $biller_id == $biller->id) ? 'selected' : '' }}>{{$biller->name}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -140,9 +142,9 @@
                         <div class="form-group">
                             <label class="control-label"><strong>Sales Person</strong></label>
                             <select name="user_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">All Sales Person</option>
+                                <option value="0" {{ (isset($user_id) && $user_id == 0) ? 'selected' : '' }}>All Sales Person</option>
                                 @foreach($lims_user_list as $user)
-                                <option value="{{$user->id}}">{{$user->name}}</option>
+                                <option value="{{$user->id}}" {{ (isset($user_id) && $user_id == $user->id) ? 'selected' : '' }}>{{$user->name}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -153,26 +155,26 @@
                         <div class="form-group">
                             <label class="control-label"><strong>{{trans('file.Payment Mode')}}</strong></label>
                             <select name="payment_mode" class="selectpicker form-control">
-                                <option value="0">All Payment Mode</option>
-                                <option value="Cash">{{trans('file.Cash')}}</option>
-                                <option value="Credit Card">Credit Card</option>
-                                <option value="Cheque">{{trans('file.Cheque')}}</option>
-                                <option value="Gift Card">{{trans('file.Gift Card')}}</option>
-                                <option value="Deposit">{{trans('file.Deposit')}}</option>
-                                <option value="PayPal">PayPal</option>
-                                <option value="Mobile Money">Mobile Money</option>
+                                <option value="0" {{ (isset($payment_mode) && ($payment_mode === '0' || $payment_mode === '')) ? 'selected' : '' }}>All Payment Mode</option>
+                                <option value="Cash" {{ (isset($payment_mode) && $payment_mode === 'Cash') ? 'selected' : '' }}>{{trans('file.Cash')}}</option>
+                                <option value="Credit Card" {{ (isset($payment_mode) && $payment_mode === 'Credit Card') ? 'selected' : '' }}>Credit Card</option>
+                                <option value="Cheque" {{ (isset($payment_mode) && $payment_mode === 'Cheque') ? 'selected' : '' }}>{{trans('file.Cheque')}}</option>
+                                <option value="Gift Card" {{ (isset($payment_mode) && $payment_mode === 'Gift Card') ? 'selected' : '' }}>{{trans('file.Gift Card')}}</option>
+                                <option value="Deposit" {{ (isset($payment_mode) && $payment_mode === 'Deposit') ? 'selected' : '' }}>{{trans('file.Deposit')}}</option>
+                                <option value="PayPal" {{ (isset($payment_mode) && $payment_mode === 'PayPal') ? 'selected' : '' }}>PayPal</option>
+                                <option value="Mobile Money" {{ (isset($payment_mode) && $payment_mode === 'Mobile Money') ? 'selected' : '' }}>Mobile Money</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- dePARTMENT Filter -->
+                    <!-- Department Filter -->
                     <div class="col-md-4 mb-3">
                         <div class="form-group">
                             <label class="control-label"><strong>Department</strong></label>
                             <select name="department_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">All Department</option>
+                                <option value="0" {{ (isset($department_id) && $department_id == 0) ? 'selected' : '' }}>All Department</option>
                                 @foreach($lims_department_list as $department)
-                                <option value="{{$department->id}}">{{$department->name}}</option>
+                                <option value="{{$department->id}}" {{ (isset($department_id) && $department_id == $department->id) ? 'selected' : '' }}>{{$department->name}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -183,9 +185,9 @@
                         <div class="form-group">
                             <label class="control-label"><strong>Category</strong></label>
                             <select name="category_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">All Category</option>
+                                <option value="0" {{ (isset($category_id) && $category_id == 0) ? 'selected' : '' }}>All Category</option>
                                 @foreach($lims_category_list as $category)
-                                <option value="{{$category->id}}">{{$category->name}}</option>
+                                <option value="{{$category->id}}" {{ (isset($category_id) && $category_id == $category->id) ? 'selected' : '' }}>{{$category->name}}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -220,86 +222,16 @@
                 </tr>
             </thead>
             <tbody>
-                @if(!empty($product_name))
-                @foreach($product_id as $key => $pro_id)
+                @if(!empty($report_rows))
+                @foreach($report_rows as $key => $row)
                 <tr>
-                    <td>{{$key}}</td>
-                    <td>{{$product_name[$key]}}</td>
-                    <?php
-                        $product = \App\Models\Product::find($pro_id);
-                        $category = $product ? \App\Models\Category::find($product->category_id) : null;
-                        $parent_category = $category ? \App\Models\CategoryDepartment::find($category->department_id) : null;
-                    ?>
-                    <td>{{$parent_category ? $parent_category->name : 'N/A'}}</td>
-                    <td>{{$category ? $category->name : 'N/A'}}</td>
-                    <?php
-                        if($warehouse_id == 0){
-                            if($variant_id[$key]) {
-                                $sold_price = DB::table('product_sales')->where([
-                                    ['product_id', $pro_id],
-                                    ['variant_id', $variant_id[$key] ]
-                                ])->whereDate('created_at','>=', $start_date)
-                                  ->whereDate('created_at','<=', $end_date)
-                                  ->sum('total');
-
-                                $product_sale_data = DB::table('product_sales')->where([
-                                    ['product_id', $pro_id],
-                                    ['variant_id', $variant_id[$key] ]
-                                ])->whereDate('created_at','>=', $start_date)
-                                  ->whereDate('created_at','<=', $end_date)
-                                  ->get();
-                            }
-                            else {
-                                $sold_price = DB::table('product_sales')->where('product_id', $pro_id)
-                                ->whereDate('created_at','>=', $start_date)->whereDate('created_at','<=', $end_date)->sum('total');
-
-                                $product_sale_data = DB::table('product_sales')->where('product_id', $pro_id)->whereDate('created_at','>=', $start_date)->whereDate('created_at','<=', $end_date)->get();
-                            }
-                        }
-                        else{
-                            if($variant_id[$key]) {
-                                $sold_price = DB::table('sales')
-                                    ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')->where([
-                                        ['product_sales.product_id', $pro_id],
-                                        ['variant_id', $variant_id[$key] ],
-                                        ['sales.warehouse_id', $warehouse_id]
-                                    ])->whereDate('sales.created_at','>=', $start_date)->whereDate('sales.created_at','<=', $end_date)->sum('total');
-                                $product_sale_data = DB::table('sales')
-                                    ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')->where([
-                                        ['product_sales.product_id', $pro_id],
-                                        ['variant_id', $variant_id[$key] ],
-                                        ['sales.warehouse_id', $warehouse_id]
-                                    ])->whereDate('sales.created_at','>=', $start_date)->whereDate('sales.created_at','<=', $end_date)->get();
-                            }
-                            else {
-                                $sold_price = DB::table('sales')
-                                    ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')->where([
-                                        ['product_sales.product_id', $pro_id],
-                                        ['sales.warehouse_id', $warehouse_id]
-                                    ])->whereDate('sales.created_at','>=', $start_date)->whereDate('sales.created_at','<=', $end_date)->sum('total');
-                                $product_sale_data = DB::table('sales')
-                                    ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')->where([
-                                        ['product_sales.product_id', $pro_id],
-                                        ['sales.warehouse_id', $warehouse_id]
-                                    ])->whereDate('sales.created_at','>=', $start_date)->whereDate('sales.created_at','<=', $end_date)->get();
-                            }
-                        }
-                        $sold_qty = 0;
-                        foreach ($product_sale_data as $product_sale) {
-                            $unit = DB::table('units')->find($product_sale->sale_unit_id);
-                            if($unit){
-                                if($unit->operator == '*')
-                                    $sold_qty += $product_sale->qty * $unit->operation_value;
-                                elseif($unit->operator == '/')
-                                    $sold_qty += $product_sale->qty / $unit->operation_value;
-                            }
-                            else
-                                $sold_qty += $product_sale->qty;
-                        }
-                    ?>
-                    <td>{{number_format((float)$sold_price, $general_setting->decimal, '.', '')}}</td>
-                    <td>{{$sold_qty}}</td>
-                    <td>{{$product_qty[$key]}}</td>
+                    <td>{{ $key }}</td>
+                    <td>{{ $row['product_name'] }}</td>
+                    <td>{{ $row['department_name'] }}</td>
+                    <td>{{ $row['category_name'] }}</td>
+                    <td>{{ number_format((float) $row['sold_amount'], $general_setting->decimal ?? 2, '.', '') }}</td>
+                    <td>{{ $row['sold_qty'] }}</td>
+                    <td>{{ $row['in_stock'] }}</td>
                 </tr>
                 @endforeach
                 @endif
@@ -338,7 +270,7 @@
     $("ul#report").addClass("show");
     $("ul#report #sale-report-menu").addClass("active");
 
-    $('#warehouse_id').val($('input[name="warehouse_id_hidden"]').val());
+    // Restore all filter selections (server already set selected; refresh so selectpicker shows them)
     $('.selectpicker').selectpicker('refresh');
 
     $('#report-table').DataTable( {
