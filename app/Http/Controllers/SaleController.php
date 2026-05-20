@@ -123,8 +123,6 @@ class SaleController extends Controller
        return back()->with('message', 'Shipping Deleted successfully'); 
     }
     
-    
-    
     public function location_add(Request $request){
        DB::connection('sitesql')->table('locations')->insertGetId([
             'name'=>$request->name,
@@ -149,65 +147,6 @@ class SaleController extends Controller
         return view('backend.sale.orders',compact('orders'));
     }
 
-    // public function index(Request $request)
-    // {
-    //     $role = Role::find(Auth::user()->role_id);
-    //     if($role->hasPermissionTo('sales-index')) {
-    //         $permissions = Role::findByName($role->name)->permissions;
-    //         foreach ($permissions as $permission)
-    //             $all_permission[] = $permission->name;
-    //         if(empty($all_permission))
-    //             $all_permission[] = 'dummy text';
-
-    //         if($request->input('warehouse_id'))
-    //             $warehouse_id = $request->input('warehouse_id');
-    //         else
-    //             $warehouse_id = 0;
-
-    //         if($request->input('sale_status'))
-    //             $sale_status = $request->input('sale_status');
-    //         else
-    //             $sale_status = 0;
-
-
-    //         if($request->input('payment_status'))
-    //             $payment_status = $request->input('payment_status');
-    //         else
-    //             $payment_status = 0;
-
-    //         if($request->input('starting_date')) {
-    //             $starting_date = $request->input('starting_date');
-    //             $ending_date = $request->input('ending_date');
-    //         }
-    //         else {
-    //             $starting_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
-    //             $ending_date = date("Y-m-d");
-    //         }
-
-    //         $lims_gift_card_list = GiftCard::where("is_active", true)->get();
-    //         $lims_pos_setting_data = PosSetting::latest()->first();
-    //         $lims_reward_point_setting_data = RewardPointSetting::latest()->first();
-    //         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-    //         $lims_account_list = Account::where('is_active', true)->get();
-    //         $lims_courier_list = Courier::where('is_active', true)->get();
-    //         if($lims_pos_setting_data)
-    //             $options = explode(',', $lims_pos_setting_data->payment_options);
-    //         else
-    //             $options = [];
-    //         $numberOfInvoice = Sale::count();
-    //         $custom_fields = CustomField::where([
-    //                             ['belongs_to', 'sale'],
-    //                             ['is_table', true]
-    //                         ])->pluck('name');
-    //         $field_name = [];
-    //         foreach($custom_fields as $fieldName) {
-    //             $field_name[] = str_replace(" ", "_", strtolower($fieldName));
-    //         }
-    //         return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list'));
-    //     }
-    //     else
-    //         return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
-    // }
 
     public function index(Request $request)
     {
@@ -712,25 +651,6 @@ class SaleController extends Controller
                 }
             }
 
-
-            // ---- ADDITIONAL SPLIT PAYMENTS ----
-            // if (!empty($data['paid_by_id_select'])) {
-               
-            //     $paidByIds = is_array($data['paid_by_id_select']) ? $data['paid_by_id_select'] : [$data['paid_by_id_select']];
-            //     $splitAmounts = is_array($data['split_amount'] ?? []) ? $data['split_amount'] : [$data['split_amount']];
-            //     $mobileOps = is_array($data['selected_mobile_op'] ?? []) ? $data['selected_mobile_op'] : [];
-            //     $mobileNumbers = is_array($data['mobile_number'] ?? []) ? $data['mobile_number'] : [];
-
-            //     foreach ($paidByIds as $index => $method) {
-            //         $payment_methods[] = [
-            //             'paid_by_id' => $method,
-            //             'amount' => (float) ($splitAmounts[$index] ?? 0), // ðŸ‘ˆ split amount here
-            //             // Assign mobile info ONLY if this is Mobile Money (ID = 8)
-            //             'mobile_op' => ($method == 8) ? ($mobileOps[$index] ?? $request->selected_mobile_op ?? null) : null,
-            //             'mobile_number' => ($method == 8) ? ($mobileNumbers[$index] ?? $request->mobile_number ?? null) : null,
-            //         ];
-            //     }
-            // }
             // ðŸ”¹ Step 2: Compute total paid and change
             $total_paid = array_sum(array_column($payment_methods, 'amount'));
 
@@ -830,6 +750,12 @@ class SaleController extends Controller
                         PaymentWithGiftCard::create($data);
                     }
                     elseif ($paying_method == 'Cheque') {
+                        if($request->has('split_cheque_no')) {
+                            $cheque_no = $request->split_cheque_no[0] ?? null;
+                        } else {
+                            $cheque_no = $data['cheque_no'] ?? null;
+                        }
+                        $data['cheque_no'] = $cheque_no;
                         PaymentWithCheque::create($data);
                     }
                     elseif ($paying_method == 'Paypal') {
