@@ -44,15 +44,15 @@ use Spatie\Permission\Models\Permission;
 class ReportController extends Controller
 {
     /**
-     * Get sale_percentage_filter from GeneralSetting model. Returns null if not set or 100.
+     * Get percentage_filter from GeneralSetting model. Returns null if not set or 100.
      */
     private function getSalePercentageFromSetting()
     {
         $settings = GeneralSetting::first();
-        if (!$settings || $settings->sale_percentage_filter === null) {
+        if (!$settings || $settings->percentage_filter === null) {
             return null;
         }
-        $pct = (int) $settings->sale_percentage_filter;
+        $pct = (int) $settings->percentage_filter;
         return ($pct >= 0 && $pct <= 100) ? $pct : null;
     }
 
@@ -2134,20 +2134,20 @@ class ReportController extends Controller
         $department_id = (int) ($data['department_id'] ?? 0);
         $payment_mode = $data['payment_mode'] ?? '0';
         // Same check as Sale index: request (form) > session > GeneralSetting, so filtering keeps percentage in sync
-        $sale_percentage_filter = null;
-        if (isset($data['sale_percentage_filter']) && $data['sale_percentage_filter'] !== '' && $data['sale_percentage_filter'] !== null) {
-            $sale_percentage_filter = (int) $data['sale_percentage_filter'];
-            if ($sale_percentage_filter < 0 || $sale_percentage_filter > 100) {
-                $sale_percentage_filter = null;
+        $percentage_filter = GeneralSetting::where('name', 'percentage_filter')->first();
+        if (isset($data['percentage_filter']) && $data['percentage_filter'] !== '' && $data['percentage_filter'] !== null) {
+            $percentage_filter = (int) $data['percentage_filter'];
+            if ($percentage_filter < 0 || $percentage_filter > 100) {
+                $percentage_filter = null;
             }
         }
-        if ($sale_percentage_filter === null && session('sale_percentage_filter') !== null) {
-            $sale_percentage_filter = (int) session('sale_percentage_filter');
+        if ($percentage_filter === null && session('percentage_filter') !== null) {
+            $percentage_filter = (int) session('percentage_filter');
         }
-        if ($sale_percentage_filter === null) {
-            $sale_percentage_filter = $this->getSalePercentageFromSetting();
+        if ($percentage_filter === null) {
+            $percentage_filter = $this->getSalePercentageFromSetting();
         }
-        $filter_by_percentage = $sale_percentage_filter !== null && $sale_percentage_filter < 100;
+        $filter_by_percentage = $percentage_filter !== null && $percentage_filter < 100;
         if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
             $filter_by_percentage = false;
         }
@@ -2165,7 +2165,7 @@ class ReportController extends Controller
             if ($user_id > 0) {
                 $baseSalesQuery->where('user_id', $user_id);
             }
-            $sale_ids_for_percentage = $this->getSaleIdsForPercentageFilter($baseSalesQuery, $sale_percentage_filter);
+            $sale_ids_for_percentage = $this->getSaleIdsForPercentageFilter($baseSalesQuery, $percentage_filter);
         }
 
         // Sale-first: one aggregated query for product_sales + sales in date range
@@ -2281,7 +2281,7 @@ class ReportController extends Controller
             'start_date', 'end_date', 'warehouse_id', 'lims_warehouse_list',
             'lims_biller_list', 'lims_user_list', 'lims_category_list', 'lims_department_list',
             'biller_id', 'user_id', 'category_id', 'department_id', 'payment_mode',
-            'sale_percentage_filter'
+            'percentage_filter'
         ));
     }
  

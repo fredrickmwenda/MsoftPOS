@@ -58,13 +58,33 @@
                         </select>
                     </div>
                 </div>
+
+               
+
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
+                
+                <div class="col-md-2 mt-3">
+                    <div class="form-group">
+                        <button type="button" class="btn btn-secondary" id="reset-filters">Reset</button>
+                    </div>
+                </div>
             </div>
             {!! Form::close() !!}
+        </div>
+
+        <div class="row ml-1 mb-2">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body py-2">
+                        <span class="text-muted small">Total Purchases</span>
+                        <h5 class="mb-0 mt-1" id="total-purchases-card-amount">—</h5>
+                    </div>
+                </div>
+            </div>
         </div>
         @if(in_array("purchases-add", $all_permission))
             <a href="{{route('purchases.create')}}" class="btn btn-info"><i class="dripicons-plus"></i> {{trans('file.Add Purchase')}}</a>&nbsp;
@@ -216,6 +236,50 @@
     var warehouse_id = <?php echo json_encode($warehouse_id); ?>;
     var purchase_status = <?php echo json_encode($purchase_status); ?>;
     var payment_status = <?php echo json_encode($payment_status); ?>;
+    var percentage_filter = <?php echo json_encode($percentage_filter); ?>;
+
+    // Handle Save as Default button for admin percentage filter
+    $('#save-admin-filter').on('click', function() {
+        var pct = $('#percentage_filter_value').val() || $('#percentage_filter_select').val();
+        
+        if(!pct || pct === '') {
+            alert('Please select a percentage filter first');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ route("sales.save-default-filter") }}',
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                percentage_filter: pct
+            },
+            success: function(response) {
+                alert('Default filter saved successfully');
+            },
+            error: function(xhr) {
+                alert('Error saving filter');
+            }
+        });
+    });
+
+    // Keep hidden in sync with percentage select so form submit and DataTable always have the value
+    $('#percentage_filter_select').on('change', function() {
+        $('#percentage_filter_value').val($(this).val() || '');
+    });
+
+    // Reset filters
+    $('#reset-filters').on('click', function() {
+        $('input[name="starting_date"]').val('');
+        $('input[name="ending_date"]').val('');
+        $('#percentage_filter_value').val('');
+        $('#percentage_filter_select').val('');
+        $('#warehouse_id').val(0);
+        $('#purchase-status').val(0);
+        $('#payment-status').val(0);
+        $('.selectpicker').selectpicker('refresh');
+        $('#filter-form').submit();
+    });
 
     var columns = [
         {"data": "key"},
@@ -455,7 +519,16 @@
                 ending_date: ending_date,
                 warehouse_id: warehouse_id,
                 purchase_status: purchase_status,
-                payment_status: payment_status
+                payment_status: payment_status,
+                percentage_filter: function() { return $('#percentage_filter_value').val() || $('select#percentage_filter_select').val(); }
+            },
+            dataSrc: function(json) {
+                if (json.total_purchase !== undefined) {
+                    $('#total-purchases-card-amount').text(parseFloat(json.total_purchase).toFixed({{ $general_setting->decimal ?? 2 }}));
+                } else {
+                    $('#total-purchases-card-amount').text('—');
+                }
+                return json.data;
             },
             dataType: "json",
             type:"post",

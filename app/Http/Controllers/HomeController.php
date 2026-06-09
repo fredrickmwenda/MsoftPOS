@@ -115,11 +115,11 @@ class HomeController extends Controller
         $end_date = date("Y").'-'.date("m").'-'.date('t', mktime(0, 0, 0, date("m"), 1, date("Y")));
         $yearly_sale_amount = [];
 
-        // Same check as Sale index: apply sale_percentage_filter when set (session then GeneralSetting); only if user has permission
-        $sale_percentage = session('sale_percentage_filter');
+        // Same check as Sale index: apply percentage_filter when set (session then GeneralSetting); only if user has permission
+        $sale_percentage = session('percentage_filter');
         if ($sale_percentage === null) {
             $settings = GeneralSetting::first();
-            $sale_percentage = $settings && $settings->sale_percentage_filter !== null ? (int) $settings->sale_percentage_filter : null;
+            $sale_percentage = $settings && $settings->percentage_filter !== null ? (int) $settings->percentage_filter : null;
         } else {
             $sale_percentage = (int) $sale_percentage;
         }

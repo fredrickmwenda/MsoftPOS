@@ -67,8 +67,8 @@
             </div>
  
             {!! Form::open(['route' => 'report.sale', 'method' => 'post']) !!}
-            {{-- Ensures sale_percentage_filter is always submitted when filtering (same as Sale index) --}}
-            <input type="hidden" name="sale_percentage_filter" value="{{ isset($sale_percentage_filter) ? $sale_percentage_filter : '' }}" />
+            {{-- Ensures percentage_filter is always submitted when filtering (same as Sale index) --}}
+            <input type="hidden" name="percentage_filter" value="{{ isset($percentage_filter) ? $percentage_filter : '' }}" />
             <div class="card-body">
                 <div class="row">
                     <!-- Date Range Filter -->

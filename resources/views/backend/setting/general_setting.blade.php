@@ -86,6 +86,36 @@
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
+                                        <label>System Profit Margin</label>
+                                        <input type="number" name="default_margin_value" class="form-control" value="@if($lims_general_setting_data){{$lims_general_setting_data->default_margin_value}}@endif" />
+                                    </div>
+                                </div>
+
+                                
+                                <div class="col-md-2">
+                                    <div class="form-group">
+                                        <label><strong>Filter By Percentage</strong></label>
+                                        {{-- Hidden input – this is what gets submitted --}}
+                                        <select name="percentage_filter" id="percentage_filter_select" class="form-control" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'disabled' : '' }}>
+                                                    <option value="">All (100%)</option>
+                                                    <option value="10" {{ ($lims_general_setting_data->percentage_filter ?? '') == 10 ? 'selected' : '' }}>10%</option>
+                                                    <option value="25" {{ ($lims_general_setting_data->percentage_filter ?? '') == 25 ? 'selected' : '' }}>25%</option>
+                                                    <option value="50" {{ ($lims_general_setting_data->percentage_filter ?? '') == 50 ? 'selected' : '' }}>50%</option>
+                                                    <option value="75" {{ ($lims_general_setting_data->percentage_filter ?? '') == 75 ? 'selected' : '' }}>75%</option>
+                                                    <option value="100" {{ ($lims_general_setting_data->percentage_filter ?? '') == 100 ? 'selected' : '' }}>100%</option>
+                                                </select>
+
+                                        @if(\Auth::user()->role_id <= 2)
+                                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (shared)' : 'Show top X% of purchases by value' }}</small>
+                                        @else
+                                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (locked)' : 'Show top X% of purchases by value' }}</small>
+                                        @endif
+                                    </div>
+                                </div>
+                                
+                                
+                                <div class="col-md-4">
+                                    <div class="form-group">
                                         <label>{{trans('file.Time Zone')}}</label>
                                         @if($lims_general_setting_data)
                                         <input type="hidden" name="timezone_hidden" value="{{env('APP_TIMEZONE')}}">
@@ -392,4 +422,5 @@
         });
     @endif
 </script>
+
 @endpush

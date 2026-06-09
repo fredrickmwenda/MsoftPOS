@@ -61,6 +61,30 @@ class PurchaseController extends Controller
                 $starting_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
                 $ending_date = date("Y-m-d");
             }
+            
+            // Handle percentage filter (show only top X% of purchases by value)
+            // Priority: User input > Session > Admin default settings
+           $percentage_filter = GeneralSetting::first()->percentage_filter;
+            
+            $is_admin_filter = false;
+            
+            if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
+                // If percentage filter is set in general settings, use it
+                $percentage_filter = (int) $percentage_filter;
+                $is_admin_filter = true;
+                session(['purchase_percentage_filter' => $percentage_filter]);
+            } else {
+                $settings = GeneralSetting::first();
+                if($settings && $settings->percentage_filter !== null) {
+                    $percentage_filter = (int) $settings->percentage_filter;
+                    $is_admin_filter = true;
+                } 
+                session(['purchase_percentage_filter' => null]);
+            }
+
+            // Only users with purchase-percentage-filter permission may use the filter
+
+            
             $permissions = Role::findByName($role->name)->permissions;
             foreach ($permissions as $permission)
                 $all_permission[] = $permission->name;
@@ -77,223 +101,267 @@ class PurchaseController extends Controller
             foreach($custom_fields as $fieldName) {
                 $field_name[] = str_replace(" ", "_", strtolower($fieldName));
             }
-            return view('backend.purchase.index', compact( 'lims_account_list', 'lims_warehouse_list', 'all_permission', 'lims_pos_setting_data', 'warehouse_id', 'starting_date', 'ending_date', 'purchase_status', 'payment_status', 'custom_fields', 'field_name'));
+            return view('backend.purchase.index', compact( 'lims_account_list', 'lims_warehouse_list', 'all_permission', 'lims_pos_setting_data', 'warehouse_id', 'starting_date', 'ending_date', 'purchase_status', 'payment_status', 'custom_fields', 'field_name', 'percentage_filter', 'is_admin_filter'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
-    public function purchaseData(Request $request)
-    {
-        //dd($request->all());
-        $columns = array(
-            1 => 'created_at',
-            2 => 'reference_no',
-            5 => 'grand_total',
-            6 => 'paid_amount',
-        );
+  public function purchaseData(Request $request)
+{
+    $columns = array(
+        1 => 'created_at',
+        2 => 'reference_no',
+        5 => 'grand_total',
+        6 => 'paid_amount',
+    );
 
-        $warehouse_id = $request->input('warehouse_id');
-        $purchase_status = $request->input('purchase_status');
-        $payment_status = $request->input('payment_status');
+    $warehouse_id = $request->input('warehouse_id');
+    $purchase_status = $request->input('purchase_status');
+    $payment_status = $request->input('payment_status');
 
-        $q = Purchase::whereDate('created_at', '>=' ,$request->input('starting_date'))->whereDate('created_at', '<=' ,$request->input('ending_date'));
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-            $q = $q->where('user_id', Auth::id());
-        if($warehouse_id)
-            $q = $q->where('warehouse_id', $warehouse_id);
-        if($purchase_status)
-            $q = $q->where('status', $purchase_status);
-        if($payment_status)
-            $q = $q->where('payment_status', $payment_status);
+    // Get percentage filter from General Setting
+    $percentage_filter = GeneralSetting::first()->percentage_filter;
+    info('Percentage Filter: ' . $percentage_filter);
 
-        $totalData = $q->count();
-        $totalFiltered = $totalData;
+    $filtered_purchase_ids = [];
+    $filtered_total_purchases = 0;
 
-        if($request->input('length') != -1)
-            $limit = $request->input('length');
-        else
-            $limit = $totalData;
-        $start = $request->input('start');
-        $order = $columns[$request->input('order.0.column')];
-        $dir = $request->input('order.0.dir');
-        //fetching custom fields data
-        $custom_fields = CustomField::where([
-                        ['belongs_to', 'purchase'],
-                        ['is_table', true]
-                    ])->pluck('name');
-        $field_names = [];
-        foreach($custom_fields as $fieldName) {
-            $field_names[] = str_replace(" ", "_", strtolower($fieldName));
-        }
-        if(empty($request->input('search.value'))) {
-            $q = Purchase::with('supplier', 'warehouse')
-                ->whereDate('created_at', '>=' ,$request->input('starting_date'))
-                ->whereDate('created_at', '<=' ,$request->input('ending_date'))
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order, $dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-                $q = $q->where('user_id', Auth::id());
-            if($warehouse_id)
-                $q = $q->where('warehouse_id', $warehouse_id);
-            if($purchase_status)
-                $q = $q->where('status', $purchase_status);
-            if($payment_status)
-                $q = $q->where('payment_status', $payment_status);
-            $purchases = $q->get();
-        }
-        else
-        {
-            $search = $request->input('search.value');
-            $q = Purchase::leftJoin('suppliers', 'purchases.supplier_id', '=', 'suppliers.id')
-                ->whereDate('purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))))
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order,$dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
-                $q =  $q->with('supplier', 'warehouse')
-                        ->where('purchases.user_id', Auth::id())
-                        ->orwhere([
-                            ['purchases.reference_no', 'LIKE', "%{$search}%"],
-                            ['purchases.user_id', Auth::id()]
-                        ])
-                        ->orwhere([
-                            ['suppliers.name', 'LIKE', "%{$search}%"],
-                            ['purchases.user_id', Auth::id()]
-                        ]);
-                foreach ($field_names as $key => $field_name) {
-                    $q = $q->orwhere([
-                            ['purchases.user_id', Auth::id()],
-                            ['purchases.' . $field_name, 'LIKE', "%{$search}%"]
-                        ]);
-                }      
-                $purchases = $q->select('purchases.*')->get();
-                $totalFiltered = $q->count();
-            }
-            else {
-                $q = $q->with('supplier', 'warehouse')
-                    ->orwhere('purchases.reference_no', 'LIKE', "%{$search}%")
-                    ->orwhere('suppliers.name', 'LIKE', "%{$search}%");
-                foreach ($field_names as $key => $field_name) {
-                    $q = $q->orwhere('purchases.' . $field_name, 'LIKE', "%{$search}%");
-                }
-                $purchases = $q->select('purchases.*')->get();
-                $totalFiltered = $q->count();
+    // ---------- Build base query with common filters (date, user, warehouse, status, payment) ----------
+    $baseQuery = Purchase::whereDate('created_at', '>=', $request->input('starting_date'))
+                         ->whereDate('created_at', '<=', $request->input('ending_date'));
+
+    if (Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        $baseQuery = $baseQuery->where('user_id', Auth::id());
+    if ($warehouse_id)
+        $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
+    if ($purchase_status)
+        $baseQuery = $baseQuery->where('status', $purchase_status);
+    if ($payment_status)
+        $baseQuery = $baseQuery->where('payment_status', $payment_status);
+
+    // ---------- Apply percentage filter (top X% by grand_total) ----------
+    if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
+        $all_purchases = (clone $baseQuery)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+        $total_value = $all_purchases->sum('grand_total');
+        info('Total Purchase Value: ' . $total_value);
+        $target_value = $total_value * ($percentage_filter / 100);
+        info('Target Value for Top ' . $percentage_filter . '%: ' . $target_value);
+
+        $running = 0;
+        foreach ($all_purchases as $purchase) {
+            $filtered_purchase_ids[] = $purchase->id;
+            $running += $purchase->grand_total;
+            $filtered_total_purchases = $running;
+            if ($running >= $target_value) {
+                break;
             }
         }
-        $data = array();
-        if(!empty($purchases))
-        {
-            foreach ($purchases as $key=>$purchase)
-            {
-                $nestedData['id'] = $purchase->id;
-                $nestedData['key'] = $key;
-                $nestedData['date'] = date(config('date_format'), strtotime($purchase->created_at->toDateString()));
-                $nestedData['reference_no'] = $purchase->reference_no;
-
-                if($purchase->supplier_id) {
-                    $supplier = $purchase->supplier;
-                }
-                else {
-                    $supplier = new Supplier();
-                }
-                $nestedData['supplier'] = $supplier->name;
-                if($purchase->status == 1){
-                    $nestedData['purchase_status'] = '<div class="badge badge-success">'.trans('file.Recieved').'</div>';
-                    $purchase_status = trans('file.Recieved');
-                }
-                elseif($purchase->status == 2){
-                    $nestedData['purchase_status'] = '<div class="badge badge-success">'.trans('file.Partial').'</div>';
-                    $purchase_status = trans('file.Partial');
-                }
-                elseif($purchase->status == 3){
-                    $nestedData['purchase_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
-                    $purchase_status = trans('file.Pending');
-                }
-                else{
-                    $nestedData['purchase_status'] = '<div class="badge badge-danger">'.trans('file.Ordered').'</div>';
-                    $purchase_status = trans('file.Ordered');
-                }
-
-                if($purchase->payment_status == 1)
-                    $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
-                else if($purchase->payment_status == 3) 
-                    $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Pending').'</div>';
-                else if($purchase->payment_status == 4)
-                    $nestedData['payment_status'] = '<div class="badge badge-danger">'.'Rejected'.'</div>';
-                else
-                    $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
-
-                $nestedData['grand_total'] = number_format($purchase->grand_total, config('decimal'));
-                $returned_amount = DB::table('return_purchases')->where('purchase_id', $purchase->id)->sum('grand_total');
-                $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
-                $nestedData['paid_amount'] = number_format($purchase->paid_amount, config('decimal'));
-                $nestedData['due'] = number_format($purchase->grand_total- $returned_amount  - $purchase->paid_amount, config('decimal'));
-                //fetching custom fields data
-                foreach($field_names as $field_name) {
-                    $nestedData[$field_name] = $purchase->$field_name;
-                }
-                $nestedData['options'] = '<div class="btn-group">
-                            <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
-                              <span class="caret"></span>
-                              <span class="sr-only">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
-                                <li>
-                                    <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
-                                </li>';
-                if(in_array("purchases-edit", $request['all_permission']))
-                    $nestedData['options'] .= '<li>
-                        <a href="'.route('purchases.edit', $purchase->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
-                        </li>';
-                if(in_array("purchase-payment-index", $request['all_permission']))
-                    $nestedData['options'] .=
-                        '<li>
-                            <button type="button" class="get-payment btn btn-link" data-id = "'.$purchase->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
-                        </li>';
-                if(in_array("purchase-payment-add", $request['all_permission']))
-                    // show the purchase using a link
-                    $nestedData['options'] .=
-                        '<li>
-                             <a href="'.route('purchases.show', $purchase->id).'" class="btn btn-link"><i class="fa fa-eye"></i> Show Payments</a>
-                            
-                        </li>';
-
-                             
-                        
-                
-                if(in_array("purchases-delete", $request['all_permission']))
-                    $nestedData['options'] .= \Form::open(["route" => ["purchases.destroy", $purchase->id], "method" => "DELETE"] ).'
-                            <li>
-                              <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
-                            </li>'.\Form::close().'
-                        </ul>
-                    </div>';
-
-                // data for purchase details by one click
-                $user = User::find($purchase->user_id);
-                if($purchase->currency_id) {
-                    $currency = Currency::select('code')->find($purchase->currency_id);
-                    if($currency)
-                        $currency_code = $currency->code;
-                }
-                else
-                    $currency_code = 'N/A';
-
-                $nestedData['purchase'] = array( '[ "'.date(config('date_format'), strtotime($purchase->created_at->toDateString())).'"', ' "'.$purchase->reference_no.'"', ' "'.$purchase_status.'"',  ' "'.$purchase->id.'"', ' "'.$purchase->warehouse->name.'"', ' "'.$purchase->warehouse->phone.'"', ' "'.preg_replace('/\s+/S', " ", $purchase->warehouse->address).'"', ' "'.$supplier->name.'"', ' "'.$supplier->company_name.'"', ' "'.$supplier->email.'"', ' "'.$supplier->phone_number.'"', ' "'.$supplier->address.'"', ' "'.$supplier->city.'"', ' "'.$purchase->total_tax.'"', ' "'.$purchase->total_discount.'"', ' "'.$purchase->total_cost.'"', ' "'.$purchase->order_tax.'"', ' "'.$purchase->order_tax_rate.'"', ' "'.$purchase->order_discount.'"', ' "'.$purchase->shipping_cost.'"', ' "'.$purchase->grand_total.'"', ' "'.$purchase->paid_amount.'"', ' "'.preg_replace('/\s+/S', " ", $purchase->note).'"', ' "'.$user->name.'"', ' "'.$user->email.'"', ' "'.$purchase->document.'"', ' "'.$currency_code.'"', ' "'.$purchase->exchange_rate.'"]'
-                );
-                $data[] = $nestedData;
-            }
-        }
-        $json_data = array(
-            "draw"            => intval($request->input('draw')),
-            "recordsTotal"    => intval($totalData),
-            "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
-        );
-        echo json_encode($json_data);
+        // Restrict the base query to only the top % purchases
+        $baseQuery = $baseQuery->whereIn('id', $filtered_purchase_ids);
     }
+
+    // ---------- Count total records (respects all filters + percentage) ----------
+    $totalData = $baseQuery->count();
+    $totalFiltered = $totalData;   // will be updated for search case
+
+    // Total purchase sum for footer (respects percentage if applied)
+    if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
+        $percentage_total = $filtered_total_purchases;
+    } else {
+        $percentage_total = (clone $baseQuery)->sum('grand_total');
+    }
+
+    // ---------- DataTable pagination & ordering ----------
+    if ($request->input('length') != -1)
+        $limit = $request->input('length');
+    else
+        $limit = $totalData;
+    $start = $request->input('start');
+    $order = $columns[$request->input('order.0.column')];
+    $dir = $request->input('order.0.dir');
+
+    // ---------- Custom fields for table columns ----------
+    $custom_fields = CustomField::where([
+        ['belongs_to', 'purchase'],
+        ['is_table', true]
+    ])->pluck('name');
+    $field_names = [];
+    foreach ($custom_fields as $fieldName) {
+        $field_names[] = str_replace(" ", "_", strtolower($fieldName));
+    }
+
+    // ---------- Fetch data: two branches (no search / search) ----------
+    if (empty($request->input('search.value'))) {
+        // No search: reuse the already filtered $baseQuery
+        $purchases = (clone $baseQuery)
+                        ->with('supplier', 'warehouse')
+                        ->offset($start)
+                        ->limit($limit)
+                        ->orderBy($order, $dir)
+                        ->get();
+    } else {
+        // With search term
+        $search = $request->input('search.value');
+        $searchDate = date('Y-m-d', strtotime(str_replace('/', '-', $search)));
+
+        // Start search query (must also respect percentage filter)
+        $searchQuery = Purchase::leftJoin('suppliers', 'purchases.supplier_id', '=', 'suppliers.id')
+                               ->whereDate('purchases.created_at', '=', $searchDate);
+
+        // Re‑apply percentage filter if any IDs were set
+        if (!empty($filtered_purchase_ids)) {
+            $searchQuery->whereIn('purchases.id', $filtered_purchase_ids);
+        }
+
+        // Apply role‑based access and search conditions
+        if (Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            $searchQuery = $searchQuery->where('purchases.user_id', Auth::id())
+                ->orWhere([
+                    ['purchases.reference_no', 'LIKE', "%{$search}%"],
+                    ['purchases.user_id', Auth::id()]
+                ])
+                ->orWhere([
+                    ['suppliers.name', 'LIKE', "%{$search}%"],
+                    ['purchases.user_id', Auth::id()]
+                ]);
+            foreach ($field_names as $field_name) {
+                $searchQuery = $searchQuery->orWhere([
+                    ['purchases.user_id', Auth::id()],
+                    ['purchases.' . $field_name, 'LIKE', "%{$search}%"]
+                ]);
+            }
+            // Get total filtered count (respecting percentage filter)
+            $totalFiltered = (clone $searchQuery)->count();
+            $purchases = $searchQuery->select('purchases.*')
+                                     ->with('supplier', 'warehouse')
+                                     ->offset($start)
+                                     ->limit($limit)
+                                     ->orderBy($order, $dir)
+                                     ->get();
+        } else {
+            $searchQuery = $searchQuery->orWhere('purchases.reference_no', 'LIKE', "%{$search}%")
+                ->orWhere('suppliers.name', 'LIKE', "%{$search}%");
+            foreach ($field_names as $field_name) {
+                $searchQuery = $searchQuery->orWhere('purchases.' . $field_name, 'LIKE', "%{$search}%");
+            }
+            $totalFiltered = (clone $searchQuery)->count();
+            $purchases = $searchQuery->select('purchases.*')
+                                     ->with('supplier', 'warehouse')
+                                     ->offset($start)
+                                     ->limit($limit)
+                                     ->orderBy($order, $dir)
+                                     ->get();
+        }
+    }
+
+    // ---------- Build the DataTable response array ----------
+    $data = array();
+    if (!empty($purchases)) {
+        foreach ($purchases as $key => $purchase) {
+            $nestedData['id'] = $purchase->id;
+            $nestedData['key'] = $key;
+            $nestedData['date'] = date(config('date_format'), strtotime($purchase->created_at->toDateString()));
+            $nestedData['reference_no'] = $purchase->reference_no;
+
+            if ($purchase->supplier_id) {
+                $supplier = $purchase->supplier;
+            } else {
+                $supplier = new Supplier();
+            }
+            $nestedData['supplier'] = $supplier->name;
+
+            if ($purchase->status == 1) {
+                $nestedData['purchase_status'] = '<div class="badge badge-success">' . trans('file.Recieved') . '</div>';
+                $purchase_status = trans('file.Recieved');
+            } elseif ($purchase->status == 2) {
+                $nestedData['purchase_status'] = '<div class="badge badge-success">' . trans('file.Partial') . '</div>';
+                $purchase_status = trans('file.Partial');
+            } elseif ($purchase->status == 3) {
+                $nestedData['purchase_status'] = '<div class="badge badge-danger">' . trans('file.Pending') . '</div>';
+                $purchase_status = trans('file.Pending');
+            } else {
+                $nestedData['purchase_status'] = '<div class="badge badge-danger">' . trans('file.Ordered') . '</div>';
+                $purchase_status = trans('file.Ordered');
+            }
+
+            if ($purchase->payment_status == 1)
+                $nestedData['payment_status'] = '<div class="badge badge-danger">' . trans('file.Due') . '</div>';
+            else if ($purchase->payment_status == 3)
+                $nestedData['payment_status'] = '<div class="badge badge-warning">' . trans('file.Pending') . '</div>';
+            else if ($purchase->payment_status == 4)
+                $nestedData['payment_status'] = '<div class="badge badge-danger">' . 'Rejected' . '</div>';
+            else
+                $nestedData['payment_status'] = '<div class="badge badge-success">' . trans('file.Paid') . '</div>';
+
+            $nestedData['grand_total'] = number_format($purchase->grand_total, config('decimal'));
+            $returned_amount = DB::table('return_purchases')->where('purchase_id', $purchase->id)->sum('grand_total');
+            $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
+            $nestedData['paid_amount'] = number_format($purchase->paid_amount, config('decimal'));
+            $nestedData['due'] = number_format($purchase->grand_total - $returned_amount - $purchase->paid_amount, config('decimal'));
+
+            // Custom fields
+            foreach ($field_names as $field_name) {
+                $nestedData[$field_name] = $purchase->$field_name;
+            }
+
+            // Options (buttons)
+            $nestedData['options'] = '<div class="btn-group">
+                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' . trans("file.action") . '
+                          <span class="caret"></span>
+                          <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
+                            <li>
+                                <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> ' . trans('file.View') . '</button>
+                            </li>';
+            if (in_array("purchases-edit", $request['all_permission']))
+                $nestedData['options'] .= '<li>
+                    <a href="' . route('purchases.edit', $purchase->id) . '" class="btn btn-link"><i class="dripicons-document-edit"></i> ' . trans('file.edit') . '</a>
+                    </li>';
+            if (in_array("purchase-payment-index", $request['all_permission']))
+                $nestedData['options'] .= '<li>
+                        <button type="button" class="get-payment btn btn-link" data-id = "' . $purchase->id . '"><i class="fa fa-money"></i> ' . trans('file.View Payment') . '</button>
+                    </li>';
+            if (in_array("purchase-payment-add", $request['all_permission']))
+                $nestedData['options'] .= '<li>
+                         <a href="' . route('purchases.show', $purchase->id) . '" class="btn btn-link"><i class="fa fa-eye"></i> Show Payments</a>
+                        </li>';
+            if (in_array("purchases-delete", $request['all_permission']))
+                $nestedData['options'] .= \Form::open(["route" => ["purchases.destroy", $purchase->id], "method" => "DELETE"]) . '
+                        <li>
+                          <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> ' . trans("file.delete") . '</button>
+                        </li>' . \Form::close() . '
+                    </ul>
+                </div>';
+
+            // Extra data for purchase details popup
+            $user = User::find($purchase->user_id);
+            if ($purchase->currency_id) {
+                $currency = Currency::select('code')->find($purchase->currency_id);
+                $currency_code = $currency ? $currency->code : 'N/A';
+            } else {
+                $currency_code = 'N/A';
+            }
+
+            $nestedData['purchase'] = array('[ "' . date(config('date_format'), strtotime($purchase->created_at->toDateString())) . '"', ' "' . $purchase->reference_no . '"', ' "' . $purchase_status . '"', ' "' . $purchase->id . '"', ' "' . $purchase->warehouse->name . '"', ' "' . $purchase->warehouse->phone . '"', ' "' . preg_replace('/\s+/S', " ", $purchase->warehouse->address) . '"', ' "' . $supplier->name . '"', ' "' . $supplier->company_name . '"', ' "' . $supplier->email . '"', ' "' . $supplier->phone_number . '"', ' "' . $supplier->address . '"', ' "' . $supplier->city . '"', ' "' . $purchase->total_tax . '"', ' "' . $purchase->total_discount . '"', ' "' . $purchase->total_cost . '"', ' "' . $purchase->order_tax . '"', ' "' . $purchase->order_tax_rate . '"', ' "' . $purchase->order_discount . '"', ' "' . $purchase->shipping_cost . '"', ' "' . $purchase->grand_total . '"', ' "' . $purchase->paid_amount . '"', ' "' . preg_replace('/\s+/S', " ", $purchase->note) . '"', ' "' . $user->name . '"', ' "' . $user->email . '"', ' "' . $purchase->document . '"', ' "' . $currency_code . '"', ' "' . $purchase->exchange_rate . '"]');
+
+            $data[] = $nestedData;
+        }
+    }
+
+    info($data);
+
+    $json_data = array(
+        "draw"            => intval($request->input('draw')),
+        "recordsTotal"    => intval($totalData),
+        "recordsFiltered" => intval($totalFiltered),
+        "total_purchase"  => $percentage_total,
+        "data"            => $data
+    );
+
+    echo json_encode($json_data);
+}
 
     public function create()
     {
@@ -1946,5 +2014,34 @@ class PurchaseController extends Controller
         }
         $lims_purchase_data->update($data);
         return redirect('purchases')->with('message', 'Purchase updated successfully');
+    }
+
+    /**
+     * Given a base Purchase query and a percentage (0-99), return purchase IDs that form the top X% of purchases by value.
+     * Returns empty array if percentage is null or 100 (no filter).
+     */
+    private function getPurchaseIdsForPercentageFilter($baseQuery, $percentage)
+    {
+        if ($percentage === null || $percentage >= 100) {
+            return ['ids' => [], 'total_purchase' => 0];
+        }
+
+        $all_purchases = (clone $baseQuery)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+        $total_value = $all_purchases->sum('grand_total');
+        $target_value = $total_value * ($percentage / 100);
+
+        $ids = [];
+        $running = 0;
+        foreach ($all_purchases as $p) {
+            $ids[] = $p->id;
+            $running += $p->grand_total;
+            if ($running >= $target_value) {
+                break;
+            }
+        }
+
+        info(['ids' => $ids, 'total_purchase' => $running]);
+
+        return ['ids' => $ids, 'total_purchase' => $running];
     }
 }

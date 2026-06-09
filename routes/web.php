@@ -336,6 +336,7 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
     });
     
     Route::post('sales/save-default-filter', [SaleController::class, 'saveDefaultFilter'])->name('sales.save-default-filter');
+
     Route::resource('sales', SaleController::class);
 
     Route::controller(HirePurchaseController::class)->group(function () {
@@ -365,7 +366,7 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
             Route::post('deletebyselection', 'deleteBySelection');
             Route::post('delete/{id}', 'delete')->name('delivery.delete');
         });
-     });
+    });
 
 
     Route::controller(QuotationController::class)->group(function () {
@@ -380,7 +381,7 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
             Route::post('sendmail', 'sendMail')->name('quotation.sendmail');
             Route::post('deletebyselection', 'deleteBySelection');
         });
-     });
+    });
     Route::resource('quotations', QuotationController::class);
 
 
@@ -406,6 +407,8 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         });
         Route::post('importpurchase', 'importPurchase')->name('purchase.import');
     });
+    //set filter as in Sales
+    Route::post('purchases/save-default-filter', [PurchaseController::class, 'saveDefaultFilter'])->name('purchases.save-default-filter');
     Route::resource('purchases', PurchaseController::class);
 
 

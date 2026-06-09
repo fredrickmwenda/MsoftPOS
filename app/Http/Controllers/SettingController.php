@@ -61,6 +61,13 @@ class SettingController extends Controller
     public function generalSetting()
     {
         $lims_general_setting_data = GeneralSetting::latest()->first();
+        //dd($lims_general_setting_data);
+        $is_admin_filter = false;
+        // check if the user has role of admin and has permission to sale percentage filter
+        if (auth()->user()->role_id == 1 || auth()->user()->hasPermissionTo('sale-percentage-filter')) {
+            $is_admin_filter = true;
+        }
+        $percentage_filter = GeneralSetting::first()->percentage_filter;
         $lims_account_list = Account::where('is_active', true)->get();
         $lims_currency_list = Currency::get();
         $zones_array = array();
@@ -70,11 +77,12 @@ class SettingController extends Controller
             $zones_array[$key]['zone'] = $zone;
             $zones_array[$key]['diff_from_GMT'] = 'UTC/GMT ' . date('P', $timestamp);
         }
-        return view('backend.setting.general_setting', compact('lims_general_setting_data', 'lims_account_list', 'zones_array', 'lims_currency_list'));
+        return view('backend.setting.general_setting', compact('lims_general_setting_data', 'lims_account_list', 'zones_array', 'lims_currency_list', 'is_admin_filter', 'percentage_filter'));
     }
 
     public function generalSettingStore(Request $request)
     {
+        //dd($request->all());
         if(!env('USER_VERIFIED'))
             return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
 
@@ -85,6 +93,7 @@ class SettingController extends Controller
 
         $data = $request->except('site_logo', 'site_favicon');
         //return $data;
+       // dd($data);
         //writting timezone info in .env file
         $path = app()->environmentFilePath();
         $searchArray = array('APP_TIMEZONE='.env('APP_TIMEZONE'));
@@ -119,6 +128,9 @@ class SettingController extends Controller
           $general_setting->support_email = $request->support_email;
         $general_setting->invoice_format = $data['invoice_format'];
         $general_setting->state = $data['state'];
+        // $general_setting->default_margin_value = $data['profit_margin'];
+        $general_setting->percentage_filter = (int) $data['percentage_filter'];
+        // dd($general_setting->percentage_filter);
         
     
         $logo = $request->site_logo;
@@ -141,8 +153,42 @@ class SettingController extends Controller
         }
         $general_setting->save();
         cache()->forget('general_setting');
+       //this redirect to the route of general setting page and show the success message
+        return redirect()->route('setting.general')->with('message', 'General setting updated successfully');
+    }
 
-        return redirect()->back()->with('message', 'Data updated successfully');
+    public function saveDefaultFilter(Request $request)
+    {
+        if (Auth::user()->role_id > 2 || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only administrators with Sale Filter permission can set default filters.'
+            ], 403);
+        }
+
+        $request->validate([
+            'percentage_filter' => 'required|integer|min:0|max:100'
+        ]);
+
+        try {
+            $settings = GeneralSetting::first();
+            if (!$settings) {
+                $settings = new GeneralSetting();
+            }
+
+            $settings->percentage_filter = (int) $request->input('percentage_filter');
+            $settings->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Default percentage filter saved successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error saving filter: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function superadminGeneralSetting()
@@ -487,6 +533,7 @@ class SettingController extends Controller
         return redirect()->back()->with('message', 'Data updated successfully');
 
     }
+
     public function posSetting()
     {
         $lims_customer_list = Customer::where('is_active', true)->get();

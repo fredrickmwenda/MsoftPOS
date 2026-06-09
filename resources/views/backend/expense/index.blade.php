@@ -14,43 +14,50 @@
             </div>
             {!! Form::open(['route' => 'expenses.index', 'method' => 'get']) !!}
             <div class="row mb-3">
-                <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                                <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                                <input type="hidden" name="ending_date" value="{{$ending_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mt-3 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
-                                <option value="0">{{trans('file.All Warehouse')}}</option>
-                                @foreach($lims_warehouse_list as $warehouse)
-                                    @if($warehouse->id == $warehouse_id)
-                                        <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @else
-                                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
+                <div class="col-md-2 mt-3">
+                    <div class="form-group">
+                        <label><strong>{{trans('file.From Date')}}</strong></label>
+                        <input type="date" name="starting_date" class="form-control" value="{{ $starting_date }}" required />
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
-                        <button class="btn btn-primary" type="submit">{{trans('file.submit')}}</button>
+                        <label><strong>{{trans('file.To Date')}}</strong></label>
+                        <input type="date" name="ending_date" class="form-control" value="{{ $ending_date }}" required />
+                    </div>
+                </div>
+                <div class="col-md-2 mt-3 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
+                    <div class="form-group">
+                        <label><strong>{{trans('file.Warehouse')}}</strong></label>
+                        <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
+                            <option value="0">{{trans('file.All Warehouse')}}</option>
+                            @foreach($lims_warehouse_list as $warehouse)
+                                <option value="{{$warehouse->id}}" @if($warehouse->id == $warehouse_id) selected @endif>{{$warehouse->name}}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2 mt-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary btn-block" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
             </div>
             {!! Form::close() !!}
         </div>
+
+        <div class="row ml-1 mb-2">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body py-2">
+                        <span class="text-muted small">Total Expenses</span>
+                        <h5 class="mb-0 mt-1" id="total-expenses-card-amount">—</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         @if(in_array("expenses-add", $all_permission))
             <button class="btn btn-info" data-toggle="modal" data-target="#expense-modal"><i class="dripicons-plus"></i> {{trans('file.Add Expense')}}</button>
         @endif
@@ -183,16 +190,7 @@
         }
     });
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
-    });
+
 
     $(document).ready(function() {
         $(document).on('click', 'button.open-Editexpense_categoryDialog', function() {
@@ -221,8 +219,9 @@
     return false;
     }
 
-    var starting_date = $("input[name=starting_date]").val();
-    var ending_date = $("input[name=ending_date]").val();
+    var starting_date = $("input[name='starting_date']").val();
+    var ending_date = $("input[name='ending_date']").val();
+
     var warehouse_id = $("#warehouse_id").val();
     $('#expense-table').DataTable( {
         "processing": true,
@@ -235,8 +234,16 @@
                 ending_date: ending_date,
                 warehouse_id: warehouse_id
             },
+            dataSrc: function(json) {
+                if (json.total_expense !== undefined) {
+                    $('#total-expenses-card-amount').text(parseFloat(json.total_expense).toFixed({{ $general_setting->decimal ?? 2 }}));
+                } else {
+                    $('#total-expenses-card-amount').text('—');
+                }
+                return json.data;
+            },
             dataType: "json",
-            type:"post"
+            type:"post",
         },
         "createdRow": function( row, data, dataIndex ) {
             $(row).attr('data-expense_id', data['id']);

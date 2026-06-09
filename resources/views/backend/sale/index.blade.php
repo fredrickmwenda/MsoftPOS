@@ -70,40 +70,11 @@
                     </div>
                 </div>
 
-                @if(in_array('sale-percentage-filter', $all_permission))
+                
                 <!-- Filter By Percentage: show only top X% of sales by value (permission required) -->
-                <div class="col-md-2">
-                    <div class="form-group">
-                        <label><strong>Filter By Percentage</strong></label>
-                        {{-- Hidden ensures value is always submitted (disabled selects are not sent) and DataTable always has it --}}
-                        <input type="hidden" name="sale_percentage_filter" id="sale_percentage_filter_value" value="{{ $sale_percentage_filter ?? request('sale_percentage_filter') ?? '' }}" />
-                        <select id="sale_percentage_filter_select" class="form-control" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'disabled' : '' }}>
-                            <option value="">All (100%)</option>
-                            <option value="10" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 10 ? 'selected' : '' }}>10%</option>
-                            <option value="25" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 25 ? 'selected' : '' }}>25%</option>
-                            <option value="50" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 50 ? 'selected' : '' }}>50%</option>
-                            <option value="75" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 75 ? 'selected' : '' }}>75%</option>
-                            <option value="100" {{ ($sale_percentage_filter ?? request('sale_percentage_filter')) == 100 ? 'selected' : '' }}>100%</option>
-                        </select>
-                        @if(\Auth::user()->role_id <= 2)
-                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (shared)' : 'Show top X% of sales by value' }}</small>
-                        @else
-                            <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (locked)' : 'Show top X% of sales by value' }}</small>
-                        @endif
-                    </div>
-                </div>
+               
 
-                @if(\Auth::user()->role_id <= 2)
-                <div class="col-md-2 mt-3">
-                    <div class="form-group">
-                        <button type="button" class="btn btn-warning btn-sm" id="save-admin-filter" title="Save this filter as default for all users">
-                            <i class="dripicons-pin"></i> Save as Default
-                        </button>
-                    </div>
-                </div>
-                @endif
-                @endif
-
+     
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
@@ -573,7 +544,7 @@
  
     // Handle Save as Default button for admin percentage filter
     $('#save-admin-filter').on('click', function() {
-        var pct = $('#sale_percentage_filter_value').val() || $('#sale_percentage_filter_select').val();
+        var pct = $('#percentage_filter_value').val() || $('#percentage_filter_select').val();
         
         if(!pct || pct === '') {
             alert('Please select a percentage before saving as default');
@@ -584,7 +555,7 @@
             type: 'POST',
             url: '{{ route("sales.save-default-filter") }}',
             data: {
-                sale_percentage_filter: pct,
+                percentage_filter: pct,
                 _token: $('meta[name="csrf-token"]').attr('content')
             },
             success: function(response) {
@@ -684,16 +655,16 @@
     });
 
     // Keep hidden in sync with percentage select so form submit and DataTable always have the value
-    $('#sale_percentage_filter_select').on('change', function() {
-        $('#sale_percentage_filter_value').val($(this).val() || '');
+    $('#percentage_filter_select').on('change', function() {
+        $('#percentage_filter_value').val($(this).val() || '');
     });
 
     // Reset filters
     $('#reset-filters').on('click', function() {
         $('input[name="starting_date"]').val('');
         $('input[name="ending_date"]').val('');
-        $('#sale_percentage_filter_value').val('');
-        $('#sale_percentage_filter_select').val('');
+        $('#percentage_filter_value').val('');
+        $('#percentage_filter_select').val('');
         $('#warehouse_id').val(0);
         $('#sale-status').val(0);
         $('#payment-status').val(0);
@@ -1035,7 +1006,7 @@
                 warehouse_id: function() { return $('#warehouse_id').val(); },
                 sale_status: function() { return $('#sale-status').val(); },
                 payment_status: function() { return $('#payment-status').val(); },
-                sale_percentage_filter: function() { return $('#sale_percentage_filter_value').val() || $('select#sale_percentage_filter_select').val(); }
+                percentage_filter: function() { return $('#percentage_filter_value').val() || $('select#percentage_filter_select').val(); }
             },
             dataSrc: function(json) {
                 if (json.total_sales_amount !== undefined) {

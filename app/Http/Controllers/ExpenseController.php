@@ -9,8 +9,10 @@ use App\Models\Warehouse;
 use App\Models\CashRegister;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Auth;
-use DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use App\Models\GeneralSetting;
+
 
 class ExpenseController extends Controller
 {
@@ -24,13 +26,13 @@ class ExpenseController extends Controller
             if(empty($all_permission))
                 $all_permission[] = 'dummy text';
 
-            if($request->starting_date) {
+            // Default: today's date for both start and end
+            if($request->has('starting_date') && $request->has('ending_date')) {
                 $starting_date = $request->starting_date;
                 $ending_date = $request->ending_date;
-            }
-            else {
-                $starting_date = date('Y-m-01', strtotime('-1 year', strtotime(date('Y-m-d'))));
-                $ending_date = date("Y-m-d");
+            } else {
+                $starting_date = date('Y-m-d');
+                $ending_date = date('Y-m-d');
             }
 
             if($request->input('warehouse_id'))
@@ -46,6 +48,8 @@ class ExpenseController extends Controller
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
+   
+
     public function expenseData(Request $request)
     {
         $columns = array(
@@ -54,68 +58,109 @@ class ExpenseController extends Controller
         );
 
         $warehouse_id = $request->input('warehouse_id');
-        $q = Expense::whereDate('created_at', '>=' ,$request->input('starting_date'))
-                     ->whereDate('created_at', '<=' ,$request->input('ending_date'));
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-            $q = $q->where('user_id', Auth::id());
-        if($warehouse_id)
-            $q = $q->where('warehouse_id', $warehouse_id);
 
-        $totalData = $q->count();
+        // Get percentage filter from General Setting
+        $percentage_filter = GeneralSetting::first()->percentage_filter;
+        info('Expense Percentage Filter: ' . $percentage_filter);
+
+        $filtered_expense_ids = [];
+        $filtered_total_expenses = 0;
+
+        // ---------- Base query (common filters) ----------
+        $baseQuery = Expense::whereDate('created_at', '>=', $request->input('starting_date'))
+                            ->whereDate('created_at', '<=', $request->input('ending_date'));
+
+        if (Auth::user()->role_id > 2 && config('staff_access') == 'own')
+            $baseQuery = $baseQuery->where('user_id', Auth::id());
+        if ($warehouse_id)
+            $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
+
+        // ---------- Apply percentage filter (top X% by amount) ----------
+        if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
+            $all_expenses = (clone $baseQuery)->orderBy('amount', 'desc')->get(['id', 'amount']);
+            $total_value = $all_expenses->sum('amount');
+            info('Total Expense Value: ' . $total_value);
+            $target_value = $total_value * ($percentage_filter / 100);
+            info('Target Value for Top ' . $percentage_filter . '%: ' . $target_value);
+
+            $running = 0;
+            foreach ($all_expenses as $expense) {
+                $filtered_expense_ids[] = $expense->id;
+                $running += $expense->amount;
+                $filtered_total_expenses = $running;
+                if ($running >= $target_value) break;
+            }
+            $baseQuery = $baseQuery->whereIn('id', $filtered_expense_ids);
+        }
+
+        // ---------- Counts & total expense sum ----------
+        $totalData = $baseQuery->count();
         $totalFiltered = $totalData;
 
-        if($request->input('length') != -1)
+        if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
+            $total_expense_sum = $filtered_total_expenses;
+        } else {
+            $total_expense_sum = (clone $baseQuery)->sum('amount');
+        }
+
+        // ---------- Pagination & ordering ----------
+        if ($request->input('length') != -1)
             $limit = $request->input('length');
         else
             $limit = $totalData;
         $start = $request->input('start');
-        $order = 'expenses.'.$columns[$request->input('order.0.column')];
+        $order = 'expenses.' . $columns[$request->input('order.0.column')];
         $dir = $request->input('order.0.dir');
-        if(empty($request->input('search.value'))) {
-            $q = Expense::with('warehouse', 'expenseCategory')
-                ->whereDate('created_at', '>=' ,$request->input('starting_date'))
-                ->whereDate('created_at', '<=' ,$request->input('ending_date'))
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order, $dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-                $q = $q->where('user_id', Auth::id());
-            if($warehouse_id)
-                $q = $q->where('warehouse_id', $warehouse_id);
-            $expenses = $q->get();
-        }
-        else
-        {
-            $search = $request->input('search.value');
-            $q = Expense::whereDate('expenses.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))))
-                ->offset($start)
-                ->limit($limit)
-                ->orderBy($order,$dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
-                $expenses =  $q->select('expenses.*')
-                                ->with('warehouse', 'expenseCategory')
-                                ->where('expenses.user_id', Auth::id())
-                                ->orwhere([
-                                    ['reference_no', 'LIKE', "%{$search}%"],
-                                    ['user_id', Auth::id()]
-                                ])
-                                ->get();
-                $totalFiltered = $q->where('expenses.user_id', Auth::id())->count();
-            }
-            else {
-                $expenses =  $q->select('expenses.*')
-                                ->with('warehouse', 'expenseCategory')
-                                ->orwhere('reference_no', 'LIKE', "%{$search}%")
-                                ->get();
 
-                $totalFiltered = $q->orwhere('expenses.reference_no', 'LIKE', "%{$search}%")->count();
+        // ---------- Fetch data (two branches) ----------
+        if (empty($request->input('search.value'))) {
+            $expenses = (clone $baseQuery)
+                            ->with('warehouse', 'expenseCategory')
+                            ->offset($start)
+                            ->limit($limit)
+                            ->orderBy($order, $dir)
+                            ->get();
+        } else {
+            $search = $request->input('search.value');
+            $searchDate = date('Y-m-d', strtotime(str_replace('/', '-', $search)));
+
+            $searchQuery = Expense::whereDate('expenses.created_at', '=', $searchDate);
+
+            // Re‑apply percentage filter if active
+            if (!empty($filtered_expense_ids)) {
+                $searchQuery->whereIn('expenses.id', $filtered_expense_ids);
+            }
+
+            if (Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+                $searchQuery = $searchQuery->where('expenses.user_id', Auth::id())
+                    ->orWhere([
+                        ['reference_no', 'LIKE', "%{$search}%"],
+                        ['user_id', Auth::id()]
+                    ]);
+                $totalFiltered = (clone $searchQuery)->count();
+                $expenses = $searchQuery->select('expenses.*')
+                                        ->with('warehouse', 'expenseCategory')
+                                        ->offset($start)
+                                        ->limit($limit)
+                                        ->orderBy($order, $dir)
+                                        ->get();
+            } else {
+                $searchQuery = $searchQuery->orWhere('reference_no', 'LIKE', "%{$search}%");
+                $totalFiltered = (clone $searchQuery)->count();
+                $expenses = $searchQuery->select('expenses.*')
+                                        ->with('warehouse', 'expenseCategory')
+                                        ->offset($start)
+                                        ->limit($limit)
+                                        ->orderBy($order, $dir)
+                                        ->get();
             }
         }
-        $data = array();
-        if(!empty($expenses))
-        {
-            foreach ($expenses as $key=>$expense)
-            {
+
+        // ---------- Build DataTable response ----------
+        $data = [];
+        if (!empty($expenses)) {
+            foreach ($expenses as $key => $expense) {
+                $nestedData = [];
                 $nestedData['id'] = $expense->id;
                 $nestedData['key'] = $key;
                 $nestedData['date'] = date(config('date_format'), strtotime($expense->created_at->toDateString()));
@@ -132,8 +177,7 @@ class ExpenseController extends Controller
                     </button>
                     <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">';
 
-                    // 🔹 Edit button (if user has permission)
-                    if (in_array("expenses-edit", $request['all_permission'])) {
+                if (in_array("expenses-edit", $request['all_permission'])) {
                     $nestedData['options'] .= '
                         <li>
                             <button type="button" data-id="' . $expense->id . '" 
@@ -142,20 +186,18 @@ class ExpenseController extends Controller
                                 <i class="dripicons-document-edit"></i> ' . trans('file.edit') . '
                             </button>
                         </li>';
-                    }
+                }
 
-                    // 🔹 Delete button (if user has permission)
-                    if (in_array("expenses-delete", $request['all_permission'])) {
+                if (in_array("expenses-delete", $request['all_permission'])) {
                     $nestedData['options'] .= \Form::open(["route" => ["expenses.destroy", $expense->id], "method" => "DELETE"]) . '
                         <li>
                             <button type="submit" class="btn btn-link" onclick="return confirmDelete()">
                                 <i class="dripicons-trash"></i> ' . trans("file.delete") . '
                             </button>
                         </li>' . \Form::close();
-                    }
+                }
 
-                    // 🔹 Authorize button (only if status = draft)
-                    if ($expense->status === 'draft') {
+                if ($expense->status === 'draft') {
                     $nestedData['options'] .= '
                         <li>
                             <button type="button" class="btn btn-link authorize-expense" 
@@ -163,10 +205,9 @@ class ExpenseController extends Controller
                                 <i class="dripicons-checkmark"></i> Authorize
                             </button>
                         </li>';
-                    }
+                }
 
-                    // 🔹 Approve button (only if status = waiting_approval)
-                    if ($expense->status === 'waiting_approval') {
+                if ($expense->status === 'waiting_approval') {
                     $nestedData['options'] .= '
                         <li>
                             <button type="button" class="btn btn-link approve-expense" 
@@ -174,21 +215,20 @@ class ExpenseController extends Controller
                                 <i class="dripicons-thumbs-up"></i> Approve
                             </button>
                         </li>';
-                    }
+                }
 
-                    $nestedData['options'] .= '</ul></div>';
-
-                    $data[] = $nestedData;
-
+                $nestedData['options'] .= '</ul></div>';
+                $data[] = $nestedData;
             }
         }
-        $json_data = array(
+
+        return response()->json([
             "draw"            => intval($request->input('draw')),
             "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
-        );
-        echo json_encode($json_data);
+            "total_expense"   => $total_expense_sum,
+            "data"            => $data,
+        ]);
     }
 
     public function create()
