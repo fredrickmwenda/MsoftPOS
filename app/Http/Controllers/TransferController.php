@@ -22,13 +22,13 @@ class TransferController extends Controller
 {
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('transfers-index')) {
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+        if(Auth::user()->hasPermissionTo('transfers-index')) {
+            // Get all permission names from all assigned roles
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
 
             if($request->input('from_warehouse_id'))
                 $from_warehouse_id = $request->input('from_warehouse_id');
@@ -67,7 +67,7 @@ class TransferController extends Controller
         $to_warehouse_id = $request->input('to_warehouse_id');
         $q = Transfer::whereDate('created_at', '>=' ,$request->input('starting_date'))
                      ->whereDate('created_at', '<=' ,$request->input('ending_date'));
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $q = $q->where('user_id', Auth::id());
         if($from_warehouse_id)
             $q = $q->where('from_warehouse_id', $from_warehouse_id);
@@ -91,7 +91,7 @@ class TransferController extends Controller
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+            if($this->isStaff() && config('staff_access') == 'own')
                 $q = $q->where('user_id', Auth::id());
             if($from_warehouse_id)
                 $q = $q->where('from_warehouse_id', $from_warehouse_id);
@@ -106,7 +106,7 @@ class TransferController extends Controller
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order,$dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $transfers =  $q->select('transfers.*')
                                 ->with('fromWarehouse', 'toWarehouse', 'user')
                                 ->where('transfers.user_id', Auth::id())
@@ -193,8 +193,7 @@ class TransferController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('transfers-add')){
+        if(Auth::user()->hasPermissionTo('transfers-add')){
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             return view('backend.transfer.create', compact('lims_warehouse_list'));
         }
@@ -539,8 +538,7 @@ class TransferController extends Controller
 
     public function transferByCsv()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('transfers-add')){
+        if(Auth::user()->hasPermissionTo('transfers-add')){
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             return view('backend.transfer.import', compact('lims_warehouse_list'));
         }
@@ -683,8 +681,7 @@ class TransferController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('transfers-edit')){
+        if(Auth::user()->hasPermissionTo('transfers-edit')){
             $lims_warehouse_list = Warehouse::where('is_active',true)->get();
             $lims_transfer_data = Transfer::find($id);
             $lims_product_transfer_data = ProductTransfer::where('transfer_id', $id)->get();

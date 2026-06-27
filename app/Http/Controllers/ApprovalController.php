@@ -7,9 +7,11 @@ use App\Models\Payment;
 use App\Models\Purchase;
 use App\Models\Expense;
 use App\Models\Account;
+use App\Models\Product;
 use App\Models\Role;
 use Auth;
 use DB;
+use Illuminate\Support\Facades\Schema;
 
 class ApprovalController extends Controller
 {
@@ -41,32 +43,38 @@ class ApprovalController extends Controller
             return redirect()->route('approvals.index')->with('not_permitted', 'Failed to approve expense: ' . $e->getMessage());
         }
     }
+
     /**
      * Display the central Approvals page with statistics and pending items
      * for both Purchase Payments and Expenses.
      */
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if (!$role || !$role->hasPermissionTo('approvals-index')) {
+        // Permission check using all of the user's roles
+        if (!Auth::user()->hasPermissionTo('approvals-index')) {
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access the Approvals module.');
         }
 
-        $canApprovePayments = $role->hasPermissionTo('approve-payments');
-        $canAccessPurchases = $role->hasPermissionTo('purchases-index');
-        $canAccessExpenses = $role->hasPermissionTo('expenses-index');
+        $canApprovePayments = Auth::user()->hasPermissionTo('approve-payments');
+        $canAccessPurchases = Auth::user()->hasPermissionTo('purchases-index');
+        $canAccessExpenses  = Auth::user()->hasPermissionTo('expenses-index');
+
+        // Determine if the user is “staff” (has any role with ID > 2)
+        $isStaff = Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
 
         $basePaymentQuery = Payment::whereNotNull('purchase_id');
         $baseExpenseQuery = Expense::query();
 
-        if (Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+        if ($isStaff && config('staff_access') == 'own') {
             $basePaymentQuery->where('user_id', Auth::id());
             $baseExpenseQuery->where('user_id', Auth::id());
         }
 
-        // Pending = not yet approved (pending, waiting_authorization, waiting_approval)
+        // Pending statuses
         $pendingPaymentStatuses = ['pending', 'waiting_authorization', 'waiting_approval'];
-        $paymentsTableHasStatus = \Schema::hasColumn('payments', 'approval_status');
+        $paymentsTableHasStatus = Schema::hasColumn('payments', 'approval_status');
 
         if ($paymentsTableHasStatus) {
             $pendingPurchasePaymentsCount = (clone $basePaymentQuery)
@@ -108,10 +116,10 @@ class ApprovalController extends Controller
             'approved_expenses_count'   => $expensesApprovedCount,
         ];
 
-        $permissions = $role->permissions ?? collect();
-        $all_permission = $permissions->pluck('name')->toArray();
+        // Gather all permission names from the user's roles
+        $all_permission = Auth::user()->getAllPermissions();
         if (empty($all_permission)) {
-            $all_permission[] = 'dummy text';
+            $all_permission = ['dummy text'];
         }
 
         return view('backend.approval.index', compact(

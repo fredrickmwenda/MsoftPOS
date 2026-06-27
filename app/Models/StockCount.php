@@ -8,6 +8,28 @@ class StockCount extends Model
 {
     protected $table = 'stock_counts';
     protected $fillable =[
-        "reference_no", "warehouse_id", "brand_id", "category_id", "user_id", "type", "initial_file", "final_file", "note", "is_adjusted"
+        "reference_no", "warehouse_id",  "user_id", "status",  "note", 
     ];
+
+
+        public function warehouse()
+    {
+        return $this->belongsTo(
+            Warehouse::class
+        );
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(
+            User::class
+        );
+    }
+
+    public function items()
+    {
+        return $this->hasMany(
+            StockCountItem::class
+        );
+    }
 }

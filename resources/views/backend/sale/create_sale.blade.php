@@ -484,6 +484,11 @@
                 </ul>
             </div>
             <li class="nav-item ml-4"><a id="btnFullscreen" data-toggle="tooltip" title="Full Screen"><i class="dripicons-expand"></i></a></li>
+            <li class="nav-item">
+                <a href="#" id="launch-customer-display" data-toggle="tooltip" title="Launch Customer Display">
+                    <i class="dripicons-device-desktop"></i>
+                </a>
+            </li>
             <?php
                 $general_setting_permission = $permission_list->where('name', 'general_setting')->first();
                 $general_setting_permission_active = DB::table('role_has_permissions')->where([
@@ -564,7 +569,7 @@
                     <li>
                         <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
                     </li>
-                    @if(Auth::user()->role_id != 5)
+                    @if(!Auth::user()->roles->contains(fn($role) => $role->id ==5))
                     <li>
                         <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>
                     </li>
@@ -762,7 +767,7 @@
                                         </div>
                                     </div>
                                     @foreach($custom_fields as $field)
-                                        @if(!$field->is_admin || \Auth::user()->role_id == 1)
+                                        @if(!$field->is_admin || $isAdmin)
                                             <div class="{{'col-md-'.$field->grid_value}}">
                                                 <div class="form-group">
                                                     <label>{{$field->name}}</label>

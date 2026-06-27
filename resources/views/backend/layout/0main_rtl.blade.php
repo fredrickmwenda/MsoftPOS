@@ -438,8 +438,12 @@
                         ['role_id', $role->id]
                     ])->first();
               ?>
+              @php
 
-              @if(Auth::user()->role_id != 5)
+
+              @endphp
+
+              @if(!Auth::user()->roles->contains(fn($r) => $r->id ==5)){{'d-none'}}@endif
               <li class=""><a href="#hrm" aria-expanded="false" data-toggle="collapse"> <i class="dripicons-user-group"></i><span>HRM</span></a>
                 <ul id="hrm" class="collapse list-unstyled ">
                   @if($department_active)
@@ -938,7 +942,7 @@
                 <li class="nav-item"><a class="dropdown-item btn-pos btn-sm" href="{{route('sale.pos')}}"><i class="dripicons-shopping-bag"></i><span> POS</span></a></li>
                 @endif
                 <li class="nav-item"><a id="btnFullscreen" data-toggle="tooltip" title="{{trans('file.Full Screen')}}"><i class="dripicons-expand"></i></a></li>
-                @if(\Auth::user()->role_id <= 2)
+                @if(!Auth::user()->roles->contains(fn($r) => $r->id <= 2))
                   <li class="nav-item"><a href="{{route('cashRegister.index')}}" data-toggle="tooltip" title="{{trans('file.Cash Register List')}}"><i class="dripicons-archive"></i></a></li>
                 @endif
                 @if($product_qty_alert_active)
@@ -1036,7 +1040,8 @@
                       <li>
                         <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
                       </li>
-                      @if(Auth::user()->role_id != 5)
+                      
+                     @if(!Auth::user()->roles->contains(fn($role) => $role->id ==5))
                       <li>
                         <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>
                       </li>
@@ -1119,7 +1124,9 @@
                     {!! Form::open(['route' => 'expenses.store', 'method' => 'post']) !!}
                     <?php
                       $lims_expense_category_list = DB::table('expense_categories')->where('is_active', true)->get();
-                      if(Auth::user()->role_id > 2)
+                         $isStaff = \Auth::user()->roles->contains(fn($role) => $role->id <= 2);
+
+                      if($isStaff)
                         $lims_warehouse_list = DB::table('warehouses')->where([
                           ['is_active', true],
                           ['id', Auth::user()->warehouse_id]

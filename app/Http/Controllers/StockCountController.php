@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use Illuminate\Http\Request;
 use App\Models\Warehouse;
 use App\Models\Brand;
@@ -9,21 +7,25 @@ use App\Models\Category;
 use App\Models\Product;
 use DB;
 use App\Models\StockCount;
+use App\Models\StockCountItem;
 use Auth;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
 
 class StockCountController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if( $role->hasPermissionTo('stock_count') ) {
+
+
+        if( Auth::user()->hasPermissionTo('stock_count') ) {
+            $isStaff=Auth::user()->roles->contains(function ($role) {
+                return $role->id > 2;
+            });
+    
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_brand_list = Brand::where('is_active', true)->get();
             $lims_category_list = Category::where('is_active', true)->get();
             $general_setting = DB::table('general_settings')->latest()->first();
-            if(Auth::user()->role_id > 2 && $general_setting->staff_access == 'own')
+            if($isStaff && $general_setting->staff_access == 'own')
                 $lims_stock_count_all = StockCount::orderBy('id', 'desc')->where('user_id', Auth::id())->get();
             else
                 $lims_stock_count_all = StockCount::orderBy('id', 'desc')->get();
@@ -178,8 +180,146 @@ class StockCountController extends Controller
         }
         return view('backend.stock_count.qty_adjustment', compact('lims_warehouse_list', 'warehouse_id', 'id', 'product_id', 'names', 'code', 'qty', 'action'));
     }
+
+    public function getProducts(Request $request)
+    {
+        $warehouseId = $request->warehouse_id;
+        $categoryId = $request->category_id;
+
+        $query = Product::leftJoin(
+                    'product_warehouse',
+                    'products.id',
+                    '=',
+                    'product_warehouse.product_id'
+                )
+                ->leftJoin('product_batches', function ($join) {
+                    $join->on(
+                        'products.id',
+                        '=',
+                        'product_batches.product_id'
+                    );
+                })
+                ->where('products.is_active', 1)
+                ->where(
+                    'product_warehouse.warehouse_id',
+                    $warehouseId
+                );
+
+        if ($categoryId != 'all') {
+            $query->where(
+                'products.category_id',
+                $categoryId
+            );
+        }
+
+        $products = $query
+            ->select(
+                'products.id',
+                'products.name',
+                'products.code',
+                'product_warehouse.qty as system_qty',
+                DB::raw('MIN(product_batches.expired_date) as expiry_date')
+            )
+            ->groupBy(
+                'products.id',
+                'products.name',
+                'products.code',
+                'product_warehouse.qty'
+            )
+            ->orderBy('products.name')
+            ->get();
+
+        return response()->json($products);
+    }
+
+    public function saveCount(Request $request)
+    {
+        $request->validate([
+            'warehouse_id' => 'required',
+            'product_id'   => 'required',
+            'physical_qty' => 'required|numeric|min:0',
+            'variance' => 'required'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $warehouseId = $request->warehouse_id;
+            $productId   = $request->product_id;
+            $addedQty    = $request->physical_qty;   // this is the quantity to add
+
+            $warehouseProduct = DB::table('product_warehouse')
+                ->where('warehouse_id', $warehouseId)
+                ->where('product_id', $productId)
+                ->first();
+
+            if (!$warehouseProduct) {
+                DB::rollBack();
+                return response()->json(['success' => false, 'message' => 'Product not found in warehouse'], 404);
+            }
+
+            $oldQty = $warehouseProduct->qty;
+            $newQty = $oldQty + $addedQty;
+            $variance = $request->variance;               // the change is exactly the added amount
+
+            // Existing or new StockCount header (still "pending")
+            $stockCount = StockCount::where('warehouse_id', $warehouseId)
+                ->where('user_id', Auth::id())
+                ->whereDate('created_at', today())
+                ->where('status', 'pending')
+                ->first();
+
+            if (!$stockCount) {
+                $stockCount = StockCount::create([
+                    'reference_no' => 'SC-' . date('YmdHis'),
+                    'warehouse_id' => $warehouseId,
+                    'user_id'      => Auth::id(),
+                    'status'       => 'pending',
+                    'note'         => null
+                ]);
+            }
+
+            $stockItem = StockCountItem::where('stock_count_id', $stockCount->id)
+                ->where('product_id', $productId)
+                ->first();
+
+            if ($stockItem) {
+                $stockItem->update([
+                    'system_qty'   => $oldQty,
+                    'physical_qty' => $addedQty,   // stored as the added quantity
+                    'variance'     => $variance,
+                    'reason'       => $request->reason
+                ]);
+            } else {
+                StockCountItem::create([
+                    'stock_count_id' => $stockCount->id,
+                    'product_id'     => $productId,
+                    'system_qty'     => $oldQty,
+                    'physical_qty'   => $addedQty,
+                    'variance'       => $variance,
+                ]);
+            }
+
+            // No inventory update here – done after approval.
+
+            DB::commit();
+
+            return response()->json([
+                'success'        => true,
+                'stock_count_id' => $stockCount->id,
+                'reference_no'   => $stockCount->reference_no,
+                'variance'       => $variance,
+                'message'        => 'Stock count saved and sent for approval.'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+        
     public function destroy($id)
     {
         //
     }
+
 }

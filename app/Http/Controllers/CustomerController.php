@@ -51,13 +51,13 @@ class CustomerController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('customers-index')){
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+        
+        if(Auth::user()->hasPermissionTo('customers-index')){
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
             $lims_customer_all = Customer::with('customerGroup')->where('is_active', true)->get();
             $custom_fields = CustomField::where([
                                 ['belongs_to', 'customer'],
@@ -121,8 +121,8 @@ class CustomerController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('customers-add')){
+        
+        if(Auth::user()->hasPermissionTo('customers-add')){
             $lims_customer_group_all = CustomerGroup::where('is_active',true)->get();
             $custom_fields = CustomField::where('belongs_to', 'customer')->get();
             return view('backend.customer.create', compact('lims_customer_group_all', 'custom_fields'));
@@ -324,8 +324,8 @@ class CustomerController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('customers-edit')){
+        
+        if(Auth::user()->hasPermissionTo('customers-edit')){
             $lims_customer_data = Customer::find($id);
             $lims_customer_group_all = CustomerGroup::where('is_active',true)->get();
             $custom_fields = CustomField::where('belongs_to', 'customer')->get();
@@ -337,7 +337,6 @@ class CustomerController extends Controller
 
     public function update(Request $request, $id)
     {
-        dd($request->customer_group_id);
         $this->validate($request, [
             'phone_number' => [
                 'max:255',
@@ -430,8 +429,8 @@ class CustomerController extends Controller
 
     public function importCustomer(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('customers-add')){
+        
+        if(Auth::user()->hasPermissionTo('customers-add')){
             $upload=$request->file('file');
             $ext = pathinfo($upload->getClientOriginalName(), PATHINFO_EXTENSION);
             if($ext != 'csv')
@@ -627,13 +626,12 @@ class CustomerController extends Controller
     }
 
     function black_list_customers() {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('customers-index')){
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+        if(Auth::user()->hasPermissionTo('customers-index')){
+           $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
             $black_list_customers = BlackListCustomer::distinct()->get(['customer_id']);
             return view('backend.customer.black_list_customer', compact('black_list_customers'));
         }

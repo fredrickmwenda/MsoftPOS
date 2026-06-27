@@ -23,8 +23,9 @@ class CategoryController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('category')) {
+        
+    
+        if(Auth::user()->hasPermissionTo('category')) {
             return view('backend.category.create');
         }
         else
@@ -361,8 +362,7 @@ class CategoryController extends Controller
     //show function for
     public function show($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('category')) {
+        if(Auth::user()->hasPermissionTo('category')) {
             $lims_category_data = Category::findOrFail($id);
             return view('backend.category.show', compact('lims_category_data'));
         }
@@ -374,14 +374,9 @@ class CategoryController extends Controller
     //categoryDepa
     public function categoryDepartment()
     {
-        // $role = Role::find(Auth::user()->role_id);
-        // if($role->hasPermissionTo('category department')) {
+
+        return view('backend.category.department');
             
-            return view('backend.category.department');
-            
-        // }
-        // else
-        //     return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
    //Store department

@@ -16,48 +16,62 @@ class AttendanceController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('attendance')) {
-            $lims_employee_list = Employee::where('is_active', true)->get();
-            $lims_hrm_setting_data = HrmSetting::latest()->first();
-            $general_setting = DB::table('general_settings')->latest()->first();
-            if(Auth::user()->role_id > 2 && $general_setting->staff_access == 'own')
+        if (!Auth::user()->hasPermissionTo('attendance')) {
+            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+        }
+
+        $lims_employee_list = Employee::where('is_active', true)->get();
+        $lims_hrm_setting_data = HrmSetting::latest()->first();
+        $general_setting = DB::table('general_settings')->latest()->first();
+
+        // Determine if the user has a "staff" role (any role ID > 2)
+        $isStaff = Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+
+        if ($isStaff && $general_setting->staff_access == 'own') {
             $lims_attendance_data = Attendance::leftJoin('employees', 'employees.id', '=', 'attendances.employee_id')
                 ->leftJoin('users', 'users.id', '=', 'attendances.user_id')
                 ->orderBy('attendances.date', 'desc')
                 ->where('attendances.user_id', Auth::id())
                 ->select(['attendances.*', 'employees.name as employee_name', 'users.name as user_name'])
                 ->get()
-                ->groupBy(['date','employee_id']);
-            else
+                ->groupBy(['date', 'employee_id']);
+        } else {
             $lims_attendance_data = Attendance::leftJoin('employees', 'employees.id', '=', 'attendances.employee_id')
                 ->leftJoin('users', 'users.id', '=', 'attendances.user_id')
                 ->orderBy('attendances.date', 'desc')
                 ->select(['attendances.*', 'employees.name as employee_name', 'users.name as user_name'])
                 ->get()
-                ->groupBy(['date','employee_id']);
-
-            $lims_attendance_all= [];
-            foreach ($lims_attendance_data as  $attendance_data) {
-                foreach ($attendance_data as $data) {
-                    $checkin_checkout = '';
-                    foreach ($data as $key => $dt) {
-                        $date = $dt->date;
-                        $employee_name = $dt->employee_name;
-                        $checkin_checkout .= (($dt->checkin != null) ? $dt->checkin : 'N/A'). ' - ' .(($dt->checkout != null) ? $dt->checkout : 'N/A'). '<br>';
-                        $status = $dt->status;
-                        $user_name = $dt->user_name;
-                        $employee_id = $dt->employee_id;
-                    }
-                    $lims_attendance_all[] = ['date'=>$date, 'employee_name'=>$employee_name,
-                                            'checkin_checkout'=>$checkin_checkout, 'status'=>$status,
-                                            'user_name'=>$user_name, 'employee_id'=>$employee_id];
-                }
-            }
-            return view('backend.attendance.index', compact('lims_employee_list', 'lims_hrm_setting_data', 'lims_attendance_all'));
+                ->groupBy(['date', 'employee_id']);
         }
-        else
-            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+
+        $lims_attendance_all = [];
+        foreach ($lims_attendance_data as $attendance_data) {
+            foreach ($attendance_data as $data) {
+                $checkin_checkout = '';
+                foreach ($data as $dt) {
+                    $date = $dt->date;
+                    $employee_name = $dt->employee_name;
+                    $checkin_checkout .= (($dt->checkin != null) ? $dt->checkin : 'N/A') . ' - ' . (($dt->checkout != null) ? $dt->checkout : 'N/A') . '<br>';
+                    $status = $dt->status;
+                    $user_name = $dt->user_name;
+                    $employee_id = $dt->employee_id;
+                }
+                $lims_attendance_all[] = [
+                    'date' => $date,
+                    'employee_name' => $employee_name,
+                    'checkin_checkout' => $checkin_checkout,
+                    'status' => $status,
+                    'user_name' => $user_name,
+                    'employee_id' => $employee_id,
+                ];
+            }
+        }
+
+        return view('backend.attendance.index', compact(
+            'lims_employee_list', 'lims_hrm_setting_data', 'lims_attendance_all'
+        ));
     }
 
 

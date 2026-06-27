@@ -86,10 +86,10 @@
                                     </div>
                                     <div class="form-group">
                                         <label><strong>{{trans('file.Role')}} *</strong></label>
-                                        <select name="role_id" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role...">
-                                          @foreach($lims_role_list as $role)
-                                              <option value="{{$role->id}}">{{$role->name}}</option>
-                                          @endforeach
+                                        <select name="roles[]" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role..." multiple>
+                                            @foreach($lims_role_list as $role)
+                                                <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                            @endforeach
                                         </select>
                                     </div>
                                     <div class="customer-section">

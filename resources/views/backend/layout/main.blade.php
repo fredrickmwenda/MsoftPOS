@@ -893,6 +893,14 @@
             border-color: #333 !important;
         }
 
+        /* In your stylesheet */
+        .right-sidebar .divider {
+            height: 1px;
+            margin: 5px 0;
+            overflow: hidden;
+            background-color: #e5e5e5;
+        }
+
     </style>
   </head>
 
@@ -1022,7 +1030,7 @@
             --}}
             {{--<li class="nav-item"><a id="switch-theme" data-toggle="tooltip" title="{{trans('file.Switch Theme')}}"><i class="dripicons-brightness-max"></i></a></li>--}}
             <li class="nav-item"><a id="btnFullscreen" data-toggle="tooltip" title="{{trans('file.Full Screen')}}"><i class="dripicons-expand"></i></a></li>
-            @if(\Auth::user()->role_id <= 2)
+           @if(!Auth::user()->roles->contains(fn($r) => $r->id <= 2)){{'d-none'}}
                {{-- <li class="nav-item"><a href="{{route('cashRegister.index')}}" data-toggle="tooltip" title="{{trans('file.Cash Register List')}}"><i class="dripicons-archive"></i></a></li>--}}
             @endif
             
@@ -1048,9 +1056,18 @@
                                 @endif
                             </li>
                         @endforeach
+
+                        {{-- ✅ Divider + Mark all as read --}}
+                        <li class="divider"></li>
+                        <li class="notifications mark-all-read">
+                            <a href="{{ route('notifications.markAsRead') }}" id="mark-notifications-read" class="btn btn-link">
+                                {{ __('Mark all as read') }}
+                            </a>
+                        </li>
                     </ul>
                 </li>
             @endif
+
             @if(\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count() > 0)
                 <li class="nav-item" id="notification-icon">
                     <a rel="nofollow" data-toggle="tooltip" title="{{__('Notifications')}}" class="nav-link dropdown-item"><i class="dripicons-bell"></i><span class="badge badge-danger notification-number">{{\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count()}}</span>
@@ -1065,7 +1082,17 @@
                                 @endif
                             </li>
                         @endforeach
+
+
+                        {{-- ✅ Divider + Mark all as read --}}
+                        <li class="divider"></li>
+                        <li class="notifications mark-all-read">
+                            <a href="javascript:void(0)" id="mark-notifications-read" class="btn btn-link">
+                                {{ __('Mark all as read') }}
+                            </a>
+                        </li>
                     </ul>
+
                 </li>
             @endif
             <li class="nav-item">
@@ -1145,7 +1172,7 @@
                     <li>
                     <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
                     </li>
-                    @if(Auth::user()->role_id != 5)
+                    @if(!Auth::user()->roles->contains(fn($r) => $r->id == 5))
                     <li>
                     <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>
                     </li>

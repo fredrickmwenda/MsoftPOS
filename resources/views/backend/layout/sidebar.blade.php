@@ -651,12 +651,17 @@
 
                         $custom_field_permission_active = $role_has_permissions_list->where('name', 'custom_field')->first();
                     ?>
-                    @if($role->id <= 2)
+                    @php
+                    $is_admin = \Auth::user()->roles->contains(fn($r) => $r->id <= 2);
+                    @endphp
+
+                    @if($is_admin)
                     <li id="role-menu"><a href="{{route('role.index')}}">{{trans('file.Role Permission')}}</a></li>
+                    @endif
                     @if($custom_field_permission_active)
                     <li id="custom-field-list-menu"><a href="{{route('custom-fields.index')}}">{{trans('file.Custom Field List')}}</a></li>
                     @endif
-                    @endif
+                  
                     @if($discount_plan_permission_active)
                     <li id="discount-plan-list-menu"><a href="{{route('discount-plans.index')}}">{{trans('file.Discount Plan')}}</a></li>
                     @endif
@@ -718,7 +723,7 @@
                     @endif
                 </ul>
             </li>
-            @if(Auth::user()->role_id != 5 && 1 == 0)
+            @if((!Auth::user()->roles->contains(fn($r) => $r->id == 5)) && 1 == 0)
             <li><a target="_blank" href="{{url('/documentation')}}"> <i class="dripicons dripicons-information"></i><span>{{trans('file.Documentation')}}</span></a></li>
             @endif
         </ul>

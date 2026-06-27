@@ -272,7 +272,6 @@ var temp_unit_operation_value = [];
 var rowindex;
 var customer_group_rate;
 var row_product_price;
-var role_id = <?php echo json_encode(Auth::user()->role_id) ?>;
 var currency = <?php echo json_encode($currency) ?>;
 var changeSaleStatus;
 

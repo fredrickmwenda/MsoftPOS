@@ -75,6 +75,13 @@ class SaleController extends Controller
     use \App\Traits\TenantInfo;
     use \App\Traits\MailInfo;
 
+
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
+
     public function location_update(Request $request,$location_id){
     
       DB::connection('sitesql')->table('locations')->where('id',$location_id)->update([
@@ -150,13 +157,13 @@ class SaleController extends Controller
 
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('sales-index')) {
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+ 
+        if(Auth::user()->hasPermissionTo('sales-index')) {
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
 
             if($request->input('warehouse_id'))
                 $warehouse_id = $request->input('warehouse_id');
@@ -223,7 +230,7 @@ class SaleController extends Controller
             }
 
             // Only users with sale-percentage-filter permission may use the filter
-            if (!$role->hasPermissionTo('sale-percentage-filter')) {
+            if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
                 $percentage_filter = null;
                 $is_admin_filter = false;
             }
@@ -255,43 +262,54 @@ class SaleController extends Controller
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
+
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('sales-add')) {
-            $lims_customer_list = Customer::where('is_active', true)->get();
-            if(Auth::user()->role_id > 2) {
-                $lims_warehouse_list = Warehouse::where([
-                    ['is_active', true],
-                    ['id', Auth::user()->warehouse_id]
-                ])->get();
-                $lims_biller_list = Biller::where([
-                    ['is_active', true],
-                    ['id', Auth::user()->biller_id]
-                ])->get();
-            }
-            else {
-                $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-                $lims_biller_list = Biller::where('is_active', true)->get();
-            }
-
-            $lims_tax_list = Tax::where('is_active', true)->get();
-            $lims_pos_setting_data = PosSetting::latest()->first();
-            $lims_reward_point_setting_data = RewardPointSetting::latest()->first();
-            if($lims_pos_setting_data)
-                $options = explode(',', $lims_pos_setting_data->payment_options);
-            else
-                $options = [];
-
-            $currency_list = Currency::where('is_active', true)->get();
-            $numberOfInvoice = Sale::count();
-            $custom_fields = CustomField::where('belongs_to', 'sale')->get();
-            $lims_customer_group_all = CustomerGroup::where('is_active', true)->get();
-            return view('backend.sale.create',compact('currency_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_biller_list', 'lims_pos_setting_data', 'lims_tax_list', 'lims_reward_point_setting_data','options', 'numberOfInvoice', 'custom_fields', 'lims_customer_group_all'));
-        }
-        else
+        if (!Auth::user()->hasPermissionTo('sales-add')) {
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
-    } 
+        }
+
+        $lims_customer_list = Customer::where('is_active', true)->get();
+
+        // Decide whether to show all warehouses/billers or only those assigned to the user.
+        // Admins (roles with ID <= 2) see everything; staff with higher roles see only their own.
+        $isAdmin = Auth::user()->roles->contains(function ($role) {
+            return $role->id <= 2;
+        });
+
+        if ($isAdmin) {
+            $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+            $lims_biller_list = Biller::where('is_active', true)->get();
+        } else {
+            // Staff (or any non‑admin) – restrict to their own assigned warehouse and biller
+            $lims_warehouse_list = Warehouse::where([
+                ['is_active', true],
+                ['id', Auth::user()->warehouse_id]
+            ])->get();
+            $lims_biller_list = Biller::where([
+                ['is_active', true],
+                ['id', Auth::user()->biller_id]
+            ])->get();
+        }
+
+        $lims_tax_list = Tax::where('is_active', true)->get();
+        $lims_pos_setting_data = PosSetting::latest()->first();
+        $lims_reward_point_setting_data = RewardPointSetting::latest()->first();
+        $options = $lims_pos_setting_data ? explode(',', $lims_pos_setting_data->payment_options) : [];
+
+        $currency_list = Currency::where('is_active', true)->get();
+        $numberOfInvoice = Sale::count();
+        $custom_fields = CustomField::where('belongs_to', 'sale')->get();
+        $lims_customer_group_all = CustomerGroup::where('is_active', true)->get();
+
+        return view('backend.sale.create', compact(
+            'currency_list', 'lims_customer_list', 'lims_warehouse_list',
+            'lims_biller_list', 'lims_pos_setting_data', 'lims_tax_list',
+            'lims_reward_point_setting_data', 'options', 'numberOfInvoice',
+            'custom_fields', 'lims_customer_group_all'
+        ));
+    }
+
 
     public function store(Request $request)
     {
@@ -900,7 +918,7 @@ class SaleController extends Controller
             
     }
 
- //create a show empty function 
+    //create a show empty function 
     public function show()
     {
         
@@ -1251,12 +1269,21 @@ class SaleController extends Controller
      */
     private function getUserPermissions()
     {
-        $cacheKey = 'user_permissions_' . Auth::user()->role_id;
-        
-        return Cache::remember($cacheKey, 60*60*24, function () {
-            $role = Role::find(Auth::user()->role_id);
-            $permissions = $role->permissions->pluck('name')->toArray();
-            
+        $user = Auth::user();
+        $cacheKey = 'user_permissions_' . $user->id;
+
+        return Cache::remember($cacheKey, 60 * 60 * 24, function () use ($user) {
+            // Fetch all permission names from all roles of the user
+            $permissions = $user->roles()
+                ->with('permissions')
+                ->get()
+                ->pluck('permissions.*.name')
+                ->flatten()
+                ->unique()
+                ->values()
+                ->toArray();
+
+            // Return as an associative array with true values (like before)
             return array_combine($permissions, array_fill(0, count($permissions), true));
         });
     }
@@ -1359,7 +1386,7 @@ class SaleController extends Controller
         $lims_reward_point_setting_data = RewardPointSetting::latest()->first();
 
         // Recent sales and drafts with eager loaded customer data
-        if (Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+        if ($this->isStaff() && config('staff_access') == 'own') {
             $recent_sale = Sale::select('id','reference_no','customer_id','grand_total','created_at')
                 ->with('customer:id,name')
                 ->where([['sale_status', 1], ['user_id', Auth::id()]])
@@ -1426,55 +1453,51 @@ class SaleController extends Controller
         ];
     }
 
-    public function posSale()
-    {
-       
-        
-        // Get role and check permission
-        $role = Role::find(Auth::user()->role_id);
-        
-        if (!$role->hasPermissionTo('sales-add')) {
-            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
-        }
-
-        // Get cached permissions (flattened for fast lookup)
-        $permissions = $this->getUserPermissions();
-        
-        // Get all dashboard data (cached)
-        $dashboardData = $this->getPosDashboardData();
-
-        // Pre-compute permission checks needed by the template (avoid DB calls in view)
-        $permissionChecks = [
-            'category' => isset($permissions['category']),
-            'products-add' => isset($permissions['products-add']),
-            'purchases-add' => isset($permissions['purchases-add']),
-            'sales-add' => isset($permissions['sales-add']),
-            'sales-edit' => isset($permissions['sales-edit']),
-            'sales-delete' => isset($permissions['sales-delete']),
-            'expenses-add' => isset($permissions['expenses-add']),
-            'quotes-add' => isset($permissions['quotes-add']),
-            'transfers-add' => isset($permissions['transfers-add']),
-            'returns-add' => isset($permissions['returns-add']),
-            'purchase-return-add' => isset($permissions['purchase-return-add']),
-            'users-add' => isset($permissions['users-add']),
-            'customers-add' => isset($permissions['customers-add']),
-            'billers-add' => isset($permissions['billers-add']),
-            'suppliers-add' => isset($permissions['suppliers-add']),
-            'general_setting' => isset($permissions['general_setting']),
-            'pos_setting' => isset($permissions['pos_setting']),
-            'today_sale' => isset($permissions['today_sale']),
-            'today_profit' => isset($permissions['today_profit']),
-        ];
-
-        // Combine all data for view
-        $viewData = array_merge(
-            compact('role', 'permissions', 'permissionChecks'),
-            $dashboardData,
-            ['flag' => 0]
-        );
-
-        return view('backend.sale.pos', $viewData);
+public function posSale()
+{
+    // Multi-role permission check – aggregates all roles
+    if (!Auth::user()->hasPermissionTo('sales-add')) {
+        return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
+
+    // Get cached permissions (already multi-role aware)
+    $permissions = $this->getUserPermissions();
+    
+    // Get all dashboard data (cached)
+    $dashboardData = $this->getPosDashboardData();
+
+    // Pre-compute permission checks
+    $permissionChecks = [
+        'category'             => isset($permissions['category']),
+        'products-add'         => isset($permissions['products-add']),
+        'purchases-add'        => isset($permissions['purchases-add']),
+        'sales-add'            => isset($permissions['sales-add']),
+        'sales-edit'           => isset($permissions['sales-edit']),
+        'sales-delete'         => isset($permissions['sales-delete']),
+        'expenses-add'         => isset($permissions['expenses-add']),
+        'quotes-add'           => isset($permissions['quotes-add']),
+        'transfers-add'        => isset($permissions['transfers-add']),
+        'returns-add'          => isset($permissions['returns-add']),
+        'purchase-return-add'  => isset($permissions['purchase-return-add']),
+        'users-add'            => isset($permissions['users-add']),
+        'customers-add'        => isset($permissions['customers-add']),
+        'billers-add'          => isset($permissions['billers-add']),
+        'suppliers-add'        => isset($permissions['suppliers-add']),
+        'general_setting'      => isset($permissions['general_setting']),
+        'pos_setting'          => isset($permissions['pos_setting']),
+        'today_sale'           => isset($permissions['today_sale']),
+        'today_profit'         => isset($permissions['today_profit']),
+    ];
+
+    // Combine for view – no more $role; the view will use shared $isAdmin/$userRoles
+    $viewData = array_merge(
+        compact('permissions', 'permissionChecks'),
+        $dashboardData,
+        ['flag' => 0]
+    );
+
+    return view('backend.sale.pos', $viewData);
+}
 
     /**
      * Invalidate permission cache for a specific user
@@ -1483,8 +1506,20 @@ class SaleController extends Controller
      */
     public function invalidatePermissionCache($roleId = null)
     {
-        $roleId = $roleId ?? Auth::user()->role_id;
-        Cache::forget('user_permissions_' . $roleId);
+        if ($roleId) {
+            // A specific role ID was provided – clear its cached permissions
+            Cache::forget('role_has_permissions_list' . $roleId);
+        } else {
+            // No role ID given – clear all roles of the authenticated user
+            $user = Auth::user();
+            if ($user) {
+                foreach ($user->roles as $role) {
+                    Cache::forget('role_has_permissions_list' . $role->id);
+                }
+                // Also clear any aggregated user‑level permission cache
+                Cache::forget('user_permissions_' . $user->id);
+            }
+        }
     }
 
     /**
@@ -1547,9 +1582,8 @@ class SaleController extends Controller
     public function createSale($id)
     {
         // dd($id);
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('sales-edit')) {
-            $permissions = Role::findByName($role->name)->permissions;
+        if(Auth::user()->hasPermissionTo('sales-edit')) {
+            $permissions = Auth::user()->getAllPermissions();
             foreach ($permissions as $permission)
                 $all_permission[] = $permission->name;
             if(empty($all_permission))
@@ -1610,7 +1644,7 @@ class SaleController extends Controller
                 else
                     $options = [];
 
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $recent_sale = Sale::select('id','reference_no','customer_id','grand_total','created_at')->where([
                     ['sale_status', 1],
                     ['user_id', Auth::id()]
@@ -1990,8 +2024,8 @@ class SaleController extends Controller
 
     public function saleByCsv()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('sales-add')){
+        
+        if(Auth::user()->hasPermissionTo('sales-add')){
             $lims_customer_list = Customer::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_biller_list = Biller::where('is_active', true)->get();
@@ -2166,8 +2200,7 @@ class SaleController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('sales-edit')){
+        if(Auth::user()->hasPermissionTo('sales-edit')){
             $lims_customer_list = Customer::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_biller_list = Biller::where('is_active', true)->get();
@@ -3477,7 +3510,7 @@ class SaleController extends Controller
     $baseQuery = Sale::whereDate('created_at', '>=', $starting_date)
                      ->whereDate('created_at', '<=', $ending_date);
 
-    if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+    if($this->isStaff() && config('staff_access') == 'own')
         $baseQuery = $baseQuery->where('user_id', Auth::id());
     if($warehouse_id)
         $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
@@ -3539,7 +3572,7 @@ class SaleController extends Controller
             ->limit($limit)
             ->orderBy($order, $dir);
             
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $q = $q->where('user_id', Auth::id());
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
@@ -3580,7 +3613,7 @@ class SaleController extends Controller
             ->limit($limit)
             ->orderBy($order, $dir);
             
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+        if($this->isStaff() && config('staff_access') == 'own') {
             $q = $q->where('sales.user_id', Auth::id());
         }
         if($warehouse_id)
@@ -3917,7 +3950,7 @@ class SaleController extends Controller
      */
     public function saveDefaultFilter(Request $request)
     {
-        if (Auth::user()->role_id > 2 || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+        if ($this->isStaff() || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only administrators with Sale Filter permission can set default filters.'

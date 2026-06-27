@@ -13,8 +13,7 @@ class DiscountPlanController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('discount_plan')) {
+        if(Auth::user()->hasPermissionTo('discount_plan')) {
             $lims_discount_plan_all = DiscountPlan::with('customers')->orderBy('id', 'desc')->get();
             return view('backend.discount_plan.index', compact('lims_discount_plan_all'));
         }

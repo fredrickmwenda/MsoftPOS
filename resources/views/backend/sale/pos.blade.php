@@ -513,6 +513,11 @@
                 </ul>
             </div>
             <li class="nav-item ml-4"><a id="btnFullscreen" data-toggle="tooltip" title="Full Screen"><i class="dripicons-expand"></i></a></li>
+            <li class="nav-item">
+    <a href="#" id="launch-customer-display" data-toggle="tooltip" title="Launch Customer Display">
+        <i class="dripicons-device-desktop"></i>
+    </a>
+</li>
             {{-- Use cached permission checks from controller instead of DB calls --}}
             @if($permissionChecks['pos_setting'])
             <li class="nav-item"><a class="dropdown-item" data-toggle="tooltip" href="{{route('setting.pos')}}" title="{{trans('file.POS Setting')}}"><i class="dripicons-gear"></i></a> </li>
@@ -567,7 +572,8 @@
                     <li>
                         <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
                     </li>
-                    @if(Auth::user()->role_id != 5)
+                    
+                    @if(\Auth::user()->roles->contains(fn($role) => $role->id != 5))
                     <li>
                         <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>
                     </li>
@@ -762,7 +768,7 @@
                                         </div>
                                     </div>
                                     @foreach($custom_fields as $field)
-                                        @if(!$field->is_admin || \Auth::user()->role_id == 1)
+                                        @if(!$field->is_admin || $isAdmin)
                                             <div class="{{'col-md-'.$field->grid_value}}">
                                                 <div class="form-group">
                                                     <label>{{$field->name}}</label>
@@ -1657,7 +1663,8 @@ var customer_group_rate;
 var row_product_price;
 var pos;
 var keyboard_active = <?php echo json_encode($keybord_active); ?>;
-var role_id = <?php echo json_encode(\Auth::user()->role_id) ?>;
+var isAdmin = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id <= 2)) ?>;
+var isStaff = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id > 2)) ?>;
 var warehouse_id = <?php echo json_encode(\Auth::user()->warehouse_id) ?>;
 var biller_id = <?php echo json_encode(\Auth::user()->biller_id) ?>;
 var coupon_list = <?php echo json_encode($lims_coupon_list) ?>;
@@ -2001,7 +2008,7 @@ $('.customer-submit-btn').on("click", function(e) {
       $('#today-profit-modal').modal('show');
   }
 
-if(role_id > 2){
+if(isStaff) {
     $('#biller_id').addClass('d-none');
     $('#warehouse_id').addClass('d-none');
     $('select[name=warehouse_id]').val(warehouse_id);
@@ -2148,7 +2155,7 @@ function  isCashRegisterAvailable(warehouse_id) {
               $("#register-details-btn").addClass('d-none');
               $('#cash-register-modal select[name=warehouse_id]').val(warehouse_id);
 
-              if(role_id <= 2)
+              if(isAdmin)
                 $("#cash-register-modal .warehouse-section").removeClass('d-none');
               else
                 $("#cash-register-modal .warehouse-section").addClass('d-none');

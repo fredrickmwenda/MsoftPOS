@@ -28,14 +28,18 @@ class DeliveryController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('delivery')) {
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-                $lims_delivery_all = Delivery::orderBy('id', 'desc')->where('user_id', Auth::id())->get();
-            else
-                $lims_delivery_all = Delivery::orderBy('id', 'desc')->get();
-            $lims_courier_list = Courier::where('is_active', true)->get();
-            return view('backend.delivery.index', compact('lims_delivery_all', 'lims_courier_list'));
+        if(Auth::user()->hasPermissionTo('delivery')) {
+            $isStaff = Auth::user()->roles->contains(function ($role) {
+                return $role->id > 2;
+            });
+
+             if ($isStaff && config('staff_access') == 'own')
+                 $lims_delivery_all = Delivery::orderBy('id', 'desc')->where('user_id', Auth::id())->get();
+             else
+                 $lims_delivery_all = Delivery::orderBy('id', 'desc')->get();
+
+             $lims_courier_list = Courier::where('is_active', true)->get();
+             return view('backend.delivery.index', compact('lims_delivery_all', 'lims_courier_list'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
@@ -43,32 +47,6 @@ class DeliveryController extends Controller
 
 
 
-    // public function index()
-    // {
-    //     $role = Role::find(Auth::user()->role_id);
-    //     if(!$role->hasPermissionTo('delivery')) {
-    //         return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
-    //     }
-
-    //     if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-    //         $deliveries = Delivery::orderBy('id', 'desc')->where('user_id', Auth::id());
-    //     else
-    //         $deliveries = Delivery::orderBy('id', 'desc');
-
-
-    //     $lims_delivery_all = $deliveries->get();
-    //     $salesId = $deliveries->pluck('sale_id');
-    //     $saleDetails = DB::table('sales')
-    //                     ->join('customers', 'sales.customer_id', '=', 'customers.id')
-    //                     ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')
-    //                     ->join('products', 'products.id', '=', 'product_sales.product_id')
-    //                     ->whereIn('sales.id', $salesId)
-    //                     ->select(DB::raw('sales.id as saleId, sales.reference_no, customers.name, customers.phone_number, customers.city, sales.grand_total, GROUP_CONCAT(products.name SEPARATOR ", ") as productNames'))
-    //                     ->groupBy('sales.id')
-    //                     ->get();
-
-    //     return view('backend.delivery.index_new', compact('lims_delivery_all','saleDetails'));
-    // }
 
     public function create($id){
         $lims_delivery_data = Delivery::where('sale_id', $id)->first();

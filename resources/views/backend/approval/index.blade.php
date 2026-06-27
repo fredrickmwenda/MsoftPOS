@@ -20,7 +20,7 @@
 
                         {{-- Statistics --}}
                         <div class="row mb-4">
-                            <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="col-md-4 col-sm-6 mb-3">
                                 <div class="card shadow h-100 py-2" style="border-left: 4px solid #4e73df;">
                                     <div class="card-body">
                                         <div class="row no-gutters align-items-center">
@@ -35,7 +35,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3 col-sm-6 mb-3">
+                            <div class="col-md-4 col-sm-6 mb-3">
                                 <div class="card shadow h-100 py-2" style="border-left: 4px solid #f6c23e;">
                                     <div class="card-body">
                                         <div class="row no-gutters align-items-center">
@@ -50,12 +50,12 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="card shadow h-100 py-2" style="border-left: 4px solid #36b9cc;">
+                            <div class="col-md-4 col-sm-6 mb-3">
+                                <div class="card shadow h-100 py-2" style="border-left: 4px solid #1cc88a;">
                                     <div class="card-body">
                                         <div class="row no-gutters align-items-center">
                                             <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Pending</div>
+                                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Pending</div>
                                                 <div class="h5 mb-0 font-weight-bold">{{ $stats['total_pending'] }}</div>
                                             </div>
                                             <div class="col-auto">
@@ -65,24 +65,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-md-3 col-sm-6 mb-3">
-                                <div class="card shadow h-100 py-2" style="border-left: 4px solid #1cc88a;">
-                                    <div class="card-body">
-                                        <div class="row no-gutters align-items-center">
-                                            <div class="col mr-2">
-                                                <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Approved (Payments + Expenses)</div>
-                                                <div class="h5 mb-0 font-weight-bold">{{ $stats['approved_payments_count'] + $stats['approved_expenses_count'] }}</div>
-                                            </div>
-                                            <div class="col-auto">
-                                                <i class="dripicons dripicons-checkmark fa-2x text-gray-300"></i>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
 
-                        {{-- Tabs: Purchase Payments | Expenses --}}
+                        {{-- Tabs --}}
                         <ul class="nav nav-tabs" id="approvalTabs" role="tablist">
                             <li class="nav-item">
                                 <a class="nav-link active" id="purchase-payments-tab" data-toggle="tab" href="#purchase-payments" role="tab">Purchase Payments</a>
@@ -93,7 +78,7 @@
                         </ul>
 
                         <div class="tab-content mt-3" id="approvalTabsContent">
-                            {{-- Pending Purchase Payments --}}
+                            {{-- Purchase Payments Tab --}}
                             <div class="tab-pane fade show active" id="purchase-payments" role="tabpanel">
                                 @if($pendingPurchasePayments->isEmpty())
                                     <p class="text-muted">No purchase payments pending approval.</p>
@@ -152,7 +137,7 @@
                                 @endif
                             </div>
 
-                            {{-- Pending Expenses --}}
+                            {{-- Expenses Tab --}}
                             <div class="tab-pane fade" id="expenses" role="tabpanel">
                                 @if($pendingExpenses->isEmpty())
                                     <p class="text-muted">No expenses pending approval.</p>
@@ -199,9 +184,10 @@
                                     </div>
                                 @endif
                             </div>
-                        </div>
-                    </div>
-                </div>
+
+                        </div> {{-- tab-content --}}
+                    </div> {{-- card-body --}}
+                </div> {{-- card --}}
             </div>
         </div>
     </div>

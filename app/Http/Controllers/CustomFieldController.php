@@ -12,8 +12,8 @@ class CustomFieldController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('custom_field')) {
+  
+        if(Auth::user()->hasPermissionTo('custom_field')) {
             $lims_custom_field_all = CustomField::orderBy('id', 'desc')->get();
             return view('backend.custom_field.index', compact('lims_custom_field_all'));
         }
@@ -23,8 +23,8 @@ class CustomFieldController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('custom_field')) {
+
+        if(Auth::user()->hasPermissionTo('custom_field')) {
             return view('backend.custom_field.create');
         }
         else
@@ -98,8 +98,7 @@ class CustomFieldController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('custom_field')) {
+        if(Auth::user()->hasPermissionTo('custom_field')) {
             $custom_field_data = CustomField::find($id);
             return view('backend.custom_field.edit', compact('custom_field_data'));
         }

@@ -21,13 +21,14 @@ class BillerController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('billers-index')) {
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+
+    
+        if(Auth::user()->hasPermissionTo('billers-index')) {
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
             $lims_biller_all = biller::where('is_active', true)->get();
             return view('backend.biller.index',compact('lims_biller_all', 'all_permission'));
         }
@@ -37,8 +38,7 @@ class BillerController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('billers-add'))
+        if(Auth::user()->hasPermissionTo('billers-add'))
             return view('backend.biller.create');
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
@@ -90,8 +90,7 @@ class BillerController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('billers-edit')) {
+        if(Auth::user()->hasPermissionTo('billers-edit')) {
             $lims_biller_data = Biller::where('id',$id)->first();
             return view('backend.biller.edit',compact('lims_biller_data'));
         }

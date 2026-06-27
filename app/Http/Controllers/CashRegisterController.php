@@ -14,7 +14,11 @@ class CashRegisterController extends Controller
 {
 	public function index()
 	{
-		if(Auth::user()->role_id <= 2) {
+		$isStaff =Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    
+		if($isStaff) {
 			$lims_cash_register_all = CashRegister::with('user', 'warehouse')->get();
 			return view('backend.cash_register.index', compact('lims_cash_register_all'));
 		}

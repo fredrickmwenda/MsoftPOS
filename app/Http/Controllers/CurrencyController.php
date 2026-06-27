@@ -14,8 +14,8 @@ class CurrencyController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('currency')) {
+       
+        if(Auth::user()->hasPermissionTo('currency')) {
             $lims_currency_all = Currency::where('is_active', true)->get();
             return view('backend.currency.index', compact('lims_currency_all'));
         }

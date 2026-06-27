@@ -420,7 +420,7 @@ var temp_unit_operation_value = [];
 var rowindex;
 var customer_group_rate;
 var row_product_price;
-var role_id = <?php echo json_encode(Auth::user()->role_id) ?>;
+var isAdmin = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id <= 2)) ?>;
 var currency = <?php echo json_encode($currency) ?>;
 
 var rownumber = $('table.order-list tbody tr:last').index();
@@ -684,7 +684,7 @@ function isCashRegisterAvailable(warehouse_id) {
             if(data == 'false') {
                 $('#cash-register-modal select[name=warehouse_id]').val(warehouse_id);
                 $('.selectpicker').selectpicker('refresh');
-                if(role_id <= 2){
+                if(isAdmin) {
                     $("#cash-register-modal .warehouse-section").removeClass('d-none');
                 }
                 else {

@@ -16,4 +16,12 @@ class Warehouse extends Model
     	return $this->hasMany('App\Models\Product');
 
     }
+
+
+    public function stockCounts()
+    {
+        return $this->hasMany(
+            StockCount::class
+        );
+    }
 }

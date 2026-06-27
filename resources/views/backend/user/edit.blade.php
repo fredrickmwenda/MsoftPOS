@@ -67,9 +67,11 @@
                                     <div class="form-group">
                                         <label><strong>{{trans('file.Role')}} *</strong></label>
                                         <input type="hidden" name="role_id_hidden" value="{{$lims_user_data->role_id}}">
-                                        <select name="role_id" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role...">
+                                        <select name="roles[]" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role..." multiple>
                                           @foreach($lims_role_list as $role)
-                                              <option value="{{$role->id}}">{{$role->name}}</option>
+                                              <option value="{{ $role->id }}" {{ in_array($role->id, $lims_user_data->roles->pluck('id')->toArray()) ? 'selected' : '' }}>
+                                                  {{ $role->name }}
+                                              </option>
                                           @endforeach
                                         </select>
                                     </div>

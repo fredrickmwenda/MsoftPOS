@@ -16,8 +16,9 @@ class CouponController extends Controller
     use CacheForget;
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('unit')) {
+       
+    
+        if(Auth::user()->hasPermissionTo('unit')) {
             $lims_coupon_all = Coupon::where('is_active', true)->orderBy('id', 'desc')->get();
             return view('backend.coupon.index', compact('lims_coupon_all'));
         }

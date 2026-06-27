@@ -34,10 +34,16 @@ class QuotationController extends Controller
     use \App\Traits\TenantInfo;
     use \App\Traits\MailInfo;
 
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
+
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('quotes-index')){
+
+        if(Auth::user()->hasPermissionTo('quotes-index')){
             if($request->input('warehouse_id'))
                 $warehouse_id = $request->input('warehouse_id');
             else
@@ -52,18 +58,20 @@ class QuotationController extends Controller
                 $ending_date = date("Y-m-d");
             }
 
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
 
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
 
-            /*if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+            
+
+            if($this->isStaff() && config('staff_access') == 'own')
                 $lims_quotation_all = Quotation::with('biller', 'customer', 'supplier', 'user')->orderBy('id', 'desc')->where('user_id', Auth::id())->get();
             else
-                $lims_quotation_all = Quotation::with('biller', 'customer', 'supplier', 'user')->orderBy('id', 'desc')->get();*/
+                $lims_quotation_all = Quotation::with('biller', 'customer', 'supplier', 'user')->orderBy('id', 'desc')->get();
             return view('backend.quotation.index', compact('lims_warehouse_list', 'all_permission', 'warehouse_id', 'starting_date', 'ending_date'));
         }
         else
@@ -80,7 +88,7 @@ class QuotationController extends Controller
         );
 
         $warehouse_id = $request->input('warehouse_id');
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $totalData = Quotation::where('user_id', Auth::id())
                         ->whereDate('created_at', '>=' ,$request->input('starting_date'))
                         ->whereDate('created_at', '<=' ,$request->input('ending_date'))
@@ -105,7 +113,7 @@ class QuotationController extends Controller
         $order = $columns[$request->input('order.0.column')];
         $dir = $request->input('order.0.dir');
         if(empty($request->input('search.value'))) {
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+            if($this->isStaff() && config('staff_access') == 'own')
                 $quotations = Quotation::with('biller', 'customer', 'supplier', 'user', 'warehouse')->offset($start)
                             ->where('user_id', Auth::id())
                             ->whereDate('created_at', '>=' ,$request->input('starting_date'))
@@ -132,7 +140,7 @@ class QuotationController extends Controller
         else
         {
             $search = $request->input('search.value');
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $quotations =  Quotation::select('quotations.*')
                             ->with('biller', 'customer', 'supplier', 'user', 'warehouse')
                             ->join('billers', 'quotations.biller_id', '=', 'billers.id')
@@ -313,8 +321,7 @@ class QuotationController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('quotes-add')){
+        if(Auth::user()->hasPermissionTo('quotes-add')){
             $lims_biller_list = Biller::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_customer_list = Customer::where('is_active', true)->get();
@@ -833,8 +840,7 @@ class QuotationController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('quotes-edit')){
+        if(Auth::user()->hasPermissionTo('quotes-edit')){
             $lims_customer_list = Customer::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_biller_list = Biller::where('is_active', true)->get();

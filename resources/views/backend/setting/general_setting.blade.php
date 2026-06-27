@@ -96,16 +96,18 @@
                                     <div class="form-group">
                                         <label><strong>Filter By Percentage</strong></label>
                                         {{-- Hidden input – this is what gets submitted --}}
-                                        <select name="percentage_filter" id="percentage_filter_select" class="form-control" {{ !(\Auth::user()->role_id <= 2) && $is_admin_filter ? 'disabled' : '' }}>
-                                                    <option value="">All (100%)</option>
-                                                    <option value="10" {{ ($lims_general_setting_data->percentage_filter ?? '') == 10 ? 'selected' : '' }}>10%</option>
-                                                    <option value="25" {{ ($lims_general_setting_data->percentage_filter ?? '') == 25 ? 'selected' : '' }}>25%</option>
-                                                    <option value="50" {{ ($lims_general_setting_data->percentage_filter ?? '') == 50 ? 'selected' : '' }}>50%</option>
-                                                    <option value="75" {{ ($lims_general_setting_data->percentage_filter ?? '') == 75 ? 'selected' : '' }}>75%</option>
-                                                    <option value="100" {{ ($lims_general_setting_data->percentage_filter ?? '') == 100 ? 'selected' : '' }}>100%</option>
-                                                </select>
+                                        <select name="percentage_filter" id="percentage_filter_select" class="form-control" {{ !(\Auth::user()->roles->contains(fn($role) => $role->id <= 2)) && $is_admin_filter ? 'disabled' : '' }}>
+                                            <option value="">All (100%)</option>
+                                            <option value="10" {{ ($lims_general_setting_data->percentage_filter ?? '') == 10 ? 'selected' : '' }}>10%</option>
+                                            <option value="25" {{ ($lims_general_setting_data->percentage_filter ?? '') == 25 ? 'selected' : '' }}>25%</option>
+                                            <option value="40" {{ ($lims_general_setting_data->percentage_filter ?? '') == 40 ? 'selected' : '' }}>40%</option>
+                                            <option value="50" {{ ($lims_general_setting_data->percentage_filter ?? '') == 50 ? 'selected' : '' }}>50%</option>
+                                            <option value="60" {{ ($lims_general_setting_data->percentage_filter ?? '') == 60 ? 'selected' : '' }}>60%</option>
+                                            <option value="75" {{ ($lims_general_setting_data->percentage_filter ?? '') == 75 ? 'selected' : '' }}>75%</option>
+                                            <option value="100" {{ ($lims_general_setting_data->percentage_filter ?? '') == 100 ? 'selected' : '' }}>100%</option>
+                                        </select>
 
-                                        @if(\Auth::user()->role_id <= 2)
+                                        @if(\Auth::user()->roles->contains(fn($role) => $role->id <= 2))
                                             <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (shared)' : 'Show top X% of purchases by value' }}</small>
                                         @else
                                             <small class="text-muted">{{ $is_admin_filter ? '📌 Admin default (locked)' : 'Show top X% of purchases by value' }}</small>

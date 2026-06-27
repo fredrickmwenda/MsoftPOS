@@ -26,13 +26,13 @@ class SupplierController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('suppliers-index')){
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+
+        if(Auth::user()->hasPermissionTo('suppliers-index')){
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
             $lims_supplier_all = Supplier::where('is_active', true)->get();
             return view('backend.supplier.index',compact('lims_supplier_all', 'all_permission'));
         }
@@ -92,8 +92,7 @@ class SupplierController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('suppliers-add')){
+        if(Auth::user()->hasPermissionTo('suppliers-add')){
             $lims_customer_group_all = CustomerGroup::where('is_active',true)->get();
             return view('backend.supplier.create', compact('lims_customer_group_all'));
         }
@@ -165,8 +164,7 @@ class SupplierController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('suppliers-edit')){
+        if(Auth::user()->hasPermissionTo('suppliers-edit')){
             $lims_supplier_data = Supplier::where('id',$id)->first();
             return view('backend.supplier.edit',compact('lims_supplier_data'));
         }

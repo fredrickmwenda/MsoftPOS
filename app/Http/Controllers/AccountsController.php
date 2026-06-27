@@ -25,8 +25,9 @@ class AccountsController extends Controller
    
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('account-index')){
+        
+        
+        if(Auth::user()->hasPermissionTo('account-index')){
             $lims_account_all = Account::where('is_active', true)->get();
             
             // Calculate actual balance for each account
@@ -156,8 +157,9 @@ class AccountsController extends Controller
 
     public function balanceSheet()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('balance-sheet')){
+        
+        
+        if(Auth::user()->hasPermissionTo('balance-sheet')){
             $lims_account_list = Account::where('is_active', true)->get();
             $debit = [];
             $credit = [];

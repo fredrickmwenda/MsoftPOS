@@ -67,7 +67,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('migrate', function() {
 	Artisan::call('migrate');
-	dd('migrated');
 });
 
 Route::get('clear',function() {
@@ -100,7 +99,17 @@ Route::get('storage-link', function() {
 });
 
 
+Route::get('pos/customer-display', function() {
+    $general_setting = \App\GeneralSetting::latest()->first();
+    $currency = \App\Currency::where('is_default', true)->first();
+    return view('backend.pos.customer-display', compact('general_setting', 'currency'));
+})->name('pos.customer-display');
 
+
+Route::get(
+    'stock-count/products',
+    [StockCountController::class, 'getProducts']
+)->name('stock-count.products');
 Route::get('update-coupon', [CouponController::class, 'updateCoupon']);
 
 Route::get('auto-update-dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -123,7 +132,6 @@ Route::controller(ClientAutoUpdateController::class)->group(function () {
     Route::post('bug-update', 'bugUpdate')->name('bug-update');
 });
 
-
 Auth::routes();
 Route::get('/documentation', [HomeController::class, 'documentation']);
 
@@ -134,7 +142,6 @@ Route::group(['middleware' => 'auth'], function() {
 });
 
 Route::group(['middleware' => ['common', 'auth', 'active']], function() {
-
     Route::controller(HomeController::class)->group(function () {
         Route::get('/', 'index');
         Route::get('/dashboard', 'dashboard');
@@ -532,8 +539,20 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
             Route::get('department', 'departmentReport')->name('report.department');
             Route::match(['get', 'post'], 'sales-person', 'salesPersonReport')->name('report.salesPerson');
             Route::post('sales-person-details', 'salesPersonReportDetails')->name('report.salesPersonDetails');
+
+            /*
+            |--------------------------------------------------------------------------
+            | Stock Taking Report
+            |--------------------------------------------------------------------------
+            */
+            Route::get('stock-taking', 'stockTaking')->name('report.stockTaking');
+
+            Route::any('stock-taking-data', 'stockTakingData')->name('report.stockTakingData');
+
             Route::match(['get', 'post'], 'payment-method', 'paymentMethodReport')->name('report.paymentMethod');
             Route::post('payment-method-details', 'paymentMethodReportDetails')->name('report.paymentMethodDetails');
+
+
         });
     });
 
@@ -574,7 +593,6 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         Route::get('backup', 'backup')->name('setting.backup');
     });
 
-
     Route::controller(ExpenseCategoryController::class)->group(function () {
         Route::get('expense_categories/gencode', 'generateCode');
         Route::post('expense_categories/import', 'import')->name('expense_category.import');
@@ -582,7 +600,6 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         Route::get('expense_categories/all', 'expenseCategoriesAll')->name('expense_category.all');;
     });
     Route::resource('expense_categories', ExpenseCategoryController::class);
-
 
     Route::controller(ExpenseController::class)->group(function () {
         Route::post('expenses/expense-data', 'expenseData')->name('expenses.data');
@@ -596,8 +613,9 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
     Route::controller(ApprovalController::class)->group(function () {
         Route::get('approvals', 'index')->name('approvals.index');
         Route::post('approvals/expense/{id}/approve', 'approveExpense')->name('approval.expense.approve');
+        Route::post('/approvals/stock-count/{id}/approve', 'approveStockCount')->name('approvals.stock-count.approve');
+        Route::post('/approvals/stock-count/bulk-approve', 'bulkApproveStockCounts')->name('approvals.stock-count.bulk-approve');
     });
-
 
     Route::controller(GiftCardController::class)->group(function () {
         Route::get('gift_cards/gencode', 'generateCode');
@@ -623,9 +641,7 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
     });
     Route::resource('accounts', AccountsController::class);
 
-
     Route::resource('money-transfers', MoneyTransferController::class);
-
 
 	//HRM routes
 	Route::post('departments/deletebyselection', [DepartmentController::class,'deleteBySelection']);
@@ -651,6 +667,7 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         Route::get('stock-count/stockdif/{id}', 'stockDif');
         Route::get('stock-count/{id}/qty_adjustment', 'qtyAdjustment')->name('stock-count.adjustment');
     });
+    Route::post('stock-count/save',[StockCountController::class, 'saveCount'])->name('stock-count.save');
     Route::resource('stock-count', StockCountController::class);
 
 
@@ -678,9 +695,9 @@ Route::group(['middleware' => ['common', 'auth', 'active']], function() {
         Route::prefix('notifications')->group(function () {
             Route::get('/', 'index')->name('notifications.index');
             Route::post('store', 'store')->name('notifications.store');
-            Route::get('mark-as-read', 'markAsRead');
+            Route::get('mark-as-read', 'markAsRead')->name('notifications.markAsRead');
         });
-    });
+    }); 
 
 
 	Route::resource('currency', CurrencyController::class);

@@ -26,7 +26,7 @@
                         <input type="date" name="ending_date" class="form-control" value="{{ $ending_date }}" required />
                     </div>
                 </div>
-                <div class="col-md-2 mt-3 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
+                <div class="col-md-2 mt-3 @if(!Auth::user()->roles->contains(fn($r) => $r->id <= 2)){{'d-none'}}@endif">
                     <div class="form-group">
                         <label><strong>{{trans('file.Warehouse')}}</strong></label>
                         <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
@@ -102,7 +102,8 @@
                 {!! Form::open(['route' => ['expenses.update', 1], 'method' => 'put']) !!}
                 <?php
                     $lims_expense_category_list = DB::table('expense_categories')->where('is_active', true)->get();
-                    if(Auth::user()->role_id > 2)
+                     $isAdmin = Auth::user()->roles->contains(fn($role) => $role->id <= 2);
+                    if($isAdmin)
                         $lims_warehouse_list = DB::table('warehouses')->where([
                             ['is_active', true],
                             ['id', Auth::user()->warehouse_id]

@@ -20,20 +20,32 @@ class PayrollController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('payroll')){
+        if (Auth::user()->hasPermissionTo('payroll')) {
             $lims_account_list = Account::where('is_active', true)->get();
             $lims_employee_list = Employee::where('is_active', true)->get();
             $general_setting = DB::table('general_settings')->latest()->first();
-            if(Auth::user()->role_id > 2 && $general_setting->staff_access == 'own')
-                $lims_payroll_all = Payroll::orderBy('id', 'desc')->where('user_id', Auth::id())->get();
-            else
-                $lims_payroll_all = Payroll::orderBy('id', 'desc')->get();
 
-            return view('backend.payroll.index', compact('lims_account_list', 'lims_employee_list', 'lims_payroll_all'));
-        }
-        else
+            // Determine if the user has a "staff" role (any role ID > 2)
+            $isStaff = Auth::user()->roles->contains(function ($role) {
+                return $role->id > 2;
+            });
+
+            if ($isStaff && $general_setting->staff_access == 'own') {
+                $lims_payroll_all = Payroll::orderBy('id', 'desc')
+                    ->where('user_id', Auth::id())
+                    ->get();
+            } else {
+                $lims_payroll_all = Payroll::orderBy('id', 'desc')->get();
+            }
+
+            return view('backend.payroll.index', compact(
+                'lims_account_list',
+                'lims_employee_list',
+                'lims_payroll_all'
+            ));
+        } else {
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+        }
     }
 
     public function create()

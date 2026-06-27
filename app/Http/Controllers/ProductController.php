@@ -39,19 +39,36 @@ class ProductController extends Controller
     use CacheForget;
     use TenantInfo;
 
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
+
     public function index()
     {
 
 
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('products-index')){
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
+        
+        if(Auth::user()->hasPermissionTo('products-index')){
+            // $permissions = Auth::user()->permissions;
+            // foreach ($permissions as $permission)
             
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
-                $all_permission[] = 'dummy text';
-            $role_id = $role->id;
+            //     $all_permission[] = $permission->name;
+            // if(empty($all_permission))
+            //     $all_permission[] = 'dummy text';
+            // $role_id = $role->id;
+
+            // Get all permission names from the user's roles
+            $all_permission = Auth::user()->getAllPermissions();
+
+            // Fallback if the user has no permissions yet (e.g., admin with no limits)
+            if (empty($all_permission)) {
+                $all_permission = ['dummy text'];
+            }
+
+            // For backward compatibility: use the first role's ID, or null
+            $role_id = optional(Auth::user()->roles->first())->id;
             $numberOfProduct = DB::table('products')->where('is_active', true)->count();
             $custom_fields = CustomField::where([
                                 ['belongs_to', 'product'],
@@ -174,7 +191,7 @@ class ProductController extends Controller
                 else
                     $nestedData['brand'] = "N/A";
                 $nestedData['category'] = $product->category->name;
-                if(Auth::user()->role_id > 2 && $product->type == 'standard') {
+                if($this->isStaff() && $product->type == 'standard') {
                     $nestedData['qty'] = Product_Warehouse::where([
                                                 ['product_id', $product->id],
                                                 ['warehouse_id', Auth::user()->warehouse_id]
@@ -292,8 +309,7 @@ class ProductController extends Controller
 
     public function create()
     {
-        $role = Role::firstOrCreate(['id' => Auth::user()->role_id]);
-        if ($role->hasPermissionTo('products-add')){
+        if (Auth::user()->hasPermissionTo('products-add')){
             $lims_product_list_without_variant = $this->productWithoutVariant();
             $lims_product_list_with_variant = $this->productWithVariant();
             $lims_brand_list = Brand::where('is_active', true)->get();
@@ -641,8 +657,7 @@ class ProductController extends Controller
  
     public function history(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('product_history')) {
+        if(Auth::user()->hasPermissionTo('product_history')) {
             if($request->input('warehouse_id'))
                 $warehouse_id = $request->input('warehouse_id');
             else
@@ -682,7 +697,7 @@ class ProductController extends Controller
             ->whereDate('sales.created_at', '<=' ,$request->input('ending_date'));
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $q = $q->where('sales.user_id', Auth::id());
 
         $totalData = $q->count();
@@ -708,7 +723,7 @@ class ProductController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $sales =  $q->orwhere([
                                 ['sales.reference_no', 'LIKE', "%{$search}%"],
                                 ['sales.user_id', Auth::id()]
@@ -782,7 +797,7 @@ class ProductController extends Controller
             ->whereDate('purchases.created_at', '<=' ,$request->input('ending_date'));
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $q = $q->where('purchases.user_id', Auth::id());
 
         $totalData = $q->count();
@@ -807,7 +822,7 @@ class ProductController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $purchases =  $q->select('purchases.id', 'purchases.reference_no', 'purchases.created_at', 'purchases.supplier_id', 'suppliers.name as supplier_name', 'suppliers.phone_number as supplier_number', 'warehouses.name as warehouse_name', 'product_purchases.qty', 'product_purchases.purchase_unit_id', 'product_purchases.total')
                             ->orwhere([
                                 ['purchases.reference_no', 'LIKE', "%{$search}%"],
@@ -886,7 +901,7 @@ class ProductController extends Controller
             ->whereDate('returns.created_at', '<=' ,$request->input('ending_date'));
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $q = $q->where('returns.user_id', Auth::id());
 
         $totalData = $q->count();
@@ -911,7 +926,7 @@ class ProductController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('returns.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $returnss =  $q->select('returns.id', 'returns.reference_no', 'returns.created_at', 'customers.name as customer_name', 'customers.phone_number as customer_number', 'warehouses.name as warehouse_name', 'product_returns.qty', 'product_returns.sale_unit_id', 'product_returns.total')
                             ->orwhere([
                                 ['returns.reference_no', 'LIKE', "%{$search}%"],
@@ -978,7 +993,7 @@ class ProductController extends Controller
             ->whereDate('return_purchases.created_at', '<=' ,$request->input('ending_date'));
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $q = $q->where('return_purchases.user_id', Auth::id());
 
         $totalData = $q->count();
@@ -1005,7 +1020,7 @@ class ProductController extends Controller
             $search = $request->input('search.value');
             $q = $q->whereDate('return_purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
 
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $return_purchases =  $q->orwhere([
                                         ['return_purchases.reference_no', 'LIKE', "%{$search}%"],
                                         ['return_purchases.user_id', Auth::id()]
@@ -1057,7 +1072,7 @@ class ProductController extends Controller
 
     public function variantData($id)
     {
-        if(Auth::user()->role_id > 2) {
+        if($this->isStaff()) {
             return ProductVariant::join('variants', 'product_variants.variant_id', '=', 'variants.id')
                 ->join('product_warehouse', function($join) {
                     $join->on('product_variants.product_id', '=', 'product_warehouse.product_id');
@@ -1082,8 +1097,7 @@ class ProductController extends Controller
 
     public function edit($id)
     {
-        $role = Role::firstOrCreate(['id' => Auth::user()->role_id]);
-        if ($role->hasPermissionTo('products-edit')) {
+        if (Auth::user()->hasPermissionTo('products-edit')) {
             $lims_product_list_without_variant = $this->productWithoutVariant();
             $lims_product_list_with_variant = $this->productWithVariant();
             $lims_brand_list = Brand::where('is_active', true)->get();

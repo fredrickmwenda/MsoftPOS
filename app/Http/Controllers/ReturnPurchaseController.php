@@ -26,20 +26,29 @@ use App\Mail\UserNotification;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 use App\Traits\TenantInfo;
+use Illuminate\Support\Facades\Auth as FacadesAuth;
 
 class ReturnPurchaseController extends Controller
 {
     use TenantInfo;
 
+
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
+
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('returns-index')) {
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+      
+        if(Auth::user()->hasPermissionTo('returns-index')) {
+            // Get all permission names from all assigned roles
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
 
             if($request->input('warehouse_id'))
                 $warehouse_id = $request->input('warehouse_id');
@@ -71,7 +80,7 @@ class ReturnPurchaseController extends Controller
 
         $warehouse_id = $request->input('warehouse_id');
 
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $totalData = ReturnPurchase::where('user_id', Auth::id())
                         ->whereDate('created_at', '>=' ,$request->input('starting_date'))
                         ->whereDate('created_at', '<=' ,$request->input('ending_date'))
@@ -101,7 +110,7 @@ class ReturnPurchaseController extends Controller
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+            if($this->isStaff() && config('staff_access') == 'own')
                 $q = $q->where('user_id', Auth::id());
             elseif($warehouse_id != 0)
                 $q = $q->where('warehouse_id', $warehouse_id);
@@ -115,7 +124,7 @@ class ReturnPurchaseController extends Controller
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order,$dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $returnss =  $q->select('return_purchases.*')
                             ->with('supplier', 'warehouse', 'user')
                             ->where('return_purchases.user_id', Auth::id())
@@ -222,8 +231,8 @@ class ReturnPurchaseController extends Controller
 
     public function create(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('purchase-return-add')) {
+        
+        if(Auth::user()->hasPermissionTo('purchase-return-add')) {
             $lims_purchase_data = Purchase::select('id')->where('reference_no', $request->input('reference_no'))->first();
             if(!$lims_purchase_data)
                 return redirect()->back()->with('not_permitted', 'This reference no does not exist!');
@@ -654,8 +663,7 @@ class ReturnPurchaseController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('purchase-return-edit')){
+        if(Auth::user()->hasPermissionTo('purchase-return-edit')){
             $lims_supplier_list = Supplier::where('is_active',true)->get();
             $lims_warehouse_list = Warehouse::where('is_active',true)->get();
             $lims_account_list = Account::where('is_active',true)->get();

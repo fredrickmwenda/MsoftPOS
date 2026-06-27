@@ -18,8 +18,7 @@ class HolidayController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('holiday')) {
+        if(Auth::user()->hasPermissionTo('holiday')) {
             $approve_permission = true;
             $lims_holiday_list = Holiday::orderBy('id', 'desc')->get();
         }
@@ -45,8 +44,7 @@ class HolidayController extends Controller
             'note'        => $request->input('note')
         ];
 
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('holiday')) {
+        if(Auth::user()->hasPermissionTo('holiday')) {
             $data['is_approved'] = true;
         }
         else{

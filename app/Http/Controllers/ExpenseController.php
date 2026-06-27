@@ -18,13 +18,13 @@ class ExpenseController extends Controller
 {
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('expenses-index')){
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+
+        if(Auth::user()->hasPermissionTo('expenses-index')){
+           $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
 
             // Default: today's date for both start and end
             if($request->has('starting_date') && $request->has('ending_date')) {
@@ -70,7 +70,10 @@ class ExpenseController extends Controller
         $baseQuery = Expense::whereDate('created_at', '>=', $request->input('starting_date'))
                             ->whereDate('created_at', '<=', $request->input('ending_date'));
 
-        if (Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        $isStaff = Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+        if ($isStaff && config('staff_access') == 'own')
             $baseQuery = $baseQuery->where('user_id', Auth::id());
         if ($warehouse_id)
             $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
@@ -130,8 +133,11 @@ class ExpenseController extends Controller
             if (!empty($filtered_expense_ids)) {
                 $searchQuery->whereIn('expenses.id', $filtered_expense_ids);
             }
+            $isStaff = Auth::user()->roles->contains(function ($role) {
+                return $role->id > 2;
+            });
 
-            if (Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if ($isStaff && config('staff_access') == 'own') {
                 $searchQuery = $searchQuery->where('expenses.user_id', Auth::id())
                     ->orWhere([
                         ['reference_no', 'LIKE', "%{$search}%"],
@@ -263,8 +269,7 @@ class ExpenseController extends Controller
 
     public function edit($id)
     {
-        $role = Role::firstOrCreate(['id' => Auth::user()->role_id]);
-        if ($role->hasPermissionTo('expenses-edit')) {
+        if (Auth::user()->hasPermissionTo('expenses-edit')) {
             $lims_expense_data = Expense::find($id);
             $lims_expense_data->date = date('d-m-Y', strtotime($lims_expense_data->created_at->toDateString()));
             return $lims_expense_data;

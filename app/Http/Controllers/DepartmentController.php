@@ -13,8 +13,7 @@ class DepartmentController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('department')) {
+        if(Auth::user()->hasPermissionTo('department')) {
             $lims_department_all = Department::where('is_active', true)->get();
             return view('backend.department.index', compact('lims_department_all'));
         }

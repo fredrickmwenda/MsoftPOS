@@ -40,40 +40,32 @@
                                         <div class="form-group">
                                             <label>{{trans('file.customer')}} *</label>
                                             <div class="input-group pos">
-                                                <?php
-                                                  $deposit = [];
-                                                  $points = [];
-                                                  $customer_active = DB::table('permissions')
-                                                  ->join('role_has_permissions', 'permissions.id', '=', 'role_has_permissions.permission_id')
-                                                  ->where([
-                                                    ['permissions.name', 'customers-add'],
-                                                    ['role_id', \Auth::user()->role_id] ])->first();
-                                                ?>
-                                                @if($customer_active)
-                                                <select required name="customer_id" id="customer_id" class="selectpicker form-control" data-live-search="true" title="Select customer..." style="width: 100px">
-                                                @foreach($lims_customer_list as $customer)
-                                                    @php
-                                                      $deposit[$customer->id] = $customer->deposit - $customer->expense;
-
-                                                      $points[$customer->id] = $customer->points;
-                                                    @endphp
-                                                    <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
-                                                @endforeach
-                                                </select>
-{{--                                                    type="button" data-toggle="modal" data-target="#addCustomer"--}}
-                                                <a href="#" class="btn btn-default btn-sm" type="button" data-toggle="modal" data-target="#addCustomer" ><i class="dripicons-plus"></i></a>
-                                                @else
-                                                <select required name="customer_id" id="customer_id" class="selectpicker form-control" data-live-search="true" title="Select customer...">
-                                                @foreach($lims_customer_list as $customer)
-                                                    @php
-                                                      $deposit[$customer->id] = $customer->deposit - $customer->expense;
-
-                                                      $points[$customer->id] = $customer->points;
-                                                    @endphp
-                                                    <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
-                                                @endforeach
-                                                </select>
-                                                @endif
+@php
+  $deposit = [];
+  $points = [];
+@endphp
+@if(Auth::user()->hasPermissionTo('customers-add'))
+    <select required name="customer_id" id="customer_id" class="selectpicker form-control" data-live-search="true" title="Select customer..." style="width: 100px">
+        @foreach($lims_customer_list as $customer)
+            @php
+                $deposit[$customer->id] = $customer->deposit - $customer->expense;
+                $points[$customer->id] = $customer->points;
+            @endphp
+            <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
+        @endforeach
+    </select>
+    <a href="#" class="btn btn-default btn-sm" type="button" data-toggle="modal" data-target="#addCustomer" ><i class="dripicons-plus"></i></a>
+@else
+    <select required name="customer_id" id="customer_id" class="selectpicker form-control" data-live-search="true" title="Select customer...">
+        @foreach($lims_customer_list as $customer)
+            @php
+                $deposit[$customer->id] = $customer->deposit - $customer->expense;
+                $points[$customer->id] = $customer->points;
+            @endphp
+            <option value="{{$customer->id}}">{{$customer->name . ' (' . $customer->phone_number . ')'}}</option>
+        @endforeach
+    </select>
+@endif
                                             </div>
                                         </div>
                                     </div>
@@ -248,7 +240,7 @@
                                         </div>
                                     </div>
                                     @foreach($custom_fields as $field)
-                                        @if(!$field->is_admin || \Auth::user()->role_id == 1)
+                                        @if(!$field->is_admin || $isAdmin)
                                             <div class="{{'col-md-'.$field->grid_value}}">
                                                 <div class="form-group">
                                                     <label>{{$field->name}}</label>
@@ -870,7 +862,7 @@ var rowindex;
 var customer_group_rate;
 var row_product_price;
 var pos;
-var role_id = <?php echo json_encode(Auth::user()->role_id)?>;
+var isAdmin = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id <= 2)) ?>;
 
 $('.selectpicker').selectpicker({
     style: 'btn-link',
@@ -1111,7 +1103,7 @@ function isCashRegisterAvailable(warehouse_id) {
             if(data == 'false') {
                 $('#cash-register-modal select[name=warehouse_id]').val(warehouse_id);
                 $('.selectpicker').selectpicker('refresh');
-                if(role_id <= 2){
+                if(isAdmin) {
                     $("#cash-register-modal .warehouse-section").removeClass('d-none');
                 }
                 else {

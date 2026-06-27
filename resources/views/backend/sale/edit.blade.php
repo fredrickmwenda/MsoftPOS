@@ -314,7 +314,7 @@
                                     </div>
                                     @foreach($custom_fields as $field)
                                         <?php $field_name = str_replace(' ', '_', strtolower($field->name)); ?>
-                                        @if(!$field->is_admin || \Auth::user()->role_id == 1)
+                                        @if(!$field->is_admin || $isAdmin)
                                             <div class="{{'col-md-'.$field->grid_value}}">
                                                 <div class="form-group">
                                                     <label>{{$field->name}}</label>
@@ -571,7 +571,7 @@
     var customer_group_rate;
     var row_product_price;
     var currencyExchangeRate = <?php echo json_encode($currency_exchange_rate) ?>;
-    var role_id = <?php echo json_encode(Auth::user()->role_id)?>;
+    var isAdmin = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id <= 2)) ?>;
     var without_stock = <?php echo json_encode($general_setting->without_stock) ?>;
 
     var rownumber = $('table.order-list tbody tr:last').index();
@@ -858,7 +858,7 @@
                 if(data == 'false') {
                     $('#cash-register-modal select[name=warehouse_id]').val(warehouse_id);
                     $('.selectpicker').selectpicker('refresh');
-                    if(role_id <= 2){
+                    if(isAdmin){
                         $("#cash-register-modal .warehouse-section").removeClass('d-none');
                     }
                     else {

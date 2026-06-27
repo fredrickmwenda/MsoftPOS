@@ -20,13 +20,14 @@ class EmployeeController extends Controller
 
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('employees-index')){
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+   
+        if(Auth::user()->hasPermissionTo('employees-index')){
+            // Get all permission names from all assigned roles
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
             $lims_employee_all = Employee::where('is_active', true)->get();
             $lims_department_list = Department::where('is_active', true)->get();
             $numberOfEmployee = Employee::where('is_active', true)->count();
@@ -38,8 +39,7 @@ class EmployeeController extends Controller
 
     public function create()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('employees-add')){
+        if(Auth::user()->hasPermissionTo('employees-add')){
             $lims_role_list = Role::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_biller_list = Biller::where('is_active', true)->get();

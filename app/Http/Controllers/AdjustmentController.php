@@ -19,13 +19,10 @@ class AdjustmentController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if( $role->hasPermissionTo('adjustment') ) {
-            /*if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
-                $lims_adjustment_all = Adjustment::orderBy('id', 'desc')->where('user_id', Auth::id())->get();
-            else*/
-                $lims_adjustment_all = Adjustment::orderBy('id', 'desc')->get();
-                // dd($lims_adjustment_all);
+      
+        
+        if( Auth::user()->hasPermissionTo('adjustment') ) {
+            $lims_adjustment_all = Adjustment::orderBy('id', 'desc')->get();
             return view('backend.adjustment.index', compact('lims_adjustment_all'));
         }
         else

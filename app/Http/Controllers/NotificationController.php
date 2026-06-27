@@ -14,8 +14,8 @@ class NotificationController extends Controller
 {
     public function index()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('all_notification')) {
+        
+        if(Auth::user()->hasPermissionTo('all_notification')) {
             $lims_notification_all = DB::table('notifications')->get();
             return view('backend.notification.index', compact('lims_notification_all'));
         }
@@ -49,5 +49,9 @@ class NotificationController extends Controller
     public function markAsRead()
     {
     	Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->markAsRead();
+        return response()->json(['success' => true]);
+
     }
+
+
 }

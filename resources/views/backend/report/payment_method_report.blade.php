@@ -38,20 +38,20 @@
                     </div>
                     <!-- Sales Officer -->
                     <div class="col-md-2 mt-3 mb-3">
-                        <div class="form-group">
-                            <label class="control-label"><strong>Sales Officer</strong></label>
-                            <select name="user_id" class="form-control selectpicker" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">All Sales Officers</option>
-                                @php 
-                                    $list_of_user_id = App\Models\Payment::select('user_id')->distinct()->pluck('user_id');
-                                    $lims_user_list = \App\Models\User::whereIn('id', $list_of_user_id)->get();
-                                @endphp
-                                @foreach($lims_user_list as $user)
-                                    <option value="{{ $user->id }}" {{ (isset($user_id) && $user_id === $user->id) ? 'selected' : '' }}>{{ $user->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
+    <div class="form-group">
+        <label class="control-label"><strong>Sales Officer</strong></label>
+        <select name="user_id" class="form-control selectpicker" data-live-search="true" data-live-search-style="begins">
+            <option value="0" {{ (isset($user_id) && $user_id == 0) ? 'selected' : '' }}>All Sales Officers</option>
+            @php 
+                $list_of_user_id = App\Models\Payment::select('user_id')->distinct()->pluck('user_id');
+                $lims_user_list = \App\Models\User::whereIn('id', $list_of_user_id)->get();
+            @endphp
+            @foreach($lims_user_list as $user)
+                <option value="{{ $user->id }}" {{ (isset($user_id) && $user_id === $user->id) ? 'selected' : '' }}>{{ $user->name }}</option>
+            @endforeach
+        </select>
+    </div>
+</div>
                     <div class="col-md-1 mt-3 mb-3">
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary btn-block"><i class="fa fa-filter"></i> Filter</button>    

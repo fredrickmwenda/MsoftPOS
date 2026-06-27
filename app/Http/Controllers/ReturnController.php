@@ -35,15 +35,22 @@ class ReturnController extends Controller
     use \App\Traits\TenantInfo;
     use \App\Traits\MailInfo;
 
+
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
+
     public function index(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('returns-index')) {
-            $permissions = Role::findByName($role->name)->permissions;
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
-            if(empty($all_permission))
+
+        if(Auth::user()->hasPermissionTo('returns-index')) {
+            $all_permission = Auth::user()->getAllPermissions();
+
+            if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
+            }
 
             if($request->input('warehouse_id'))
                 $warehouse_id = $request->input('warehouse_id');
@@ -75,7 +82,7 @@ class ReturnController extends Controller
 
         $warehouse_id = $request->input('warehouse_id');
 
-        if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+        if($this->isStaff() && config('staff_access') == 'own')
             $totalData = Returns::where('user_id', Auth::id())
                         ->whereDate('created_at', '>=' ,$request->input('starting_date'))
                         ->whereDate('created_at', '<=' ,$request->input('ending_date'))
@@ -105,7 +112,7 @@ class ReturnController extends Controller
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own')
+            if($this->isStaff() && config('staff_access') == 'own')
                 $q = $q->where('user_id', Auth::id());
             elseif($warehouse_id != 0)
                 $q = $q->where('warehouse_id', $warehouse_id);
@@ -120,7 +127,7 @@ class ReturnController extends Controller
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order,$dir);
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $returnss =  $q->select('returns.*')
                             ->with('biller', 'customer', 'warehouse', 'user')
                             ->where('returns.user_id', Auth::id())
@@ -242,8 +249,8 @@ class ReturnController extends Controller
 
     public function create(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('returns-add')) {
+       
+        if(Auth::user()->hasPermissionTo('returns-add')) {
             $lims_sale_data = Sale::where([
                 ['reference_no', $request->input('reference_no')],
                 ['sale_status', 1]
@@ -732,8 +739,8 @@ class ReturnController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('returns-edit')){
+        
+        if(Auth::user()->hasPermissionTo('returns-edit')){
             $lims_customer_list = Customer::where('is_active',true)->get();
             $lims_warehouse_list = Warehouse::where('is_active',true)->get();
             $lims_biller_list = Biller::where('is_active',true)->get();

@@ -26,7 +26,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4 mt-3 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
+                <div class="col-md-4 mt-3 @if(\Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
                     <div class="d-flex">
                         <label class="">{{trans('file.Warehouse')}} &nbsp;</label>
                         <div class="">

@@ -10,7 +10,7 @@
                     <h4 class="card-title">Department Report</h4>
                 </div>
                 <div class="card-body">
-                    //the filter form
+                   
                     <form method="GET" action="{{ route('report.department') }}" class="mb-3">
                         <div class="form-row align-items-end">
                             <div class="col-md-3">
@@ -34,9 +34,9 @@
                                     <th>Department Name</th>
                                     <th>Categories</th>
                                     <th>Products</th>
-                                    <th>Total Sales Qty</th>
-                                    <th>Total Revenue</th>
-                                    <th>Cost</th>
+                                    <th>Total Sales</th>
+                                    <th>Total Purchases</th>
+                                    <th>Profit Margin</th>
                                     <th>Actions</th>
                                 </tr> 
                             </thead>
@@ -58,16 +58,16 @@
                                         <span class="badge badge-warning">{{ $dept['products_count'] }}</span>
                                     </td>
                                     <td>
-                                        {{ number_format($dept['total_sales'], 2) }}
+                                        {{ number_format($dept['total_revenue'], 2) }}
                                     </td>
                                     <td>
                                         <span class="text-success font-weight-bold">
-                                            {{ config('app.currency_symbol') }} {{ number_format($dept['total_revenue'], 2) }}
+                                            {{ config('app.currency_symbol') }} {{ number_format($dept['total_purchases'], 2) }}
                                         </span>
                                     </td>
                                     <td>
                                         <span class="text-danger font-weight-bold">
-                                            {{ config('app.currency_symbol') }} {{ number_format($dept['total_cost'] ?? 0, 2) }}
+                                            {{ config('app.currency_symbol') }} {{ number_format($dept['profit_margin'] ?? 0, 2) }}
                                         </span>
                                     </td>
                                     <td>
@@ -99,12 +99,10 @@
                                                     </div>
                                                     <div class="col-md-6">
                                                         <h6><strong>Sales Performance</strong></h6>
-                                                        <p><strong>Total Sales Qty:</strong> {{ number_format($dept['total_sales'], 2) }}</p>
-                                                        <p><strong>Total Revenue:</strong> {{ config('app.currency_symbol') }} {{ number_format($dept['total_revenue'], 2) }}</p>
-                                                        <p><strong>Total Cost:</strong> {{ config('app.currency_symbol') }} {{ number_format($dept['total_cost'] ?? 0, 2) }}</p>
-                                                        @if($dept['total_sales'] > 0)
-                                                        <p><strong>Avg Sale Value:</strong> {{ config('app.currency_symbol') }} {{ number_format($dept['total_revenue'] / $dept['total_sales'], 2) }}</p>
-                                                        @endif
+                                                        <p><strong>Total Sales:</strong> {{ number_format($dept['total_revenue'], 2) }}</p>
+                                                        <p><strong>Total Purchases:</strong> {{ config('app.currency_symbol') }} {{ number_format($dept['total_purchases'], 2) }}</p>
+                                                        <p><strong>Total Profit Margin:</strong> {{ config('app.currency_symbol') }} {{ number_format($dept['profit_margin'], 2) }}</p>
+
                                                     </div>
                                                 </div>
                                             </div>

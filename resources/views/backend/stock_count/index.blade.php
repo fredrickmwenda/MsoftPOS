@@ -1,404 +1,664 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+
+@section('content')
 @if(session()->has('message'))
   <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('message') }}</div>
 @endif
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
+@push('css')
+<style>
+.stock-header {
+    background: linear-gradient(90deg,#2d7cb7,#3d97cb);
+    color:white;
+    padding:30px;
+    border-radius:15px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+.page-header-modern {
+    background: #1ec068;
+    box-shadow: 0 8px 22px rgba(60, 141, 188, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    margin-top: 36px;
+    margin-bottom: 24px;
+    color: white;
+}
+
+
+
+.stock-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.stock-header-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.stock-header-subtitle {
+    font-size: 16px;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.stock-header-actions
+ {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btn-header {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.42);
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    backdrop-filter: blur(10px);
+}
+
+.stock-header-left
+ {
+    flex: 1;
+}
+
+.warehouse-card {
+    border:1px solid #dbe2ea;
+    border-radius:15px;
+    padding:25px;
+    display:flex;
+    gap:20px;
+    cursor:pointer;
+    transition:.3s;
+}
+
+.warehouse-card:hover {
+    border-color:#2d7cb7;
+}
+
+.warehouse-card.active {
+    border:2px solid #2d7cb7;
+    background:#eef8ff;
+}
+
+.warehouse-icon {
+    width:60px;
+    height:60px;
+    border-radius:15px;
+    background:#e8f4fb;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:22px;
+}
+
+.info-box {
+    background:white;
+    padding:18px;
+    border-radius:12px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+}
+
+.variance-positive {
+    color:green;
+    font-weight:600;
+}
+
+.variance-negative {
+    color:red;
+    font-weight:600;
+}
+</style>
+@endpush
 
 <section>
-    <div class="container-fluid">
-        <button class="btn btn-info" data-toggle="modal" data-target="#createModal"><i class="dripicons-plus"></i> {{trans('file.Count Stock')}} </button>
+<div class="stock-count-wrapper">
+
+
+    <div class="page-header-modern">
+        <div class="stock-header-content">
+            <div class="stock-header-left">
+                <h1 class="stock-header-title">
+                    <i class="fa fa-clipboard-check"></i>
+                    Physical Stock Count
+                </h1>
+                <p class="stock-header-subtitle">Count inventory and reconcile system stock</p>
+            </div>
+            <div class="stock-header-actions">
+                <button onclick="window.print()" class="btn-header">
+                    <i class="fa fa-print"></i> Print Report
+                </button>
+                <button onclick="refreshData()" class="btn-header">
+                    <i class="fa fa-refresh"></i> Refresh
+                </button>
+            </div>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table id="stock-count-table" class="table stock-count-list">
-            <thead>
-                <tr>
-                    <th class="not-exported"></th>
-                    <th>{{trans('file.Date')}}</th>
-                    <th>{{trans('file.reference')}}</th>
-                    <th>{{trans('file.Warehouse')}}</th>
-                    <th>{{trans('file.category')}}</th>
-                    <th>{{trans('file.Brand')}}/Make</th>
-                    <th>{{trans('file.Type')}}</th>
-                    <th class="not-exported">{{trans('file.Initial File')}}</th>
-                    <th class="not-exported">{{trans('file.Final File')}}</th>
-                    <th class="not-exported">{{trans('file.action')}}</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($lims_stock_count_all as $key => $stock_count)
-                <?php
-                    $warehouse = DB::table('warehouses')->find($stock_count->warehouse_id);
-                    $category_name = [];
-                    $brand_name = [];
-                    $initial_file = 'public/stock_count/' . $stock_count->initial_file;
-                    $final_file = 'public/stock_count/' . $stock_count->final_file;
-                ?>
-                <tr>
-                    <td>{{$key}}</td>
-                    <td>{{ date($general_setting->date_format, strtotime($stock_count->created_at->toDateString())) . ' '. $stock_count->created_at->toTimeString() }}</td>
-                    <td>{{ $stock_count->reference_no }}</td>
-                    <td>{{ $warehouse->name }}</td>
-                    <td>
-                        @if($stock_count->category_id)
-                            @foreach(explode(",",$stock_count->category_id) as $cat_key=>$category_id)
-                            @php
-                                $category = \DB::table('categories')->find($category_id);
-                                $category_name[] = $category->name;
-                            @endphp
-                                @if($cat_key)
-                                    {{', ' . $category->name}}
-                                @else
-                                    {{$category->name}}
-                                @endif
-                            @endforeach
-                        @endif
-                    </td>
-                    <td>
-                        @if($stock_count->brand_id)
-                            @foreach(explode(",",$stock_count->brand_id) as $brand_key=>$brand_id)
-                            @php
-                                $brand = \DB::table('brands')->find($brand_id);
-                                $brand_name[] = $brand->title;
-                            @endphp
-                                @if($brand_key)
-                                    {{', '.$brand->title}}
-                                @else
-                                    {{$brand->title}}
-                                @endif
-                            @endforeach
-                        @endif
-                    </td>
-                    @if($stock_count->type == 'full')
-                        @php $type = trans('file.Full') @endphp
-                        <td><div class="badge badge-primary">{{trans('file.Full')}}</div></td>
-                    @else
-                        @php $type = trans('file.Partial') @endphp
-                        <td><div class="badge badge-info">{{trans('file.Partial')}}</div></td>
-                    @endif
-                    <td class="text-center">
-                        <a download href="{{'public/stock_count/'.$stock_count->initial_file}}" title="{{trans('file.Download')}}"><i class="dripicons-copy"></i></a>
-                    </td>
-                    <td class="text-center">
-                        @if($stock_count->final_file)
-                        <a download href="{{'public/stock_count/'.$stock_count->final_file}}" title="{{trans('file.Download')}}"><i class="dripicons-copy"></i></a>
-                        @endif
-                    </td>
-                    <td>
-                        @if($stock_count->final_file)
-                            <div style="cursor: pointer;" class="badge badge-success final-report" data-stock_count='["{{date($general_setting->date_format, strtotime($stock_count->created_at->toDateString()))}}", "{{$stock_count->reference_no}}", "{{$warehouse->name}}", "{{$type}}", "{{implode(", ", $category_name)}}", "{{implode(", ", $brand_name)}}", "{{$initial_file}}", "{{$final_file}}", "{{$stock_count->id}}"]'>{{trans('file.Final Report')}}
-                            </div>
-                        @else
-                            <div style="cursor: pointer;" class="badge badge-primary finalize" data-id="{{$stock_count->id}}">{{trans('file.Finalize')}}
-                            </div>
-                        @endif
-                    </td>
-                </tr>
+
+    {{-- Warehouse Selection --}}
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+
+            <h5 class="mb-4">
+                SELECT WAREHOUSE
+            </h5>
+
+            <div class="row">
+
+                @foreach($lims_warehouse_list as $warehouse)
+                <div class="col-md-4 mb-3">
+
+                    <div class="warehouse-card"
+                         data-id="{{ $warehouse->id }}">
+
+                        <div class="warehouse-icon">
+                            <i class="fa fa-warehouse"></i>
+                        </div>
+
+                        <div>
+                            <h5>{{ $warehouse->name }}</h5>
+                            <small>
+                                Inventory Location
+                            </small>
+                        </div>
+
+                    </div>
+
+                </div>
                 @endforeach
-            </tbody>
-            <tfoot class="tfoot active">
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-                <th></th>
-            </tfoot>
-        </table>
+
+            </div>
+
+        </div>
     </div>
+
+    {{-- Information Bar --}}
+    <div class="row mt-4">
+        <input type="hidden" id="warehouse_id">
+
+        <div class="col-md-4">
+            <div class="info-box">
+                <strong>Location:</strong>
+                <span id="selectedWarehouse">
+                    Select Warehouse
+                </span>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="info-box">
+                <strong>Counter:</strong>
+                {{ Auth::user()->name }}
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="info-box">
+                <strong>Date:</strong>
+                {{ now()->format('d M Y') }}
+            </div>
+        </div>
+
+    </div>
+
+    {{-- Count Section --}}
+    <div class="card mt-4">
+
+        <div class="card-header">
+            <h4>Physical Inventory Count</h4>
+        </div>
+
+        <div class="card-body">
+
+            <div class="row mb-4">
+
+                <div class="col-md-4">
+
+                    <label>Product Category</label>
+
+                    <select id="category"
+                            class="form-control">
+                        
+                        <option value="">Choose Category</option>
+
+
+                        <option value="all">All Categories</option>
+
+                        @foreach($lims_category_list as $category)
+                            <option value="{{ $category->id }}">
+                                {{ $category->name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+
+                </div>
+
+                <div class="col-md-5">
+
+                    <label>Search Product</label>
+
+                    <input type="text"
+                           class="form-control"
+                           id="searchProduct">
+
+                </div>
+
+                <div class="col-md-3">
+
+                    <label>&nbsp;</label>
+
+                    <button class="btn btn-info btn-block"
+                            id="loadProducts">
+
+                        Load Products
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <table class="table table-bordered">
+
+                <thead>
+
+                <tr>
+                    <th width="50">
+                        <input type="checkbox" id="checkAll">
+                    </th>
+                    <th>ID</th>
+                    <th>Product Name</th>
+                    <th>Expiry Date</th>
+                    <th>System Count</th>
+                    <th>Physical Count</th>
+                    <th>Variance</th>
+                    <th>Save</th>
+                </tr>
+
+
+                </thead>
+
+                <tbody id="productTable">
+
+                </tbody>
+
+            </table>
+
+            <thead>
+
+
+        </div>
+
+    </div>
+
+</div>
 </section>
 
-<div id="createModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-    <div role="document" class="modal-dialog">
-      <div class="modal-content">
-        {!! Form::open(['route' => 'stock-count.store', 'method' => 'post', 'files' => true]) !!}
-        <div class="modal-header">
-          <h5 id="exampleModalLabel" class="modal-title">{{trans('file.Count Stock')}}</h5>
-          <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
-        </div>
-        <div class="modal-body">
-          <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
-            <div class="row">
-                <div class="col-md-6 form-group">
-                    <label>{{trans('file.Warehouse')}} *</label>
-                    <select required name="warehouse_id" id="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select warehouse...">
-                        @foreach($lims_warehouse_list as $warehouse)
-                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-6 form-group">
-                    <label>{{trans('file.Type')}} *</label>
-                    <select class="form-control" name="type">
-                        <option value="full">{{trans('file.Full')}}</option>
-                        <option value="partial">{{trans('file.Partial')}}</option>
-                    </select>
-                </div>
-                <div class="col-md-6 form-group" id="category">
-                    <label>{{trans('file.category')}}</label>
-                    <select name="category_id[]" id="category_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Category..." multiple>
-                        @foreach($lims_category_list as $category)
-                        <option value="{{$category->id}}">{{$category->name}}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-6 form-group" id="brand">
-                    <label>{{trans('file.Brand')}}/Make</label>
-                    <select name="brand_id[]" id="brand_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Brand..." multiple>
-                        @foreach($lims_brand_list as $brand)
-                        <option value="{{$brand->id}}">{{$brand->title}}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-              <input type="submit" value="{{trans('file.submit')}}" class="btn btn-primary">
-            </div>
-        </div>
-        {{ Form::close() }}
-      </div>
-    </div>
-</div>
 
-<div id="finalizeModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-  <div role="document" class="modal-dialog">
-    <div class="modal-content">
-        {{ Form::open(['route' => 'stock-count.finalize', 'method' => 'POST', 'files' => true] ) }}
-      <div class="modal-header">
-        <h5 id="exampleModalLabel" class="modal-title"> {{trans('file.Finalize Stock Count')}}</h5>
-        <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
-      </div>
-        <div class="modal-body">
-            <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.<strong>{{trans('file.You just need to update the Counted column in the initial file')}}</strong> </small></p>
-            <div class="form-group">
-                <label>{{trans('file.Upload File')}} *</label>
-                <input required type="file" name="final_file" class="form-control" />
-            </div>
-            <input type="hidden" name="stock_count_id">
-            <div class="form-group">
-                <label>{{trans('file.Note')}}</label>
-                <textarea rows="3" name="note" class="form-control"></textarea>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="{{trans('file.submit')}}" class="btn btn-primary">
-              </div>
-        </div>
-      {{ Form::close() }}
-    </div>
-  </div>
-</div>
-
-<div id="stock-count-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-    <div role="document" class="modal-dialog">
-        <div class="modal-content">
-            <div class="container mt-3 pb-3">
-                <div class="row border-bottom pb-2">
-                    <div class="col-md-3">
-                        <button id="print-btn" type="button" class="btn btn-default btn-sm d-print-none"><i class="dripicons-print"></i> {{trans('file.Print')}}</button>
-                    </div>
-                    <div class="col-md-6">
-                        <h3 id="exampleModalLabel" class="modal-title text-center container-fluid">{{$general_setting->site_title}}</h3>
-                    </div>
-                    <div class="col-md-3">
-                        <button type="button" id="close-btn" data-dismiss="modal" aria-label="Close" class="close d-print-none"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
-                    </div>
-                    <div class="col-md-12 text-center">
-                        <i style="font-size: 15px;">{{trans('file.Stock Count')}}</i>
-                    </div>
-                </div>
-                <br>
-                <div id="stock-count-content">
-                </div>
-                <br>
-                <table class="table table-bordered stockdif-list">
-                    <thead>
-                        <th>#</th>
-                        <th>{{trans('file.product')}}</th>
-                        <th>{{trans('file.Expected')}}</th>
-                        <th>{{trans('file.Counted')}}</th>
-                        <th>{{trans('file.Difference')}}</th>
-                        <th>{{trans('file.Cost')}}</th>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-                <div id="stock-count-footer"></div>
-            </div>
-        </div>
-    </div>
-</div>
 
 
 
 @endsection
 @push('scripts')
-<script type="text/javascript">
+<script>
 
-    $("ul#product").siblings('a').attr('aria-expanded','true');
+    // Sidebar Active Menu
+    $("ul#product").siblings('a').attr('aria-expanded', 'true');
     $("ul#product").addClass("show");
     $("ul#product #stock-count-menu").addClass("active");
 
-    $("#category, #brand").hide();
+    let selectedWarehouse = null;
 
-    $('select[name=type]').on('change', function(){
-        if($(this).val() == 'partial')
-            $("#category, #brand").show(500);
-        else
-            $("#category, #brand").hide(500);
+    $(document).ready(function () {
+        let firstWarehouse = $('.warehouse-card').first();
+
+        if (firstWarehouse.length) {
+            firstWarehouse.trigger('click');
+        }
     });
 
-    $(document).on('click', '.finalize', function(){
-        $('input[name="stock_count_id"]').val($(this).data('id'));
-        $('#finalizeModal').modal('show');
+    // Warehouse Selection
+    // $(document).on('click', '.warehouse-card', function () {
+
+    //     $('.warehouse-card').removeClass('active');
+
+    //     $(this).addClass('active');
+
+    //     selectedWarehouse = $(this).data('id');
+
+    //     $('#warehouse_id').val(selectedWarehouse);
+
+    //     $('#selectedWarehouse').text(
+    //         $(this).find('h5').text()
+    //     );
+
+    //     $('#category').val('all');
+
+    //     loadProducts(
+    //         selectedWarehouse,
+    //         'all'
+    //     );
+    // });
+
+    $(document).on('click', '.warehouse-card', function () {
+
+        $('.warehouse-card').removeClass('active');
+        $(this).addClass('active');
+
+        selectedWarehouse = $(this).data('id');
+
+        $('#warehouse_id').val(selectedWarehouse);
+
+        $('#selectedWarehouse').text(
+            $(this).find('h5').text()
+        );
+
+        // Reload products if category already selected
+        let categoryId = $('#category').val();
+
+        if (categoryId !== '') {
+            loadProducts(selectedWarehouse, categoryId);
+        }
     });
 
-    $(document).on('click', '.final-report', function(){
-        var stock_count = $(this).data('stock_count');
-        var htmltext = '<strong>{{trans("file.Date")}}: </strong>'+stock_count[0]+'<br><strong>{{trans("file.reference")}}: </strong>'+stock_count[1]+'<br><strong>{{trans("file.Warehouse")}}: </strong>'+stock_count[2]+'<br><strong>{{trans("file.Type")}}: </strong>'+stock_count[3];
-        if(stock_count[4])
-            htmltext += '<br><strong>{{trans("file.category")}}: </strong>'+stock_count[4];
-        if(stock_count[5])
-            htmltext += '<br><strong>{{trans("file.Brand")}}: </strong>'+stock_count[5];
-        htmltext += '<br><span class="d-print-none mt-1"><strong>{{trans("file.Files")}}: </strong>&nbsp;&nbsp;<a href="'+stock_count[6]+'" class="btn btn-sm btn-primary"><i class="dripicons-download"></i> {{trans("file.Initial File")}}</a>&nbsp;&nbsp;<a href="'+stock_count[7]+'" class="btn btn-sm btn-info"><i class="dripicons-download"></i> {{trans("file.Final File")}}</a></span>';
-        $.get('stock-count/stockdif/' + stock_count[8], function(data){
-            $(".stockdif-list tbody").remove();
-            var name_code = data[0];
-            var expected = data[1];
-            var counted = data[2];
-            var dif = data[3];
-            var cost = data[4];
-            var newBody = $("<tbody>");
-            if(name_code){
-                $('.stockdif-list').removeClass('d-none')
-                $.each(name_code, function(index){
-                    var newRow = $("<tr>");
-                    var cols = '';
-                    cols += '<td><strong>' + (index+1) + '</strong></td>';
-                    cols += '<td>' + name_code[index] + '</td>';
-                    cols += '<td>' + parseFloat(expected[index]).toFixed({{$general_setting->decimal}}) + '</td>';
-                    cols += '<td>' + parseFloat(counted[index]).toFixed({{$general_setting->decimal}}) + '</td>';
-                    cols += '<td>' + parseFloat(dif[index]).toFixed({{$general_setting->decimal}}) + '</td>';
-                    cols += '<td>' + parseFloat(cost[index]).toFixed({{$general_setting->decimal}}) + '</td>';
-                    newRow.append(cols);
-                    newBody.append(newRow);
+    // Load Products When Category Changes
+    $('#category').on('change', function () {
+
+        let categoryId = $(this).val();
+
+        if (!selectedWarehouse) {
+            alert('Please select a warehouse first');
+            $(this).val('');
+            return;
+        }
+
+        if (!categoryId) {
+            $('#productTable').html('');
+            return;
+        }
+
+        loadProducts(selectedWarehouse, categoryId);
+    });
+
+  
+
+    // Manual Load Button
+    $('#loadProducts').on('click', function () {
+
+        let categoryId = $('#category').val();
+
+        if (!selectedWarehouse) {
+            alert('Please select a warehouse first');
+            return;
+        }
+
+        if (!categoryId) {
+            alert('Please select a category');
+            return;
+        }
+
+        loadProducts(selectedWarehouse, categoryId);
+    });
+
+    // Load Products Function
+    function loadProducts(warehouseId, categoryId) {
+
+        $('#productTable').html(`
+            <tr>
+                <td colspan="7" class="text-center">
+                    Loading products...
+                </td>
+            </tr>
+        `);
+
+        $.ajax({
+            url: "{{ route('stock-count.products') }}",
+            type: "GET",
+            data: {
+                warehouse_id: warehouseId,
+                category_id: categoryId
+            },
+
+            success: function (products) {
+
+                let html = '';
+
+                if(products.length === 0){
+                    html = `
+                        <tr>
+                            <td colspan="7" class="text-center">
+                                No products found
+                            </td>
+                        </tr>
+                    `;
+
+                    $('#productTable').html(html);
+                    return;
+                }
+
+                // Inside loadProducts success callback, replace the row template:
+                products.forEach((product) => {
+                    let expiry = product.expiry_date ? product.expiry_date : 'N/A';
+                    let systemQty = parseFloat(product.system_qty).toFixed(2);
+
+                    html += `
+                    <tr>
+                        <td>
+                            <input type="checkbox" class="product-check" value="${product.id}">
+                        </td>
+                        <td>${product.id}</td>
+                        <td>
+                            <strong>${product.name}</strong><br>
+                            <small>${product.code}</small>
+                        </td>
+                        <td>${expiry}</td>
+                        <td>${systemQty}</td>
+                        <td>
+                            <input type="number" 
+                                class="form-control physical-count" 
+                                data-system="${systemQty}" 
+                                data-product="${product.id}" 
+                                value="0.00">
+                        </td>
+                        <td class="variance">${systemQty}</td>   <!-- variance = system + 0 -->
+                        <td>
+                            <button class="btn btn-success save-row" data-product="${product.id}">
+                                <i class="fa fa-save"></i>
+                            </button>
+                        </td>
+                    </tr>`;
                 });
 
-                if( !parseInt(data[5]) ) {
-                    htmlFooter = '<a class="btn btn-primary d-print-none" href="stock-count/'+stock_count[8]+'/qty_adjustment"><i class="dripicons-plus"></i> {{trans("file.Add Adjustment")}}</a>';
-                    $('#stock-count-footer').html(htmlFooter);
-                }
+                $('#productTable').html(html);
+            },
+
+            error: function () {
+
+                $('#productTable').html(`
+                    <tr>
+                        <td colspan="8" class="text-center text-danger">
+                            Failed to load products
+                        </td>
+                    </tr>
+                `);
             }
-            else{
-                $('.stockdif-list').addClass('d-none');
-                $('#stock-count-footer').html('');
-            }
-
-            /*var newRow = $("<tr>");
-            cols = '';
-            cols += '<td colspan=6><strong>{{trans("file.Order Discount")}}:</strong></td>';
-            cols += '<td>' + sale[19] + '</td>';
-            newRow.append(cols);
-            newBody.append(newRow);
+        });
+    }
 
 
-            newRow.append(cols);
-            newBody.append(newRow);*/
+    // Live Variance Calculation
+    $(document).on('keyup change', '.physical-count', function () {
 
-            $("table.stockdif-list").append(newBody);
+        let row = $(this).closest('tr');
+
+        let systemQty = parseFloat(
+            $(this).data('system')
+        ) || 0;
+
+        let physicalQty = parseFloat(
+            $(this).val()
+        ) || 0;
+
+        let variance = physicalQty - systemQty;
+
+        let varianceCell = row.find('.variance');
+
+        varianceCell.removeClass(
+            'text-success text-danger text-secondary'
+        );
+
+        if (variance > 0) {
+            varianceCell
+                .addClass('text-success')
+                .html('+' + variance);
+        }
+        else if (variance < 0) {
+            varianceCell
+                .addClass('text-danger')
+                .html(variance);
+        }
+        else {
+            varianceCell
+                .addClass('text-secondary')
+                .html('0');
+        }
+    });
+
+    // Product Search
+    $('#searchProduct').on('keyup', function () {
+
+        let value = $(this)
+            .val()
+            .toLowerCase();
+
+        $('#productTable tr').filter(function () {
+
+            $(this).toggle(
+                $(this)
+                    .text()
+                    .toLowerCase()
+                    .indexOf(value) > -1
+            );
+
         });
 
-        $('#stock-count-content').html(htmltext);
-        $('#stock-count-details').modal('show');
     });
 
-    $(document).on("click", "#print-btn", function(){
-          var divToPrint=document.getElementById('stock-count-details');
-          var newWin=window.open('','Print-Window');
-          newWin.document.open();
-          newWin.document.write('<link rel="stylesheet" href="<?php echo asset('vendor/bootstrap/css/bootstrap.min.css') ?>" type="text/css"><style type="text/css">@media print {.modal-dialog { max-width: 1000px;} }</style><body onload="window.print()">'+divToPrint.innerHTML+'</body>');
-          newWin.document.close();
-          setTimeout(function(){newWin.close();},10);
+    // Save Single Row
+    $(document).on('click', '.save-row', function () {
+
+        let button = $(this);
+
+        let row = button.closest('tr');
+
+        let productId = button.data('product');
+
+        let physicalQty = row.find('.physical-count').val();
+
+        let variance = row.find('.variance').text().trim();
+
+
+
+        console.log(variance);
+
+        $.ajax({
+
+            url: "{{ route('stock-count.save') }}",
+
+            type: "POST",
+
+            data: {
+
+                _token: "{{ csrf_token() }}",
+
+                warehouse_id: selectedWarehouse,
+
+                product_id: productId,
+
+                physical_qty: physicalQty,
+
+                variance: variance
+
+            },
+
+            beforeSend: function () {
+
+                button.prop('disabled', true);
+
+                button.html(
+                    '<i class="fa fa-spinner fa-spin"></i>'
+                );
+            },
+
+            success: function (response) {
+
+                row.find('.variance')
+                .removeClass('text-danger text-success')
+                .addClass('text-success')
+                .html('Saved');
+
+                row.find('.physical-count')
+                .attr('data-system', physicalQty);
+
+                button.html(
+                    '<i class="fa fa-check"></i>'
+                );
+
+                setTimeout(function () {
+
+                    button.html(
+                        '<i class="fa fa-save"></i>'
+                    );
+
+                    button.prop('disabled', false);
+
+                }, 1500);
+
+            },
+
+            error: function (xhr) {
+
+                alert(
+                    xhr.responseJSON?.message ??
+                    'Failed to save stock'
+                );
+
+                button.html(
+                    '<i class="fa fa-save"></i>'
+                );
+
+                button.prop('disabled', false);
+            }
+        });
+
     });
 
-    $('#stock-count-table').DataTable( {
-        "order": [],
-        'language': {
-            'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
-             "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
-            "search":  '{{trans("file.Search")}}',
-            'paginate': {
-                    'previous': '<i class="dripicons-chevron-left"></i>',
-                    'next': '<i class="dripicons-chevron-right"></i>'
-            }
-        },
-        'columnDefs': [
-            {
-                "orderable": false,
-                'targets': [0, 7, 8, 9]
-            },
-            {
-                'render': function(data, type, row, meta){
-                    if(type === 'display'){
-                        data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
-                    }
-
-                   return data;
-                },
-                'checkboxes': {
-                   'selectRow': true,
-                   'selectAllRender': '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>'
-                },
-                'targets': [0]
-            }
-        ],
-        'select': { style: 'multi',  selector: 'td:first-child'},
-        'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
-        dom: '<"row"lfB>rtip',
-        buttons: [
-            {
-                extend: 'pdf',
-                text: '<i title="export to pdf" class="fa fa-file-pdf-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible',
-                },
-            },
-            {
-                extend: 'excel',
-                text: '<i title="export to excel" class="dripicons-document-new"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible',
-                },
-            },
-            {
-                extend: 'csv',
-                text: '<i title="export to csv" class="fa fa-file-text-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible',
-                },
-            },
-            {
-                extend: 'print',
-                text: '<i title="print" class="fa fa-print"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible',
-                },
-            },
-            {
-                extend: 'colvis',
-                text: '<i title="column visibility" class="fa fa-eye"></i>',
-                columns: ':gt(0)'
-            },
-        ],
-    } );
+    $(document).on('change', '#checkAll', function () {
+        $('.product-check').prop(
+            'checked',
+            $(this).prop('checked')
+        );
+    });
 
 </script>
 @endpush
+

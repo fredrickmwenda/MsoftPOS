@@ -34,6 +34,13 @@ class HomeController extends Controller
 {
     use \App\Traits\AutoUpdateTrait;
 
+
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
+
     public function home()
     {
         return view('backend.home');
@@ -59,40 +66,19 @@ class HomeController extends Controller
 
     public function dashboard()
     {
-        /*$headers = array(
-            "Authorization: Bearer kRHXREZr1SmBu32lSZ26GB6VlyKhjWLpDOB",
-            "Content-Type: application/json",
-            "cache-control: no-cache"
-        );
-        $params = [
-            "sender" => "SEWI PAY",
-            "content" => "Hello akdjohnson",
-            "dlrUrl" => "",
-            "recipients" => ["2250709134185"]
-        ];
-        $params = json_encode($params);
-        $url = "https://api.smscloud.ci/v1/campaigns";
-        $curl = curl_init($url);
-        curl_setopt($curl, CURLOPT_URL, $url);
-        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, TRUE);
-        curl_setopt($curl, CURLOPT_POST, TRUE);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($curl, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($curl, CURLOPT_POSTFIELDS, $params);
-        $resp = curl_exec($curl);
-        curl_close($curl);
-        return dd($resp);*/
-        //return \Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'));
-        //making strict mode false for this query
+
+        
         config()->set('database.connections.mysql.strict', false);
         DB::reconnect();
 
         if (!Auth::check() || !Auth::user()) {
             return redirect()->route('login')->with('error', __('Your session is invalid or has expired. Please log in again.'));
         }
+        $isCustomer= Auth::user()->roles->contains(function ($role) {
+            return $role->id == 2;
+        });
 
-        if(Auth::user()->role_id == 5) {
-            //dd(Auth::user()->role_id);
+        if($isCustomer) {
             $customer = Customer::select('id', 'points')->where('user_id', Auth::id())->first();
             if (!$customer) {
                 return redirect()->back()->with('error', __('Customer profile not found for this user. Please contact an administrator.'));
@@ -128,7 +114,9 @@ class HomeController extends Controller
             $apply_sale_percentage_current = false;
         }
 
-        if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own')
+   
+
+        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
         {
             $sale_base = Sale::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date);
             $sale_ids_current = [];
@@ -213,13 +201,13 @@ class HomeController extends Controller
         //cash flow of last 6 months
         $start = strtotime(date('Y-m-01', strtotime('-6 month', strtotime(date('Y-m-d') ))));
         $end = strtotime(date('Y-m-'.date('t', mktime(0, 0, 0, date("m"), 1, date("Y")))));
-
+    
         while($start < $end)
         {
             $start_date = date("Y-m", $start).'-'.'01';
             $end_date = date("Y-m", $start).'-'.date('t', mktime(0, 0, 0, date("m", $start), 1, date("Y", $start)));
-
-            if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
+             
+            if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
                 $recieved_amount = DB::table('payments')->whereNotNull('sale_id')->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('amount');
                 $sent_amount = DB::table('payments')->whereNotNull('purchase_id')->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('amount');
                 $return_amount = Returns::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
@@ -256,7 +244,7 @@ class HomeController extends Controller
             $end_date = date("Y").'-'.date('m', $start).'-'.date('t', mktime(0, 0, 0, date("m", $start), 1, date("Y", $start)));
 
             $sale_base = Sale::whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date);
-            if (Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
+            if ($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
                 $sale_base->where('user_id', Auth::id());
             }
             if ($apply_sale_percentage) {
@@ -274,7 +262,7 @@ class HomeController extends Controller
                 $sale_amount = (clone $sale_base)->sum('grand_total');
             }
 
-            if (Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
+            if ($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
                 $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
             } else {
                 $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
@@ -287,7 +275,7 @@ class HomeController extends Controller
         config()->set('database.connections.mysql.strict', true);
         DB::reconnect();
         //fetching data for auto updates
-        if(Auth::user()->role_id <= 2 && isset($_COOKIE['login_now']) && $_COOKIE['login_now']) {
+        if($this->isStaff() && isset($_COOKIE['login_now']) && $_COOKIE['login_now']) {
             $autoUpdateData = $this->general();
             $alertBugEnable =  $autoUpdateData['alertBugEnable'];
             $alertVersionUpgradeEnable = $autoUpdateData['alertVersionUpgradeEnable'];
@@ -353,7 +341,7 @@ class HomeController extends Controller
 
     public function recentSale()
     {
-        if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
         {
             $recent_sale = Sale::join('customers', 'customers.id', '=', 'sales.customer_id')->select('sales.id','sales.reference_no','sales.sale_status','sales.created_at','sales.grand_total','sales.user_id','customers.name')->orderBy('id', 'desc')->where('sales.user_id', Auth::id())->take(5)->get();
             return response()->json($recent_sale);
@@ -367,7 +355,7 @@ class HomeController extends Controller
 
     public function recentPurchase()
     {
-        if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
         {
             $recent_purchase = Purchase::join('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')->select('purchases.id','purchases.reference_no','purchases.payment_status','purchases.created_at','purchases.grand_total','purchases.user_id','suppliers.name')->orderBy('id', 'desc')->where('purchases.user_id', Auth::id())->take(5)->get();
             return response()->json($recent_purchase);
@@ -381,7 +369,7 @@ class HomeController extends Controller
 
     public function recentQuotation()
     {
-        if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
         {
             $recent_quotation = Quotation::join('customers', 'customers.id', '=', 'quotations.customer_id')->select('quotations.id','quotations.reference_no','quotations.quotation_status','quotations.created_at','quotations.grand_total','quotations.user_id','customers.name')->orderBy('id', 'desc')->where('quotations.user_id', Auth::id())->take(5)->get();
             return response()->json($recent_quotation);
@@ -395,7 +383,7 @@ class HomeController extends Controller
 
     public function recentPayment()
     {
-        if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
         {
             $recent_payment = Payment::select('id','payment_reference','amount','paying_method','created_at','user_id')->orderBy('id', 'desc')->where('user_id', Auth::id())->take(5)->get();
             return response()->json($recent_payment);
@@ -409,7 +397,7 @@ class HomeController extends Controller
 
     public function dashboardFilter($start_date, $end_date)
     {
-        if(Auth::user()->role_id > 2 && cache()->get('general_setting')->staff_access == 'own') {
+        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
             config()->set('database.connections.mysql.strict', false);
             DB::reconnect();
             $product_sale_data = Sale::join('product_sales', 'sales.id','=', 'product_sales.sale_id')

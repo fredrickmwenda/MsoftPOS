@@ -25,7 +25,7 @@
                         <input type="hidden" name="ending_date" value="{{$ending_date}}" />
                     </div>
                 </div>
-                <div class="col-md-3 @if(\Auth::user()->role_id > 2){{'d-none'}}@endif">
+                <div class="col-md-3 @if(!Auth::user()->roles->contains(fn($r) => $r->id <= 2)){{'d-none'}}@endif">
                     <div class="form-group">
                         <label><strong>{{trans('file.Warehouse')}}</strong></label>
                         <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >

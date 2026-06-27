@@ -43,6 +43,12 @@ use Spatie\Permission\Models\Permission;
 
 class ReportController extends Controller
 {
+
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
     /**
      * Get percentage_filter from GeneralSetting model. Returns null if not set or 100.
      */
@@ -82,14 +88,13 @@ class ReportController extends Controller
 
     public function reportDashboard()
     {
-        $role = Role::find(Auth::user()->role_id);
+        
         return view('backend.report.report_dashboard');
     }
 
     public function productQuantityAlert()
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('product-qty-alert')){
+        if(Auth::user()->hasPermissionTo('product-qty-alert')){
             $lims_product_data = Product::select('name','code', 'image', 'qty', 'alert_quantity')->where('is_active', true)->whereColumn('alert_quantity', '>', 'qty')->get();
             return view('backend.report.qty_alert_report', compact('lims_product_data'));
         }
@@ -122,8 +127,7 @@ class ReportController extends Controller
 
     public function dailySaleObjective(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('dso-report')) {
+        if(Auth::user()->hasPermissionTo('dso-report')) {
             if($request->input('starting_date')) {
                 $starting_date = $request->input('starting_date');
                 $ending_date = $request->input('ending_date');
@@ -343,8 +347,7 @@ class ReportController extends Controller
         
     public function warehouseStock(Request $request)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('warehouse-stock-report')) {
+        if(Auth::user()->hasPermissionTo('warehouse-stock-report')) {
             if(isset($request->warehouse_id))
                 $warehouse_id = $request->warehouse_id;
             else
@@ -397,8 +400,7 @@ class ReportController extends Controller
 
     public function dailySale($year, $month)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('daily-sale')){
+        if(Auth::user()->hasPermissionTo('daily-sale')){
             $sale_percentage = $this->getSalePercentageFromSetting();
             $apply_percentage = $sale_percentage !== null && $sale_percentage < 100;
             if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
@@ -539,8 +541,7 @@ class ReportController extends Controller
 
     public function dailyPurchase($year, $month)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('daily-purchase')){
+        if(Auth::user()->hasPermissionTo('daily-purchase')){
             $start = 1;
             $number_of_day = date('t', mktime(0, 0, 0, $month, 1, $year));
             while($start <= $number_of_day)
@@ -622,8 +623,7 @@ class ReportController extends Controller
 
     public function monthlySale($year)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('monthly-sale')){
+        if(Auth::user()->hasPermissionTo('monthly-sale')){
             $sale_percentage = $this->getSalePercentageFromSetting();
             $apply_percentage = $sale_percentage !== null && $sale_percentage < 100;
             if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
@@ -729,8 +729,7 @@ class ReportController extends Controller
 
     public function monthlyPurchase($year)
     {
-        $role = Role::find(Auth::user()->role_id);
-        if($role->hasPermissionTo('monthly-purchase')){
+        if(Auth::user()->hasPermissionTo('monthly-purchase')){
             $start = strtotime($year .'-01-01');
             $end = strtotime($year .'-12-31');
             while($start <= $end)
@@ -800,79 +799,45 @@ class ReportController extends Controller
         return view('backend.report.monthly_purchase', compact('year', 'total_discount', 'order_discount', 'total_tax', 'order_tax', 'shipping_cost', 'grand_total', 'lims_warehouse_list', 'warehouse_id'));
     }
 
-    // public function bestSeller()
-    // {
-    //     $role = Role::find(Auth::user()->role_id);
-    //     if($role->hasPermissionTo('best-seller')){
-    //         $start = strtotime(date("Y-m", strtotime("-2 months")).'-01');
-    //         $end = strtotime(date("Y").'-'.date("m").'-31');
-
-    //         while($start <= $end)
-    //         {
-    //             $start_date = date("Y-m", $start).'-'.'01';
-    //             $end_date = date("Y-m", $start).'-'.'31';
-
-    //             $best_selling_qty = Product_Sale::select(DB::raw('product_id, sum(qty) as sold_qty'))->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->groupBy('product_id')->orderBy('sold_qty', 'desc')->take(10)->get();
-    //             if(!count($best_selling_qty)){
-    //                 $product[] = '';
-    //                 $sold_qty[] = 0;
-    //             }
-    //             foreach ($best_selling_qty as $best_seller) {
-    //                 $product_data = Product::find($best_seller->product_id);
-    //                 $product[] = $product_data->name.': '.$product_data->code;
-    //                 $sold_qty[] = $best_seller->sold_qty;
-    //             }
-    //             $start = strtotime("+1 month", $start);
-    //         }
-    //         $start_month = date("F Y", strtotime('-2 month'));
-    //         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-    //         $warehouse_id = 0;
-    //         //return $product;
-    //         return view('backend.report.best_seller', compact('product', 'sold_qty', 'start_month', 'lims_warehouse_list', 'warehouse_id'));
-    //     }
-    //     else
-    //         return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
-    // }
-
+ 
     public function bestSeller(Request $request)
-{
-    $role = Role::find(Auth::user()->role_id);
-    if (!$role->hasPermissionTo('best-seller')) {
-        return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+    {
+        if (!Auth::user()->hasPermissionTo('best-seller')) {
+            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+        }
+
+        // Default to today’s date if no input is provided
+        $start_date = $request->input('start_date', date('Y-m-d'));
+        $end_date   = $request->input('end_date', date('Y-m-d'));
+
+        // Single query for the date range (default = today)
+        $best_selling_qty = Product_Sale::select(DB::raw('product_id, sum(qty) as sold_qty'))
+            ->whereDate('created_at', '>=', $start_date)
+            ->whereDate('created_at', '<=', $end_date)
+            ->groupBy('product_id')
+            ->orderByDesc('sold_qty')
+            ->take(10)
+            ->get();
+
+        $product  = [];
+        $sold_qty = [];
+
+        foreach ($best_selling_qty as $best_seller) {
+            $product_data = Product::find($best_seller->product_id);
+            $product[]  = $product_data->name . ': ' . $product_data->code;
+            $sold_qty[] = $best_seller->sold_qty;
+        }
+
+        // If no sales, pass empty arrays (view can handle)
+        $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+        $warehouse_id = 0;
+        $start_month = date("F Y"); // For display, now just current month/day context
+
+        return view('backend.report.best_seller', compact(
+            'product', 'sold_qty', 'start_month', 'lims_warehouse_list', 'warehouse_id',
+            'start_date', 'end_date' // pass to view if needed for form inputs
+        ));
     }
-
-    // Default to today’s date if no input is provided
-    $start_date = $request->input('start_date', date('Y-m-d'));
-    $end_date   = $request->input('end_date', date('Y-m-d'));
-
-    // Single query for the date range (default = today)
-    $best_selling_qty = Product_Sale::select(DB::raw('product_id, sum(qty) as sold_qty'))
-        ->whereDate('created_at', '>=', $start_date)
-        ->whereDate('created_at', '<=', $end_date)
-        ->groupBy('product_id')
-        ->orderByDesc('sold_qty')
-        ->take(10)
-        ->get();
-
-    $product  = [];
-    $sold_qty = [];
-
-    foreach ($best_selling_qty as $best_seller) {
-        $product_data = Product::find($best_seller->product_id);
-        $product[]  = $product_data->name . ': ' . $product_data->code;
-        $sold_qty[] = $best_seller->sold_qty;
-    }
-
-    // If no sales, pass empty arrays (view can handle)
-    $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-    $warehouse_id = 0;
-    $start_month = date("F Y"); // For display, now just current month/day context
-
-    return view('backend.report.best_seller', compact(
-        'product', 'sold_qty', 'start_month', 'lims_warehouse_list', 'warehouse_id',
-        'start_date', 'end_date' // pass to view if needed for form inputs
-    ));
-}
 
     public function bestSellerByWarehouse(Request $request)
     {
@@ -1042,11 +1007,11 @@ class ReportController extends Controller
             $period_label = $year;
             $period_subtitle = 'For the Year Ending ' . $year;
         }
-        
+
         // Get active currency
         $active_currency = Currency::where('is_active', true)->first();
         $currency_code = $active_currency ? $active_currency->code : '$';
-        
+
         // Query arrays for aggregations
         $query1 = [
             'SUM(grand_total) AS grand_total',
@@ -1055,7 +1020,7 @@ class ReportController extends Controller
             'SUM(total_tax + order_tax) AS tax',
             'SUM(total_discount + order_discount) AS discount'
         ];
-        
+
         $query2 = [
             'SUM(grand_total) AS grand_total',
             'SUM(total_tax + order_tax) AS tax'
@@ -1065,7 +1030,7 @@ class ReportController extends Controller
         config()->set('database.connections.mysql.strict', false);
         DB::reconnect();
 
-        // Get product sale data for calculating product cost and tax
+        // Get product sale data for period (used for revenue and tax extraction)
         $product_sale_data = Product_Sale::select(DB::raw('product_id, product_batch_id, sale_unit_id, variant_id, 
             sum(qty) as sold_qty, 
             sum(product_sales.return_qty) as return_qty, 
@@ -1077,20 +1042,25 @@ class ReportController extends Controller
         config()->set('database.connections.mysql.strict', true);
         DB::reconnect();
 
-        // Calculate COGS (Cost of Goods Sold) using average cost method
-        // This gives us the actual cost of products sold, not total purchases
-        $data = $this->calculateAverageCOGS($product_sale_data);
-        $product_cost = $data[0] ?? 0; // This is the "Purchases" amount in P&L
-        $product_tax = $data[1] ?? 0;  // Tax on sold products
+        // Tax extraction – keep using the old method (or adjust if needed)
+        $cogsData = $this->calculateAverageCOGS($product_sale_data);
+        $product_tax = $cogsData[1] ?? 0;  // Tax on sold products
 
-        // Calculate total product revenue from the sale data
+        // *** NEW: Total purchases (product cost) directly from product_purchases ***
+        // Joins product_sales with product_purchases on product_id, calculates cost as:
+        // sold_qty * (product_purchases.total_cost / product_purchases.qty)
+        $product_cost = DB::table('product_sales')
+            ->join('product_purchases', 'product_sales.product_id', '=', 'product_purchases.product_id')
+            ->whereBetween('product_sales.created_at', [$start_date, $end_date])
+            ->sum(DB::raw('product_sales.qty * (product_purchases.net_unit_cost / product_purchases.qty)'));
+
+        // Total product revenue from sale data
         $product_revenue = $product_sale_data->sum('sold_amount');
 
-        // Gross profit = selling price – cost price
+        // Profit from product sales (informational)
         $product_profit = $product_revenue - $product_cost;
-        $product_cost =$product_profit;
 
-        // Get total purchases (for reference, not used in P&L calculations)
+        // Get total purchases (summary of all purchase transactions, still for reference)
         $purchase = Purchase::whereBetween('created_at', [$start_date, $end_date])
             ->selectRaw(implode(',', $query1))
             ->first();
@@ -1117,77 +1087,32 @@ class ReportController extends Controller
         $expenses = Expense::whereBetween('created_at', [$start_date, $end_date])->get();
         $total_expense = $expenses->sum('amount');
 
-        // Filtered expenses (operating expenses only)
-        // Exclude payroll if it's included as separate direct labor
+        // Operating expenses (exclude payroll)
         $filtered_expenses = $expenses->filter(function($expense) {
-            // Remove any expense that might be duplicate of payroll
-            // Adjust based on your actual expense categories
             $exclude_categories = ['payroll', 'salary', 'wages', 'labour'];
             return !in_array(strtolower($expense->name), $exclude_categories);
         });
         $total_operating_expenses = $filtered_expenses->sum('amount');
 
-        // Get payroll (direct labor costs)
+        // Payroll (direct labor)
         $payroll = Payroll::whereBetween('created_at', [$start_date, $end_date])->sum('amount');
         $total_payroll_count = Payroll::whereBetween('created_at', [$start_date, $end_date])->count();
 
         // Calculate P&L metrics
-        // Option 1: Simple calculation
-        $total_cogs = $product_cost + $payroll; // Cost of Goods Sold = Purchases + Direct Labor
+        $total_cogs = $product_cost + $payroll;
         $gross_profit = $total_sale - $total_cogs;
         $operating_profit = $gross_profit - $total_operating_expenses;
         $net_profit_before_tax = $operating_profit;
         $net_profit = $net_profit_before_tax - $product_tax;
 
-        // Option 2: More detailed calculation including returns (if you want to include them)
-        // $net_sales = $total_sale - $sale_return_amount;
-        // $adjusted_cogs = $product_cost - $purchase_return_amount;
-        // $total_cogs_detailed = $adjusted_cogs + $payroll;
-        // $gross_profit_detailed = $net_sales - $total_cogs_detailed;
-        // $operating_profit_detailed = $gross_profit_detailed - $total_operating_expenses;
-        // $net_profit_detailed = $operating_profit_detailed - $product_tax;
-
         return view('backend.report.profitloss', compact(
-            'selected_year',
-            'selected_month',
-            'period_label',
-            'period_subtitle',
-            'year',
-            'start_date',
-            'end_date',
-            'currency_code',
-            
-            // Sales data
-            'sale',
-            'total_sale',
-            
-            // Purchase data (for reference)
-            'purchase',
-            
-            // Returns data
-            'return',
-            'sale_return_amount',
-            'purchase_return',
-            'purchase_return_amount',
-            
-            // COGS data
-            'product_cost', // This is the "Purchases" amount in your P&L
-            'product_tax',
-            'payroll',
-            'total_payroll_count',
-            'total_cogs',
-            
-            // Expense data
-            'expenses',
-            'filtered_expenses',
-            'total_expense',
-            'total_operating_expenses',
-            
-            // Calculated profits
-            'gross_profit',
-            'operating_profit',
-            'net_profit_before_tax',
-            'net_profit'
+            'selected_year', 'selected_month', 'period_label', 'period_subtitle',
+            'year', 'start_date', 'end_date', 'currency_code',
+            'sale', 'total_sale', 'purchase',
+            'return', 'sale_return_amount', 'purchase_return', 'purchase_return_amount',
+            'product_cost', 'product_tax', 'payroll', 'total_payroll_count', 'total_cogs',
+            'expenses', 'filtered_expenses', 'total_expense', 'total_operating_expenses',
+            'gross_profit', 'operating_profit', 'net_profit_before_tax', 'net_profit'
         ));
     }
 
@@ -2134,7 +2059,7 @@ class ReportController extends Controller
         $department_id = (int) ($data['department_id'] ?? 0);
         $payment_mode = $data['payment_mode'] ?? '0';
         // Same check as Sale index: request (form) > session > GeneralSetting, so filtering keeps percentage in sync
-        $percentage_filter = GeneralSetting::where('name', 'percentage_filter')->first();
+        $percentage_filter = GeneralSetting::first()->percentage_filter;
         if (isset($data['percentage_filter']) && $data['percentage_filter'] !== '' && $data['percentage_filter'] !== null) {
             $percentage_filter = (int) $data['percentage_filter'];
             if ($percentage_filter < 0 || $percentage_filter > 100) {
@@ -2438,7 +2363,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $sales =  $q->orwhere([
                                 ['sales.reference_no', 'LIKE', "%{$search}%"],
                                 ['sales.user_id', Auth::id()]
@@ -2570,7 +2495,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $purchases =  $q->orwhere([
                                 ['purchases.reference_no', 'LIKE', "%{$search}%"],
                                 ['purchases.user_id', Auth::id()]
@@ -2705,7 +2630,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('quotations.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $quotations =  $q->orwhere([
                                 ['quotations.reference_no', 'LIKE', "%{$search}%"],
                                 ['quotations.user_id', Auth::id()]
@@ -2831,7 +2756,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('returns.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $returns =  $q->orwhere([
                                 ['returns.reference_no', 'LIKE', "%{$search}%"],
                                 ['returns.user_id', Auth::id()]
@@ -2946,7 +2871,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('expenses.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $expenses =  $q->orwhere([
                                 ['expenses.reference_no', 'LIKE', "%{$search}%"],
                                 ['expenses.user_id', Auth::id()]
@@ -3076,7 +3001,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $sales =  $q->orwhere([
                                 ['sales.reference_no', 'LIKE', "%{$search}%"],
                                 ['sales.user_id', Auth::id()]
@@ -3191,7 +3116,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $purchases =  $q->orwhere([
                                 ['purchases.reference_no', 'LIKE', "%{$search}%"],
                                 ['purchases.user_id', Auth::id()]
@@ -3312,7 +3237,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('quotations.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $quotations =  $q->orwhere([
                                 ['quotations.reference_no', 'LIKE', "%{$search}%"],
                                 ['quotations.user_id', Auth::id()]
@@ -3420,7 +3345,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('transfers.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $transfers =  $q->orwhere([
                                 ['transfers.reference_no', 'LIKE', "%{$search}%"],
                                 ['transfers.user_id', Auth::id()]
@@ -3536,7 +3461,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('payments.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $payments =  $q->orwhere([
                                 ['payments.payment_reference', 'LIKE', "%{$search}%"],
                                 ['payments.user_id', Auth::id()]
@@ -3619,7 +3544,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('payrolls.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $payrolls =  $q->orwhere([
                                 ['payrolls.reference_no', 'LIKE', "%{$search}%"],
                                 ['payrolls.user_id', Auth::id()]
@@ -3709,7 +3634,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('expenses.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $expenses =  $q->orwhere([
                                 ['expenses.reference_no', 'LIKE', "%{$search}%"],
                                 ['expenses.user_id', Auth::id()]
@@ -3810,7 +3735,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $sales =  $q->orwhere([
                                 ['sales.reference_no', 'LIKE', "%{$search}%"],
                                 ['sales.user_id', Auth::id()]
@@ -3939,7 +3864,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('payments.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $payments =  $q->orwhere([
                                 ['payments.payment_reference', 'LIKE', "%{$search}%"],
                                 ['payments.user_id', Auth::id()]
@@ -4025,7 +3950,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('quotations.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $quotations =  $q->orwhere([
                                 ['quotations.reference_no', 'LIKE', "%{$search}%"],
                                 ['quotations.user_id', Auth::id()]
@@ -4138,7 +4063,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('returns.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $returns =  $q->orwhere([
                                 ['returns.reference_no', 'LIKE', "%{$search}%"],
                                 ['returns.user_id', Auth::id()]
@@ -4256,7 +4181,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $sales =  $q->orwhere([
                                 ['sales.reference_no', 'LIKE', "%{$search}%"],
                                 ['sales.user_id', Auth::id()]
@@ -4373,7 +4298,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('payments.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $payments =  $q->orwhere([
                                 ['payments.payment_reference', 'LIKE', "%{$search}%"],
                                 ['payments.user_id', Auth::id()]
@@ -4461,7 +4386,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('quotations.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $quotations =  $q->orwhere([
                                 ['quotations.reference_no', 'LIKE', "%{$search}%"],
                                 ['quotations.user_id', Auth::id()]
@@ -4575,7 +4500,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('returns.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $returns =  $q->orwhere([
                                 ['returns.reference_no', 'LIKE', "%{$search}%"],
                                 ['returns.user_id', Auth::id()]
@@ -4700,7 +4625,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $purchases =  $q->orwhere([
                                 ['purchases.reference_no', 'LIKE', "%{$search}%"],
                                 ['purchases.user_id', Auth::id()]
@@ -4814,7 +4739,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('payments.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $payments =  $q->orwhere([
                                 ['payments.payment_reference', 'LIKE', "%{$search}%"],
                                 ['payments.user_id', Auth::id()]
@@ -4899,7 +4824,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('return_purchases.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $return_purchases =  $q->orwhere([
                                 ['return_purchases.reference_no', 'LIKE', "%{$search}%"],
                                 ['return_purchases.user_id', Auth::id()]
@@ -5001,7 +4926,7 @@ class ReportController extends Controller
         {
             $search = $request->input('search.value');
             $q = $q->whereDate('quotations.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-            if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+            if($this->isStaff() && config('staff_access') == 'own') {
                 $quotations =  $q->orwhere([
                                 ['quotations.reference_no', 'LIKE', "%{$search}%"],
                                 ['quotations.user_id', Auth::id()]
@@ -5122,7 +5047,7 @@ class ReportController extends Controller
             {
                 $search = $request->input('search.value');
                 $q = $q->whereDate('sales.created_at', '=' , date('Y-m-d', strtotime(str_replace('/', '-', $search))));
-                if(Auth::user()->role_id > 2 && config('staff_access') == 'own') {
+                if($this->isStaff() && config('staff_access') == 'own') {
                     $sales =  $q->orwhere([
                                     ['sales.reference_no', 'LIKE', "%{$search}%"],
                                     ['sales.user_id', Auth::id()]
@@ -5254,15 +5179,53 @@ class ReportController extends Controller
         return view('backend.report.supplier_due_report', compact('lims_purchase_data', 'supplier_summaries', 'start_date', 'end_date', 'general_setting'));
     }
 
+    // public function departmentReport()
+    // {
+    //     $dateFrom = request('date_from') ?? date('Y-m-d');
+    //     $dateTo = request('date_to') ?? date('Y-m-d');
+    //     $departments = CategoryDepartment::where('is_active', true)->get();
+    //     $department_data = [];
+    //     foreach($departments as $department) {
+    //         $categories = Category::where('department_id', $department->id)->pluck('id');
+    //         $total_products = Product::whereIn('category_id', $categories)->count();
+    //         $salesQuery = DB::table('product_sales')
+    //             ->join('products', 'product_sales.product_id', '=', 'products.id')
+    //             ->whereIn('products.category_id', $categories)
+    //             ->whereBetween('product_sales.created_at', [
+    //                 $dateFrom . ' 00:00:00',
+    //                 $dateTo . ' 23:59:59'
+    //             ]);
+    //         $total_sales = $salesQuery->sum('product_sales.qty');
+    //         $total_revenue = $salesQuery->sum('product_sales.total');
+    //         // Cost calculation: sum of (qty * net_unit_price)
+    //         $total_cost = $salesQuery->sum(DB::raw('product_sales.qty * product_sales.net_unit_price'));
+    //         $categories_count = Category::where('department_id', $department->id)->count();
+    //         $department_data[] = [
+    //             'id' => $department->id,
+    //             'name' => $department->name,
+    //             'image' => $department->image,
+    //             'categories_count' => $categories_count,
+    //             'products_count' => $total_products,
+    //             'total_sales' => $total_sales ?? 0,
+    //             'total_revenue' => $total_revenue ?? 0,
+    //             'total_cost' => $total_cost ?? 0
+    //         ];
+    //     }
+    //     return view('backend.report.department_report', compact('department_data'));
+    // }
     public function departmentReport()
     {
         $dateFrom = request('date_from') ?? date('Y-m-d');
         $dateTo = request('date_to') ?? date('Y-m-d');
         $departments = CategoryDepartment::where('is_active', true)->get();
+    // dd($departments);
         $department_data = [];
-        foreach($departments as $department) {
+
+        foreach ($departments as $department) {
             $categories = Category::where('department_id', $department->id)->pluck('id');
             $total_products = Product::whereIn('category_id', $categories)->count();
+
+            // Base query for sales in the period
             $salesQuery = DB::table('product_sales')
                 ->join('products', 'product_sales.product_id', '=', 'products.id')
                 ->whereIn('products.category_id', $categories)
@@ -5270,22 +5233,36 @@ class ReportController extends Controller
                     $dateFrom . ' 00:00:00',
                     $dateTo . ' 23:59:59'
                 ]);
-            $total_sales = $salesQuery->sum('product_sales.qty');
+
+            // Total revenue (kept internal for profit margin)
             $total_revenue = $salesQuery->sum('product_sales.total');
-            // Cost calculation: sum of (qty * net_unit_price)
-            $total_cost = $salesQuery->sum(DB::raw('product_sales.qty * product_sales.net_unit_price'));
+
+            // Total purchases (cost of goods sold) – from product_purchases table
+            // Unit cost = product_purchases.total_cost / product_purchases.qty
+            $total_purchases = DB::table('product_sales')
+                ->join('products', 'product_sales.product_id', '=', 'products.id')
+                ->join('product_purchases', 'product_sales.product_id', '=', 'product_purchases.product_id')
+                ->whereIn('products.category_id', $categories)
+                ->whereBetween('product_sales.created_at', [
+                    $dateFrom . ' 00:00:00',
+                    $dateTo . ' 23:59:59'
+                ])
+                ->sum(DB::raw('product_sales.qty * (product_purchases.net_unit_cost / product_purchases.qty)'));
+
             $categories_count = Category::where('department_id', $department->id)->count();
+
             $department_data[] = [
-                'id' => $department->id,
-                'name' => $department->name,
-                'image' => $department->image,
+                'id'               => $department->id,
+                'name'             => $department->name,
+                'image'            => $department->image,
                 'categories_count' => $categories_count,
-                'products_count' => $total_products,
-                'total_sales' => $total_sales ?? 0,
-                'total_revenue' => $total_revenue ?? 0,
-                'total_cost' => $total_cost ?? 0
+                'products_count'   => $total_products,
+                'total_revenue'     => $total_revenue ?? 0,
+                'total_purchases'  => $total_purchases ?? 0,
+                'profit_margin'    => ($total_revenue ?? 0) - ($total_purchases ?? 0),
             ];
         }
+
         return view('backend.report.department_report', compact('department_data'));
     }
 
@@ -5380,28 +5357,31 @@ class ReportController extends Controller
         return response()->json(['rows' => $rows]);
     }
 
-    /**
-     * Payment Method Report – show form and aggregated data by payment method.
+ 
+
+      /**
+     * Main payment method report.
+     * Filters by date range, payment method, and sales officer.
      */
     public function paymentMethodReport(Request $request)
     {
-        // dd('paymentMethodReport', $request->all());
         $start_date = $request->input('start_date', date('Y-m-d'));
-        $end_date = $request->input('end_date', date('Y-m-d'));
+        $end_date   = $request->input('end_date', date('Y-m-d'));
         $payment_method = $request->input('payment_method', '');
         $user_id = (int) $request->input('user_id', 0);
 
+        // Join with sales to get paid_amount from the sale record
         $query = DB::table('payments')
+            ->join('sales', 'payments.sale_id', '=', 'sales.id')
             ->whereDate('payments.created_at', '>=', $start_date)
             ->whereDate('payments.created_at', '<=', $end_date);
-        
-        //sales officer here are the users who made the payments, so we filter by payments.user_id
-        // get the list of user ids FROM Payment Model
-        $list_of_user_id = Payment::select('user_id')->distinct()->pluck('user_id');
-        
+
+        // Filter by payment method
         if (!empty($payment_method)) {
             $query->where('payments.paying_method', $payment_method);
         }
+
+        // Filter by sales officer (payments.user_id)
         if ($user_id > 0) {
             $query->where('payments.user_id', $user_id);
         }
@@ -5410,7 +5390,7 @@ class ReportController extends Controller
             ->select(
                 'payments.paying_method',
                 DB::raw('COUNT(payments.id) as transaction_count'),
-                DB::raw('COALESCE(SUM(payments.amount), 0) as total_amount')
+                DB::raw('COALESCE(SUM(sales.paid_amount), 0) as total_amount')   // <-- changed
             )
             ->groupBy('payments.paying_method')
             ->orderByDesc('total_amount')
@@ -5420,13 +5400,47 @@ class ReportController extends Controller
             'report_rows',
             'start_date',
             'end_date',
-            'payment_method'
+            'payment_method',
+            'user_id'
         ));
     }
 
     /**
-     * AJAX: Return payment/sale details for Payment Method Report modal (date, products, amount).
+     * AJAX endpoint for the modal: shows individual sales for a selected payment method
+     * and date range (filters are respected, including the sales officer if supplied).
      */
+    public function paymentMethodDetails(Request $request)
+    {
+        $start_date = $request->input('start_date');
+        $end_date   = $request->input('end_date');
+        $payment_method = $request->input('payment_method');
+        $user_id = (int) $request->input('user_id', 0);   // optional sales officer filter
+
+        $query = DB::table('payments')
+            ->join('sales', 'payments.sale_id', '=', 'sales.id')
+            ->whereDate('payments.created_at', '>=', $start_date)
+            ->whereDate('payments.created_at', '<=', $end_date)
+            ->where('payments.paying_method', $payment_method);
+
+        if ($user_id > 0) {
+            $query->where('payments.user_id', $user_id);
+        }
+
+        $details = $query
+            ->select(
+                DB::raw('DATE(payments.created_at) as date'),
+                'sales.reference_no as products',      // you can later join product details if needed
+                'sales.paid_amount as amount'           // <-- changed to sales.paid_amount
+            )
+            ->orderBy('payments.created_at')
+            ->get();
+
+        return response()->json(['rows' => $details]);
+    }
+
+        /**
+         * AJAX: Return payment/sale details for Payment Method Report modal (date, products, amount).
+         */
     public function paymentMethodReportDetails(Request $request)
     {
         $start_date = $request->input('start_date');
@@ -5451,10 +5465,14 @@ class ReportController extends Controller
         $rows = [];
         foreach ($payments as $payment) {
             $date = $payment->created_at ? $payment->created_at->format('Y-m-d H:i') : '';
-            $amount = (float) $payment->amount;
             $products = '—';
+            $amount = 0;
+
             if ($payment->sale_id && $payment->sale) {
                 $date = $payment->sale->created_at ? $payment->sale->created_at->format('Y-m-d H:i') : $date;
+                // Amount from the sale’s paid_amount, not the payment record
+                $amount = (float) $payment->sale->paid_amount;
+
                 $lines = [];
                 foreach ($payment->sale->product_sales ?? [] as $ps) {
                     $name = $ps->product ? $ps->product->name : 'Product #' . $ps->product_id;
@@ -5466,14 +5484,197 @@ class ReportController extends Controller
                 $products = $lines ? implode(', ', $lines) : '—';
             } elseif ($payment->purchase_id && $payment->purchase) {
                 $products = 'Purchase #' . ($payment->purchase->reference_no ?? $payment->purchase_id);
+                // For purchases, keep the payment amount (no sale to link to)
+                $amount = (float) $payment->amount;
+            } else {
+                // Fallback: use the payment amount directly
+                $amount = (float) $payment->amount;
             }
+
             $rows[] = [
-                'date' => $date,
+                'date'     => $date,
                 'products' => $products,
-                'amount' => $amount,
+                'amount'   => $amount,
             ];
         }
 
         return response()->json(['rows' => $rows]);
+    }
+
+
+
+
+    public function stockTaking()
+    {
+        $categories = Category::where(
+            'is_active',
+            true
+        )->get();
+
+        return view(
+            'backend.report.stock_taking',
+            compact('categories')
+        );
+    }
+
+
+    public function stockTakingData(Request $request)
+    {
+        $columns = [
+            1 => 'stock_counts.created_at',
+            2 => 'products.name'
+        ];
+
+        $q = DB::table('stock_count_items')
+            ->join(
+                'stock_counts',
+                'stock_count_items.stock_count_id',
+                '=',
+                'stock_counts.id'
+            )
+            ->join(
+                'products',
+                'stock_count_items.product_id',
+                '=',
+                'products.id'
+            )
+            ->leftJoin(
+                'categories',
+                'products.category_id',
+                '=',
+                'categories.id'
+            )
+            ->join(
+                'warehouses',
+                'stock_counts.warehouse_id',
+                '=',
+                'warehouses.id'
+            )
+            ->join(
+                'users',
+                'stock_counts.user_id',
+                '=',
+                'users.id'
+            )
+            ->whereDate(
+                'stock_counts.created_at',
+                '>=',
+                $request->from_date
+            )
+            ->whereDate(
+                'stock_counts.created_at',
+                '<=',
+                $request->to_date
+            );
+
+        if ($request->status) {
+            $q->where(
+                'stock_counts.status',
+                $request->status
+            );
+        }
+
+        if ($request->category_id) {
+            $q->where(
+                'products.category_id',
+                $request->category_id
+            );
+        }
+
+        $totalData = $q->count();
+        $totalFiltered = $totalData;
+
+        $limit = $request->length;
+        $start = $request->start;
+
+        $items = $q->select(
+                'stock_count_items.*',
+                'stock_counts.reference_no',
+                'stock_counts.status',
+                'stock_counts.created_at',
+                'products.name as product_name',
+                'categories.name as category_name',
+                'warehouses.name as warehouse_name',
+                'users.name as user_name'
+            )
+            ->offset($start)
+            ->limit($limit)
+            ->orderBy(
+                'stock_counts.created_at',
+                'desc'
+            )
+            ->get();
+
+        $data = [];
+
+        foreach ($items as $item) {
+
+            $nestedData['date'] =
+                date(
+                    config('date_format') . ' H:i',
+                    strtotime($item->created_at)
+                );
+
+            $nestedData['reference_no'] =
+                $item->reference_no;
+
+            $nestedData['warehouse'] =
+                $item->warehouse_name;
+
+            $nestedData['product'] =
+                $item->product_name;
+
+            $nestedData['category'] =
+                $item->category_name;
+
+            $nestedData['system_qty'] =
+                number_format(
+                    $item->system_qty,
+                    2
+                );
+
+            $nestedData['physical_qty'] =
+                number_format(
+                    $item->physical_qty,
+                    2
+                );
+
+            $nestedData['variance'] =                
+                    $item->variance;
+
+            $nestedData['reason'] =
+                $item->reason;
+
+            if ($item->status == 'approved') {
+                $nestedData['status'] =
+                    '<span class="badge badge-success">
+                        Approved
+                    </span>';
+            }
+            elseif ($item->status == 'pending') {
+                $nestedData['status'] =
+                    '<span class="badge badge-warning">
+                        Pending
+                    </span>';
+            }
+            else {
+                $nestedData['status'] =
+                    '<span class="badge badge-danger">
+                        Denied
+                    </span>';
+            }
+
+            $nestedData['taken_by'] =
+                $item->user_name;
+
+            $data[] = $nestedData;
+        }
+
+        return response()->json([
+            "draw" => intval($request->draw),
+            "recordsTotal" => intval($totalData),
+            "recordsFiltered" => intval($totalFiltered),
+            "data" => $data
+        ]);
     }
 }

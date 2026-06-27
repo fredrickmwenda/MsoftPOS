@@ -159,7 +159,11 @@ class SettingController extends Controller
 
     public function saveDefaultFilter(Request $request)
     {
-        if (Auth::user()->role_id > 2 || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+        $isStaff =Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    
+        if ($isStaff || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
             return response()->json([
                 'success' => false,
                 'message' => 'Only administrators with Sale Filter permission can set default filters.'
