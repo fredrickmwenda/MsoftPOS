@@ -63,61 +63,7 @@ class UserController extends Controller
         return $id;
     }
 
-    // public function store(Request $request)
-    // {
-    //     $this->validate($request, [
-    //         'name' => [
-    //             'max:255',
-    //                 Rule::unique('users')->where(function ($query) {
-    //                 return $query->where('is_deleted', false);
-    //             }),
-    //         ],
-    //         'email' => [
-    //             'email',
-    //             'max:255',
-    //                 Rule::unique('users')->where(function ($query) {
-    //                 return $query->where('is_deleted', false);
-    //             }),
-    //         ],
-    //     ]);
-
-    //     if($request->role_id == 5) {
-    //         $this->validate($request, [
-    //             'phone_number' => [
-    //                 'max:255',
-    //                     Rule::unique('customers')->where(function ($query) {
-    //                     return $query->where('is_active', 1);
-    //                 }),
-    //             ],
-    //         ]);
-    //     }
-    //     $data = $request->all();
-    //     $message = 'User created successfully';
-    //     $mail_setting = MailSetting::latest()->first();
-    //     if($mail_setting) {
-    //         $this->setMailInfo($mail_setting);
-    //         try {
-    //             Mail::to($data['email'])->send(new UserDetails($data));
-    //         }
-    //         catch(\Exception $e){
-    //             $message = 'User created successfully. Please setup your <a href="setting/mail_setting">mail setting</a> to send mail.';
-    //         }
-    //     }
-    //     if(!isset($data['is_active']))
-    //         $data['is_active'] = false;
-    //     $data['is_deleted'] = false;
-    //     $data['password'] = bcrypt($data['password']);
-    //     $data['phone'] = $data['phone_number'];
-    //     User::create($data);
-    //     if($data['role_id'] == 5) {
-    //         $data['name'] = $data['customer_name'];
-    //         $data['phone_number'] = $data['phone'];
-    //         $data['is_active'] = true;
-    //         Customer::create($data);
-    //     }
-    //     return redirect('user')->with('message1', $message);
-    // }
-
+   
     public function store(Request $request)
     {
         // 1. Basic validation
@@ -204,38 +150,7 @@ class UserController extends Controller
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
-    // public function update(Request $request, $id)
-    // {
-    //     if(!env('USER_VERIFIED'))
-    //         return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
-
-    //     $this->validate($request, [
-    //         'name' => [
-    //             'max:255',
-    //             Rule::unique('users')->ignore($id)->where(function ($query) {
-    //                 return $query->where('is_deleted', false);
-    //             }),
-    //         ],
-    //         'email' => [
-    //             'email',
-    //             'max:255',
-    //                 Rule::unique('users')->ignore($id)->where(function ($query) {
-    //                 return $query->where('is_deleted', false);
-    //             }),
-    //         ],
-    //     ]);
-
-    //     $input = $request->except('password');
-    //     if(!isset($input['is_active']))
-    //         $input['is_active'] = false;
-    //     if(!empty($request['password']))
-    //         $input['password'] = bcrypt($request['password']);
-    //     $lims_user_data = User::find($id);
-    //     $lims_user_data->update($input);
-
-    //     cache()->forget('user_role');
-    //     return redirect('user')->with('message2', 'Data updated successfullly');
-    // }
+ 
 
     public function update(Request $request, $id)
     {
@@ -372,11 +287,11 @@ class UserController extends Controller
 
     public function notificationUsers()
     {
-        $notification_users = DB::table('users')->where([
-            ['is_active', true],
-            ['id', '!=', \Auth::user()->id],
-            ['role_id', '!=', '5']
-        ])->get();
+        $notification_users = User::where('is_active', true)
+            ->where('id', '!=', \Auth::user()->id)
+            ->whereDoesntHave('roles', function ($query) {
+                $query->where('id', 5);
+            })->get();
         
         $html = '';
         foreach($notification_users as $user){

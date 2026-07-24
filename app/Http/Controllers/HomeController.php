@@ -67,6 +67,7 @@ class HomeController extends Controller
     public function dashboard()
     {
 
+    
         
         config()->set('database.connections.mysql.strict', false);
         DB::reconnect();

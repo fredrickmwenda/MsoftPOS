@@ -120,7 +120,7 @@
                                     </div>
                                     <div class="form-group" id="biller-id">
                                         <label><strong>{{trans('file.Biller')}} *</strong></label>
-                                        <select name="biller_id" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Biller...">
+                                        <select name="biller_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Biller...">
                                           @foreach($lims_biller_list as $biller)
                                               <option value="{{$biller->id}}">{{$biller->name}}</option>
                                           @endforeach
@@ -128,7 +128,7 @@
                                     </div>
                                     <div class="form-group" id="warehouseId">
                                         <label><strong>{{trans('file.Warehouse')}} *</strong></label>
-                                        <select name="warehouse_id" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Warehouse...">
+                                        <select name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Warehouse...">
                                           @foreach($lims_warehouse_list as $warehouse)
                                               <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
                                           @endforeach
@@ -183,31 +183,38 @@
       });
     });
 
-    $('select[name="role_id"]').on('change', function() {
-        if($(this).val() == 5) {
-            $('#biller-id').hide(300);
-            $('#warehouseId').hide(300);
+    function handleUserRoleFields() {
+        var selectedRoles = $('select[name="roles[]"]').val() || [];
+        var hasCustomerRole = selectedRoles.indexOf('5') !== -1;
+        var hasBillerWarehouseRole = selectedRoles.some(function(value) {
+            var intVal = parseInt(value);
+            return intVal > 2 && intVal !== 5;
+        });
+
+        if (hasCustomerRole) {
             $('.customer-section').show(300);
             $('.customer-input').prop('required',true);
-            $('select[name="warehouse_id"]').prop('required',false);
-            $('select[name="biller_id"]').prop('required',false);
+        } else {
+            $('.customer-section').hide(300);
+            $('.customer-input').prop('required',false);
         }
-        else if($(this).val() > 2 && $(this).val() != 5) {
-            $('select[name="warehouse_id"]').prop('required',true);
-            $('select[name="biller_id"]').prop('required',true);
+
+        if (hasBillerWarehouseRole) {
             $('#biller-id').show(300);
             $('#warehouseId').show(300);
-            $('.customer-section').hide(300);
-            $('.customer-input').prop('required',false);
-        }
-        else {
-            $('select[name="warehouse_id"]').prop('required',false);
-            $('select[name="biller_id"]').prop('required',false);
+            $('select[name="warehouse_id"]').prop('required',true).prop('disabled',false);
+            $('select[name="biller_id"]').prop('required',true).prop('disabled',false);
+        } else {
             $('#biller-id').hide(300);
             $('#warehouseId').hide(300);
-            $('.customer-section').hide(300);
-            $('.customer-input').prop('required',false);
+            $('select[name="warehouse_id"]').prop('required',false).prop('disabled',true);
+            $('select[name="biller_id"]').prop('required',false).prop('disabled',true);
         }
-    });
+
+        $('.selectpicker').selectpicker('refresh');
+    }
+
+    $('select[name="roles[]"]').on('changed.bs.select change', handleUserRoleFields);
+    handleUserRoleFields();
 </script>
 @endpush

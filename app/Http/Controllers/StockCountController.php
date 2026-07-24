@@ -181,34 +181,97 @@ class StockCountController extends Controller
         return view('backend.stock_count.qty_adjustment', compact('lims_warehouse_list', 'warehouse_id', 'id', 'product_id', 'names', 'code', 'qty', 'action'));
     }
 
-    public function getProducts(Request $request)
+    /** 
+     * Get Batches  
+     **/
+    public function getBatches(Request $request)
     {
         $warehouseId = $request->warehouse_id;
         $categoryId = $request->category_id;
 
-        $query = Product::leftJoin(
-                    'product_warehouse',
-                    'products.id',
-                    '=',
-                    'product_warehouse.product_id'
-                )
-                ->leftJoin('product_batches', function ($join) {
-                    $join->on(
-                        'products.id',
-                        '=',
-                        'product_batches.product_id'
-                    );
-                })
-                ->where('products.is_active', 1)
-                ->where(
-                    'product_warehouse.warehouse_id',
-                    $warehouseId
-                );
+        $query = DB::table('product_batches')
+            ->join(
+                'products',
+                'product_batches.product_id',
+                '=',
+                'products.id'
+            )
+            ->join(
+                'product_warehouse',
+                'products.id',
+                '=',
+                'product_warehouse.product_id'
+            )
+            ->where(
+                'product_warehouse.warehouse_id',
+                $warehouseId
+            );
 
-        if ($categoryId != 'all') {
+        if (
+            $categoryId &&
+            $categoryId != 'all'
+        ) {
             $query->where(
                 'products.category_id',
                 $categoryId
+            );
+        }
+
+        $batches = $query
+            ->select(
+                'product_batches.id',
+                'product_batches.batch_no'
+            )
+            ->whereNotNull('product_batches.batch_no')
+            ->distinct()
+            ->orderBy('product_batches.batch_no')
+            ->get();
+
+        return response()->json($batches);
+    }
+
+  
+
+    public function getProducts(Request $request)
+    {
+        $warehouseId = $request->warehouse_id;
+        $categoryId  = $request->category_id;
+        $batchId     = $request->batch_id;
+
+        $query = Product::leftJoin(
+                        'product_warehouse',
+                        'products.id',
+                        '=',
+                        'product_warehouse.product_id'
+                    )
+                    ->leftJoin(
+                        'product_batches',
+                        'products.id',
+                        '=',
+                        'product_batches.product_id'
+                    )
+                    ->where('products.is_active', 1)
+                    ->where(
+                        'product_warehouse.warehouse_id',
+                        $warehouseId
+                    );
+
+        // Category filter
+        if (
+            !empty($categoryId) &&
+            $categoryId != 'all'
+        ) {
+            $query->where(
+                'products.category_id',
+                $categoryId
+            );
+        }
+
+        // Batch filter
+        if (!empty($batchId)) {
+            $query->where(
+                'product_batches.id',
+                $batchId
             );
         }
 
@@ -218,6 +281,8 @@ class StockCountController extends Controller
                 'products.name',
                 'products.code',
                 'product_warehouse.qty as system_qty',
+                DB::raw('MAX(product_batches.id) as batch_id'),
+                DB::raw('MAX(product_batches.batch_no) as batch_no'),
                 DB::raw('MIN(product_batches.expired_date) as expiry_date')
             )
             ->groupBy(

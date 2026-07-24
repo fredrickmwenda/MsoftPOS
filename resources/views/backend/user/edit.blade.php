@@ -66,7 +66,6 @@
                                     </div>
                                     <div class="form-group">
                                         <label><strong>{{trans('file.Role')}} *</strong></label>
-                                        <input type="hidden" name="role_id_hidden" value="{{$lims_user_data->role_id}}">
                                         <select name="roles[]" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role..." multiple>
                                           @foreach($lims_role_list as $role)
                                               <option value="{{ $role->id }}" {{ in_array($role->id, $lims_user_data->roles->pluck('id')->toArray()) ? 'selected' : '' }}>
@@ -112,31 +111,41 @@
     $('#biller-id').hide();
     $('#warehouseId').hide();
 
+    function handleUserRoleFields() {
+        var selectedRoles = $('select[name="roles[]"]').val() || [];
+        var hasCustomerRole = selectedRoles.indexOf('5') !== -1;
+        var hasBillerWarehouseRole = selectedRoles.some(function(value) {
+            var intVal = parseInt(value, 10);
+            return intVal > 2 && intVal !== 5;
+        });
 
+        if (hasCustomerRole) {
+            $('.customer-section').show(300);
+            $('.customer-input').prop('required', true);
+        } else {
+            $('.customer-section').hide(300);
+            $('.customer-input').prop('required', false);
+        }
 
-    $('select[name=role_id]').val($("input[name='role_id_hidden']").val());
-    if($('select[name=role_id]').val() > 2){
-        $('#warehouseId').show();
-        $('select[name=warehouse_id]').val($("input[name='warehouse_id_hidden']").val());
-        $('#biller-id').show();
-        $('select[name=biller_id]').val($("input[name='biller_id_hidden']").val());
+        if (hasBillerWarehouseRole) {
+            $('#biller-id').show(300);
+            $('#warehouseId').show(300);
+            $('select[name="warehouse_id"]').prop('required', true).prop('disabled', false);
+            $('select[name="biller_id"]').prop('required', true).prop('disabled', false);
+            $('select[name="warehouse_id"]').val($("input[name='warehouse_id_hidden']").val());
+            $('select[name=biller_id]').val($("input[name='biller_id_hidden']").val());
+        } else {
+            $('#biller-id').hide(300);
+            $('#warehouseId').hide(300);
+            $('select[name="warehouse_id"]').prop('required', false).prop('disabled', true);
+            $('select[name="biller_id"]').prop('required', false).prop('disabled', true);
+        }
+
+        $('.selectpicker').selectpicker('refresh');
     }
-    $('.selectpicker').selectpicker('refresh');
 
-    $('select[name="role_id"]').on('change', function() {
-        if($(this).val() > 2){
-            $('select[name="warehouse_id"]').prop('required',true);
-            $('select[name="biller_id"]').prop('required',true);
-            $('#biller-id').show();
-            $('#warehouseId').show();
-        }
-        else{
-            $('select[name="warehouse_id"]').prop('required',false);
-            $('select[name="biller_id"]').prop('required',false);
-            $('#biller-id').hide();
-            $('#warehouseId').hide();
-        }
-    });
+    handleUserRoleFields();
+    $('select[name="roles[]"]').on('changed.bs.select change', handleUserRoleFields);
 
     $('#genbutton').on("click", function(){
       $.get('../genpass', function(data){

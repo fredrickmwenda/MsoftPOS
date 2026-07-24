@@ -230,7 +230,7 @@
 
             <div class="row mb-4">
 
-                <div class="col-md-4">
+                <div class="col-md-3">
 
                     <label>Product Category</label>
 
@@ -252,7 +252,15 @@
 
                 </div>
 
-                <div class="col-md-5">
+                <div class="col-md-3">
+                    <label>Batch No</label>
+
+                    <select id="batch_no" class="form-control" disabled>
+                        <option value="">Select Category First</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
 
                     <label>Search Product</label>
 
@@ -380,23 +388,97 @@
         }
     });
 
-    // Load Products When Category Changes
-    $('#category').on('change', function () {
+    
+   $(document).on('change', '#category', function () {
 
-        let categoryId = $(this).val();
+    let categoryId = $(this).val();
 
-        if (!selectedWarehouse) {
-            alert('Please select a warehouse first');
-            $(this).val('');
-            return;
+    $('#batch_no')
+        .prop('disabled', true)
+        .html('<option value="">Loading...</option>');
+
+    $('#productTable').html('');
+
+    if (!selectedWarehouse) {
+        alert('Please select a warehouse first');
+        return;
+    }
+
+    if (categoryId === '') {
+        $('#batch_no')
+            .html('<option value="">Select Category First</option>')
+            .prop('disabled', true);
+
+        $('#productTable').html('');
+        return;
+    }
+
+    $.ajax({
+        url: "{{ route('stock-count.batches') }}",
+        type: "GET",
+        data: {
+            warehouse_id: selectedWarehouse,
+            category_id: categoryId
+        },
+
+        success: function (response) {
+
+            console.log(response);
+
+            let batches = response.data ?? response;
+
+            let options =
+                '<option value="">All Batches</option>';
+
+            batches.forEach(function (batch) {
+                options += `
+                    <option value="${batch.id}">
+                        ${batch.batch_no}
+                    </option>
+                `;
+            });
+
+            $('#batch_no')
+                .html(options)
+                .prop('disabled', false);
+
+            // LOAD PRODUCTS AFTER BATCHES HAVE LOADED
+            loadProducts(
+                selectedWarehouse,
+                categoryId,
+                ''
+            );
+        },
+
+        error: function (xhr) {
+
+            console.log(xhr.responseText);
+
+            $('#batch_no')
+                .html('<option value="">No Batches Found</option>')
+                .prop('disabled', true);
+
+            // Even if there are no batches, still load products
+            loadProducts(
+                selectedWarehouse,
+                categoryId,
+                ''
+            );
         }
+    });
+});
 
-        if (!categoryId) {
-            $('#productTable').html('');
-            return;
-        }
 
-        loadProducts(selectedWarehouse, categoryId);
+
+    $('#batch_no').on('change', function () {
+        let categoryId = $('#category').val();
+        let batchId = $(this).val();
+
+        loadProducts(
+            selectedWarehouse,
+            categoryId,
+            batchId
+        );
     });
 
   
@@ -405,6 +487,7 @@
     $('#loadProducts').on('click', function () {
 
         let categoryId = $('#category').val();
+        let batchId = $('#batch_no').val();
 
         if (!selectedWarehouse) {
             alert('Please select a warehouse first');
@@ -416,15 +499,19 @@
             return;
         }
 
-        loadProducts(selectedWarehouse, categoryId);
+        loadProducts(
+            selectedWarehouse,
+            categoryId,
+            batchId
+        );
     });
 
     // Load Products Function
-    function loadProducts(warehouseId, categoryId) {
+    function loadProducts( warehouseId,categoryId,batchId = '') {
 
         $('#productTable').html(`
             <tr>
-                <td colspan="7" class="text-center">
+                <td colspan="8" class="text-center">
                     Loading products...
                 </td>
             </tr>
@@ -435,17 +522,18 @@
             type: "GET",
             data: {
                 warehouse_id: warehouseId,
-                category_id: categoryId
+                category_id: categoryId,
+                batch_id: batchId
             },
 
             success: function (products) {
 
                 let html = '';
 
-                if(products.length === 0){
+                if (products.length === 0) {
                     html = `
                         <tr>
-                            <td colspan="7" class="text-center">
+                            <td colspan="8" class="text-center">
                                 No products found
                             </td>
                         </tr>
@@ -455,36 +543,69 @@
                     return;
                 }
 
-                // Inside loadProducts success callback, replace the row template:
                 products.forEach((product) => {
-                    let expiry = product.expiry_date ? product.expiry_date : 'N/A';
-                    let systemQty = parseFloat(product.system_qty).toFixed(2);
+
+                    let expiry =
+                        product.expiry_date
+                            ? product.expiry_date
+                            : 'N/A';
+
+                    let systemQty =
+                        parseFloat(
+                            product.system_qty
+                        ).toFixed(2);
 
                     html += `
                     <tr>
+
                         <td>
-                            <input type="checkbox" class="product-check" value="${product.id}">
+                            <input
+                                type="checkbox"
+                                class="product-check"
+                                value="${product.id}">
                         </td>
+
                         <td>${product.id}</td>
+
                         <td>
-                            <strong>${product.name}</strong><br>
+                            <strong>${product.name}</strong>
+                            <br>
                             <small>${product.code}</small>
+                            ${product.batch_no
+                                ? `<br><span class="badge badge-info">${product.batch_no}</span>`
+                                : ''
+                            }
                         </td>
+
                         <td>${expiry}</td>
+
                         <td>${systemQty}</td>
+
                         <td>
-                            <input type="number" 
-                                class="form-control physical-count" 
-                                data-system="${systemQty}" 
-                                data-product="${product.id}" 
+                            <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="form-control physical-count"
+                                data-system="${systemQty}"
+                                data-product="${product.id}"
+                                data-batch="${product.batch_id ?? ''}"
                                 value="0.00">
                         </td>
-                        <td class="variance">${systemQty}</td>   <!-- variance = system + 0 -->
+
+                        <td class="variance text-danger">
+                            -${systemQty}
+                        </td>
+
                         <td>
-                            <button class="btn btn-success save-row" data-product="${product.id}">
+                            <button
+                                class="btn btn-success save-row"
+                                data-product="${product.id}"
+                                data-batch="${product.batch_id ?? ''}">
                                 <i class="fa fa-save"></i>
                             </button>
                         </td>
+
                     </tr>`;
                 });
 
@@ -495,14 +616,98 @@
 
                 $('#productTable').html(`
                     <tr>
-                        <td colspan="8" class="text-center text-danger">
+                        <td colspan="8"
+                            class="text-center text-danger">
                             Failed to load products
-                        </td>
+                    </td>
                     </tr>
                 `);
             }
         });
     }
+    // function loadProducts(warehouseId, categoryId) {
+
+    //     $('#productTable').html(`
+    //         <tr>
+    //             <td colspan="7" class="text-center">
+    //                 Loading products...
+    //             </td>
+    //         </tr>
+    //     `);
+
+    //     $.ajax({
+    //         url: "{{ route('stock-count.products') }}",
+    //         type: "GET",
+    //         data: {
+    //             warehouse_id: warehouseId,
+    //             category_id: categoryId
+    //         },
+
+    //         success: function (products) {
+
+    //             let html = '';
+
+    //             if(products.length === 0){
+    //                 html = `
+    //                     <tr>
+    //                         <td colspan="7" class="text-center">
+    //                             No products found
+    //                         </td>
+    //                     </tr>
+    //                 `;
+
+    //                 $('#productTable').html(html);
+    //                 return;
+    //             }
+
+    //             // Inside loadProducts success callback, replace the row template:
+    //             products.forEach((product) => {
+    //                 let expiry = product.expiry_date ? product.expiry_date : 'N/A';
+    //                 let systemQty = parseFloat(product.system_qty).toFixed(2);
+
+    //                 html += `
+    //                 <tr>
+    //                     <td>
+    //                         <input type="checkbox" class="product-check" value="${product.id}">
+    //                     </td>
+    //                     <td>${product.id}</td>
+    //                     <td>
+    //                         <strong>${product.name}</strong><br>
+    //                         <small>${product.code}</small>
+    //                     </td>
+    //                     <td>${expiry}</td>
+    //                     <td>${systemQty}</td>
+    //                     <td>
+    //                         <input type="number" 
+    //                             class="form-control physical-count" 
+    //                             data-system="${systemQty}" 
+    //                             data-product="${product.id}" 
+    //                             value="0.00">
+    //                     </td>
+    //                     <td class="variance">${systemQty}</td>   <!-- variance = system + 0 -->
+    //                     <td>
+    //                         <button class="btn btn-success save-row" data-product="${product.id}">
+    //                             <i class="fa fa-save"></i>
+    //                         </button>
+    //                     </td>
+    //                 </tr>`;
+    //             });
+
+    //             $('#productTable').html(html);
+    //         },
+
+    //         error: function () {
+
+    //             $('#productTable').html(`
+    //                 <tr>
+    //                     <td colspan="8" class="text-center text-danger">
+    //                         Failed to load products
+    //                     </td>
+    //                 </tr>
+    //             `);
+    //         }
+    //     });
+    // }
 
 
     // Live Variance Calculation

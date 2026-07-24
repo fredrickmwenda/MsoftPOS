@@ -71,22 +71,28 @@ class Common
         View::share(['alert_product' => $alert_product, 'dso_alert_product_no' => $dso_alert_product_no]);
 
         // ---------------- MULTI-ROLE PERMISSION HANDLING ----------------
-        // Get all roles of the currently authenticated user (with cache)
-        $userRoles = Cache::remember('user_roles_' . Auth::id(), 60*60*24, function () {
-            return Auth::user()->roles()->with('permissions')->get();
-        });
+        // Safe handling when the request is not authenticated yet.
+        $userRoles = collect();
+        $isAdmin = false;
+        $allPermissionNames = [];
 
-        // Determine if the user is an admin (any role with ID <= 2)
-        $isAdmin = $userRoles->contains(function ($role) {
-            return $role->id <= 2;
-        });
+        if (Auth::check()) {
+            $userRoles = Cache::remember('user_roles_' . Auth::id(), 60*60*24, function () {
+                return Auth::user()->roles()->with('permissions')->get();
+            });
 
-        // Permissions aggregated from all roles
-        $allPermissionNames = $userRoles->pluck('permissions.*.name')
-            ->flatten()
-            ->unique()
-            ->values()
-            ->toArray();
+            // Determine if the user is an admin (any role with ID <= 2)
+            $isAdmin = $userRoles->contains(function ($role) {
+                return $role->id <= 2;
+            });
+
+            // Permissions aggregated from all roles
+            $allPermissionNames = $userRoles->pluck('permissions.*.name')
+                ->flatten()
+                ->unique()
+                ->values()
+                ->toArray();
+        }
 
         // Build a collection of objects with 'name' property, like the old $role_has_permissions_list
         $role_has_permissions_list = collect($allPermissionNames)->map(function ($name) {

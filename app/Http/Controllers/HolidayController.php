@@ -105,7 +105,6 @@ class HolidayController extends Controller
             }
             $start++;
         }
-        //return dd($holidays);
         $start_day = date('w', strtotime($year.'-'.$month.'-01')) + 1;
         $prev_year = date('Y', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
         $prev_month = date('m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));

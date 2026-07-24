@@ -61,7 +61,6 @@ class SettingController extends Controller
     public function generalSetting()
     {
         $lims_general_setting_data = GeneralSetting::latest()->first();
-        //dd($lims_general_setting_data);
         $is_admin_filter = false;
         // check if the user has role of admin and has permission to sale percentage filter
         if (auth()->user()->role_id == 1 || auth()->user()->hasPermissionTo('sale-percentage-filter')) {

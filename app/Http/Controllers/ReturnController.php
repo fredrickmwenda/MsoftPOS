@@ -756,7 +756,6 @@ class ReturnController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->except('document');
-        //return dd($data);
         $document = $request->document;
         $lims_return_data = Returns::find($id);
 

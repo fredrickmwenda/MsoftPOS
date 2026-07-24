@@ -201,39 +201,10 @@ class SaleController extends Controller
 
             // Handle percentage filter (show only top X% of sales by value)
             // Priority: User input > Session > Admin default settings
-            $percentage_filter = null;
-            $is_admin_filter = false;
-            
-            if ($request->has('percentage_filter')) {
-                $req_pct = $request->input('percentage_filter');
-                if ($req_pct !== '' && $req_pct !== null) {
-                    $percentage_filter = (int) $req_pct;
-                    if ($percentage_filter >= 0 && $percentage_filter <= 100) {
-                        session(['percentage_filter' => $percentage_filter]);
-                    } else {
-                        $percentage_filter = null;
-                    }
-                } else {
-                    // User chose "All (100%)" - clear filter and session
-                    $percentage_filter = null;
-                    session()->forget('percentage_filter');
-                }
-            } else if (session('percentage_filter') !== null) {
-                $percentage_filter = (int) session('percentage_filter');
-            } else {
-                $settings = GeneralSetting::first();
-                if($settings && $settings->percentage_filter !== null) {
-                    $percentage_filter = (int) $settings->percentage_filter;
-                    $is_admin_filter = true;
-                }
-                session(['percentage_filter' => null]);
-            }
+     
 
             // Only users with sale-percentage-filter permission may use the filter
-            if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
-                $percentage_filter = null;
-                $is_admin_filter = false;
-            }
+
 
             $lims_gift_card_list = GiftCard::where("is_active", true)->get();
             $lims_pos_setting_data = PosSetting::latest()->first();
@@ -256,7 +227,7 @@ class SaleController extends Controller
             }
 
             
-            return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list', 'percentage_filter', 'is_admin_filter'));
+            return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
@@ -1672,7 +1643,7 @@ public function posSale()
             return view('backend.sale.create_sale',compact('currency_list', 'lims_biller_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_tax_list', 'lims_sale_data','lims_product_sale_data', 'lims_pos_setting_data', 'lims_brand_list', 'lims_category_list', 'lims_coupon_list', 'lims_product_list', 'product_number', 'lims_customer_group_all', 'lims_reward_point_setting_data', 'options', 'custom_fields', 'recent_sale', 'recent_draft', 'role', 'all_permission', 'deposit', 'points'));
         }
         else
-            dd(" You don't have permission to access this module.");
+           
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
@@ -3458,316 +3429,686 @@ public function posSale()
 
   
 
-    public function saleData(Request $request)
+    // public function saleData(Request $request)
+    // {
+    //     $columns = array(
+    //         1 => 'created_at', 
+    //         2 => 'reference_no',
+    //         7 => 'grand_total',
+    //         8 => 'paid_amount',
+    //     );
+
+    //     $warehouse_id = $request->input('warehouse_id');
+    //     $sale_status = $request->input('sale_status');
+    //     $payment_status = $request->input('payment_status');
+
+    //     // Date range: use request (from form/DataTable) or session or default (same as index)
+    //     $starting_date = $request->input('starting_date');
+    //     $ending_date = $request->input('ending_date');
+    //     if (empty($starting_date) || empty($ending_date)) {
+    //         $starting_date = session('sale_filter_starting_date');
+    //         $ending_date = session('sale_filter_ending_date');
+    //     }
+    //     if (empty($starting_date) || empty($ending_date)) {
+    //         $ending_date = date('Y-m-d');
+    //         $starting_date = date('Y-m-d', strtotime('-1 year', strtotime($ending_date)));
+    //     }
+
+    //     $sale_percentage = GeneralSetting::first()->percentage_filter ?? null;
+    //     if ($sale_percentage === null || $sale_percentage === '') {
+    //         if (session('percentage_filter') !== null) {
+    //             $sale_percentage = (int) session('percentage_filter');
+    //         } else {
+    //             $settings = GeneralSetting::first();
+    //             $sale_percentage = $settings && $settings->percentage_filter !== null ? (int) $settings->percentage_filter : null;
+    //         }
+    //     } else {
+    //         $sale_percentage = (int) $sale_percentage;
+    //     }
+    //     if ($sale_percentage !== null && ($sale_percentage < 0 || $sale_percentage > 100)) {
+    //         $sale_percentage = null;
+    //     }
+
+    //     // Only apply percentage filter if user has permission
+    //     if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
+    //         $sale_percentage = null;
+    //     }
+    //     $filter_by_percentage = $sale_percentage !== null && $sale_percentage < 100;
+    //     $filtered_sale_ids = [];
+    //     $filtered_total_sales = 0;
+
+    //     // Base query for all sales in the date range
+    //     $baseQuery = Sale::whereDate('created_at', '>=', $starting_date)
+    //                     ->whereDate('created_at', '<=', $ending_date);
+
+    //     if($this->isStaff() && config('staff_access') == 'own')
+    //         $baseQuery = $baseQuery->where('user_id', Auth::id());
+    //     if($warehouse_id)
+    //         $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
+    //     if($sale_status)
+    //         $baseQuery = $baseQuery->where('sale_status', $sale_status);
+    //     if($payment_status)
+    //         $baseQuery = $baseQuery->where('payment_status', $payment_status);
+
+    //     // Percentage filter: show only the top X% of sales by value (largest sales first until we reach X% of total)
+    //     if ($filter_by_percentage) {
+    //         $all_sales = (clone $baseQuery)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
+    //         $total_value = $all_sales->sum('grand_total');
+    //         $target_value = $total_value * ($sale_percentage / 100);
+    //         $running_sum = 0;
+    //         foreach ($all_sales as $sale) {
+    //             $filtered_sale_ids[] = $sale->id;
+    //             $running_sum += $sale->grand_total;
+    //             $filtered_total_sales = $running_sum;
+    //             if ($running_sum >= $target_value) {
+    //                 break;
+    //             }
+    //         }
+    //         $baseQuery = $baseQuery->whereIn('id', $filtered_sale_ids);
+    //     }
+
+    //     $totalData = $baseQuery->count();
+    //     $totalFiltered = $totalData;
+    //     // Total sales amount for the filtered set (for the summary card)
+    //     if ($filter_by_percentage) {
+    //         $total_sales_amount = $filtered_total_sales;
+    //     } else {
+    //         $total_sales_amount = (clone $baseQuery)->sum('grand_total');
+    //     }
+
+    //     if($request->input('length') != -1)
+    //         $limit = $request->input('length');
+    //     else
+    //         $limit = $totalData;
+    //     $start = $request->input('start');
+    //     $order = 'sales.'.$columns[$request->input('order.0.column')];
+    //     $dir = $request->input('order.0.dir');
+        
+    //     //fetching custom fields data
+    //     $custom_fields = CustomField::where([
+    //                     ['belongs_to', 'sale'],
+    //                     ['is_table', true]
+    //                 ])->pluck('name');
+    //     $field_names = [];
+    //     foreach($custom_fields as $fieldName) {
+    //         $field_names[] = str_replace(" ", "_", strtolower($fieldName));
+    //     }
+        
+    //     if(empty($request->input('search.value'))) {
+    //         // Get paginated results
+    //         $q = Sale::with('biller', 'customer', 'warehouse', 'user')
+    //             ->whereDate('created_at', '>=', $starting_date)
+    //             ->whereDate('created_at', '<=', $ending_date)
+    //             ->offset($start)
+    //             ->limit($limit)
+    //             ->orderBy($order, $dir);
+                
+    //         if($this->isStaff() && config('staff_access') == 'own')
+    //             $q = $q->where('user_id', Auth::id());
+    //         if($warehouse_id)
+    //             $q = $q->where('warehouse_id', $warehouse_id);
+    //         if($sale_status)
+    //             $q = $q->where('sale_status', $sale_status);
+    //         if($payment_status)
+    //             $q = $q->where('payment_status', $payment_status);
+            
+    //         // Apply filtered sale IDs from percentage filter
+    //         if ($filter_by_percentage && count($filtered_sale_ids) > 0) {
+    //             $q = $q->whereIn('id', $filtered_sale_ids);
+    //         } elseif ($filter_by_percentage && count($filtered_sale_ids) == 0) {
+    //             $q = $q->whereIn('id', []);
+    //         }
+                
+    //         $sales = $q->get();
+    //     }
+    //     else
+    //     {
+    //         $search = $request->input('search.value');
+    //         $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
+    //             ->join('billers', 'sales.biller_id', '=', 'billers.id')
+    //             ->whereDate('sales.created_at', '>=', $starting_date)
+    //             ->whereDate('sales.created_at', '<=', $ending_date)
+    //             ->where(function($query) use ($search, $field_names) {
+    //                 $query->where('sales.reference_no', 'LIKE', "%{$search}%")
+    //                     ->orWhere('customers.name', 'LIKE', "%{$search}%")
+    //                     ->orWhere('customers.phone_number', 'LIKE', "%{$search}%")
+    //                     ->orWhere('billers.name', 'LIKE', "%{$search}%");
+                    
+    //                 foreach ($field_names as $field_name) {
+    //                     $query->orWhere('sales.' . $field_name, 'LIKE', "%{$search}%");
+    //                 }
+    //             })
+    //             ->select('sales.*')
+    //             ->with('biller', 'customer', 'warehouse', 'user')
+    //             ->offset($start)
+    //             ->limit($limit)
+    //             ->orderBy($order, $dir);
+                
+    //         if($this->isStaff() && config('staff_access') == 'own') {
+    //             $q = $q->where('sales.user_id', Auth::id());
+    //         }
+    //         if($warehouse_id)
+    //             $q = $q->where('sales.warehouse_id', $warehouse_id);
+    //         if($sale_status)
+    //             $q = $q->where('sales.sale_status', $sale_status);
+    //         if($payment_status)
+    //             $q = $q->where('sales.payment_status', $payment_status);
+            
+    //         // Apply filtered sale IDs from percentage filter
+    //         if ($filter_by_percentage && count($filtered_sale_ids) > 0) {
+    //             $q = $q->whereIn('sales.id', $filtered_sale_ids);
+    //         } elseif ($filter_by_percentage && count($filtered_sale_ids) == 0) {
+    //             $q = $q->whereIn('sales.id', []);
+    //         }
+                
+    //         $sales = $q->get();
+    //         $totalFiltered = $q->count();
+    //     }
+        
+    //     $data = array();
+    //     if(!empty($sales))
+    //     {
+    //         foreach ($sales as $key=>$sale)
+    //         {
+    //             $nestedData['id'] = $sale->id;
+    //             $nestedData['key'] = $key;
+    //             $nestedData['date'] = date(config('date_format'), strtotime($sale->created_at->toDateString()));
+    //             $nestedData['reference_no'] = $sale->reference_no;
+    //             $nestedData['biller'] = $sale->biller->name;
+    //             $nestedData['customer'] = $sale->customer->name.'<br>'.$sale->customer->phone_number.'<input type="hidden" class="deposit" value="'.($sale->customer->deposit - $sale->customer->expense).'" />'.'<input type="hidden" class="points" value="'.$sale->customer->points.'" />';
+
+    //             if($sale->sale_status == 1){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-success">'.trans('file.Completed').'</div>';
+    //                 $sale_status_text = trans('file.Completed');
+    //             }
+    //             elseif($sale->sale_status == 2){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+    //                 $sale_status_text = trans('file.Pending');
+    //             }
+    //             elseif($sale->sale_status == 3){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-warning">'.trans('file.Draft').'</div>';
+    //                 $sale_status_text = trans('file.Draft');
+    //             }
+    //             elseif($sale->sale_status == 4){
+    //                 $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Returned').'</div>';
+    //                 $sale_status_text = trans('file.Returned');
+    //             }
+
+    //             if($sale->payment_status == 1)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+    //             elseif($sale->payment_status == 2)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
+    //             elseif($sale->payment_status == 3)
+    //                 $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Partial').'</div>';
+    //             else
+    //                 $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
+                
+    //             $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
+    //             if($delivery_data) {
+    //                 if($delivery_data->status == 1)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Packing').'</div>';
+    //                 elseif($delivery_data->status == 2)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivering').'</div>';
+    //                 elseif($delivery_data->status == 3)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivered').'</div>';
+    //                 elseif($delivery_data->status == 0)
+    //                     $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
+    //             }
+    //             else
+    //                 $nestedData['delivery_status'] = 'N/A';
+
+    //             $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal'));
+                
+    //             $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
+    //             $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
+    //             $nestedData['paid_amount'] = number_format($sale->paid_amount, config('decimal'));
+    //             $nestedData['due'] = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
+                
+    //             //fetching custom fields data
+    //             foreach($field_names as $field_name) {
+    //                 $nestedData[$field_name] = $sale->$field_name;
+    //             }
+                
+    //             $nestedData['options'] = '<div class="btn-group">
+    //                         <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
+    //                         <span class="caret"></span>
+    //                         <span class="sr-only">Toggle Dropdown</span>
+    //                         </button>
+    //                         <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
+    //                             <li><a href="'.route('sale.invoice', $sale->id).'" class="btn btn-link"><i class="fa fa-copy"></i> '.trans('file.Generate Invoice').'</a></li>
+    //                             <li>
+    //                                 <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
+    //                             </li>';
+    //             if(in_array("sales-edit", $request['all_permission'])){
+    //                 if($sale->sale_status != 3)
+    //                     $nestedData['options'] .= '<li>
+    //                         <a href="'.route('sales.edit', $sale->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+    //                         </li>';
+    //                 else
+    //                     $nestedData['options'] .= '<li>
+    //                         <a href="'.url('sales/'.$sale->id.'/create').'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
+    //                     </li>';
+    //             }
+    //             if(in_array("sale-payment-index", $request['all_permission']))
+    //                 $nestedData['options'] .=
+    //                     '<li>
+    //                         <button type="button" class="get-payment btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
+    //                     </li>';
+    //             if(in_array("sale-payment-add", $request['all_permission']))
+    //                 $nestedData['options'] .=
+    //                     '<li>
+    //                         <button type="button" class="add-payment btn btn-link" data-id = "'.$sale->id.'" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> '.trans('file.Add Payment').'</button>
+    //                     </li>';
+
+    //             $nestedData['options'] .=
+    //                 '<li>
+    //                     <button type="button" class="add-delivery btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-truck"></i> '.trans('file.Add Delivery').'</button>
+    //                 </li>';
+    //             if(in_array("sales-delete", $request['all_permission']))
+    //                 $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"] ).'
+    //                         <li>
+    //                         <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
+    //                         </li>'.\Form::close().'
+    //                     </ul>
+    //                 </div>';
+                
+    //             // data for sale details by one click
+    //             $coupon = Coupon::find($sale->coupon_id);
+    //             if($coupon)
+    //                 $coupon_code = $coupon->code;
+    //             else
+    //                 $coupon_code = null;
+
+    //             if($sale->currency_id)
+    //                 $currency_code = Currency::select('code')->find($sale->currency_id)->code;
+    //             else
+    //                 $currency_code = 'N/A';
+
+    //             $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status_text.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
+    //             );
+                
+    //             $data[] = $nestedData;
+    //         }
+    //     }
+        
+    //     $json_data = array(
+    //         "draw"            => intval($request->input('draw')),
+    //         "recordsTotal"    => intval($totalData),
+    //         "recordsFiltered" => intval($totalFiltered),
+    //         "data"            => $data,
+    //         "total_sales_amount" => $total_sales_amount
+    //     );
+        
+    //     echo json_encode($json_data);
+    // }
+
+public function saleData(Request $request)
 {
     $columns = array(
-        1 => 'created_at', 
+        1 => 'created_at',
         2 => 'reference_no',
         7 => 'grand_total',
         8 => 'paid_amount',
     );
 
-    $warehouse_id = $request->input('warehouse_id');
-    $sale_status = $request->input('sale_status');
+    $warehouse_id   = $request->input('warehouse_id');
+    $sale_status    = $request->input('sale_status');
     $payment_status = $request->input('payment_status');
 
-    // Date range: use request (from form/DataTable) or session or default (same as index)
+    /* ------------------------------------------------------------------
+     * 1.  Date range – default to CURRENT CALENDAR YEAR (yearly basis)
+     * ------------------------------------------------------------------ */
     $starting_date = $request->input('starting_date');
-    $ending_date = $request->input('ending_date');
+    $ending_date   = $request->input('ending_date');
+
     if (empty($starting_date) || empty($ending_date)) {
         $starting_date = session('sale_filter_starting_date');
-        $ending_date = session('sale_filter_ending_date');
+        $ending_date   = session('sale_filter_ending_date');
     }
     if (empty($starting_date) || empty($ending_date)) {
-        $ending_date = date('Y-m-d');
-        $starting_date = date('Y-m-d', strtotime('-1 year', strtotime($ending_date)));
+        $starting_date = date('Y-01-01');
+        $ending_date   = date('Y-12-31');
     }
 
+    /* ------------------------------------------------------------------
+     * 2.  Percentage filter value
+     * ------------------------------------------------------------------ */
     $sale_percentage = GeneralSetting::first()->percentage_filter ?? null;
+
     if ($sale_percentage === null || $sale_percentage === '') {
         if (session('percentage_filter') !== null) {
             $sale_percentage = (int) session('percentage_filter');
         } else {
             $settings = GeneralSetting::first();
-            $sale_percentage = $settings && $settings->percentage_filter !== null ? (int) $settings->percentage_filter : null;
+            $sale_percentage = $settings && $settings->percentage_filter !== null
+                ? (int) $settings->percentage_filter
+                : null;
         }
     } else {
         $sale_percentage = (int) $sale_percentage;
     }
+
     if ($sale_percentage !== null && ($sale_percentage < 0 || $sale_percentage > 100)) {
         $sale_percentage = null;
     }
 
-    // Only apply percentage filter if user has permission
     if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
         $sale_percentage = null;
     }
-    $filter_by_percentage = $sale_percentage !== null && $sale_percentage < 100;
-    $filtered_sale_ids = [];
-    $filtered_total_sales = 0;
 
-    // Base query for all sales in the date range
+    $filter_by_percentage = $sale_percentage !== null && $sale_percentage < 100 && $sale_percentage > 0;
+    $filtered_sale_ids    = [];
+
+    /* ------------------------------------------------------------------
+     * 3.  Base query (all filters except search & pagination)
+     * ------------------------------------------------------------------ */
     $baseQuery = Sale::whereDate('created_at', '>=', $starting_date)
                      ->whereDate('created_at', '<=', $ending_date);
 
-    if($this->isStaff() && config('staff_access') == 'own')
+    if ($this->isStaff() && config('staff_access') == 'own') {
         $baseQuery = $baseQuery->where('user_id', Auth::id());
-    if($warehouse_id)
+    }
+    if ($warehouse_id) {
         $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
-    if($sale_status)
+    }
+    if ($sale_status) {
         $baseQuery = $baseQuery->where('sale_status', $sale_status);
-    if($payment_status)
+    }
+    if ($payment_status) {
         $baseQuery = $baseQuery->where('payment_status', $payment_status);
+    }
 
-    // Percentage filter: show only the top X% of sales by value (largest sales first until we reach X% of total)
+    /* ------------------------------------------------------------------
+     * 4.  100 % total (this is the baseline for the percentage math)
+     * ------------------------------------------------------------------ */
+    $total_100 = (clone $baseQuery)->sum('grand_total');
+
+    /* ------------------------------------------------------------------
+     * 5.  Percentage filter – accumulate chronologically to decide
+     *     WHICH rows appear in the table, but the CARD will show the
+     *     exact mathematical percentage of $total_100.
+     * ------------------------------------------------------------------ */
     if ($filter_by_percentage) {
-        $all_sales = (clone $baseQuery)->orderBy('grand_total', 'desc')->get(['id', 'grand_total']);
-        $total_value = $all_sales->sum('grand_total');
-        $target_value = $total_value * ($sale_percentage / 100);
-        $running_sum = 0;
+        $all_sales = (clone $baseQuery)
+            ->orderBy('created_at', 'asc')
+            ->get(['id', 'grand_total']);
+
+        $target_value = $total_100 * ($sale_percentage / 100);
+        $running_sum  = 0;
+
         foreach ($all_sales as $sale) {
             $filtered_sale_ids[] = $sale->id;
             $running_sum += $sale->grand_total;
-            $filtered_total_sales = $running_sum;
             if ($running_sum >= $target_value) {
                 break;
             }
         }
-        $baseQuery = $baseQuery->whereIn('id', $filtered_sale_ids);
+
+        if (count($filtered_sale_ids) > 0) {
+            $baseQuery = $baseQuery->whereIn('id', $filtered_sale_ids);
+        } else {
+            $baseQuery = $baseQuery->whereIn('id', []);
+        }
     }
 
-    $totalData = $baseQuery->count();
+    /* ------------------------------------------------------------------
+     * 6.  DataTables counts
+     * ------------------------------------------------------------------ */
+    $totalData     = $baseQuery->count();
     $totalFiltered = $totalData;
-    // Total sales amount for the filtered set (for the summary card)
-    if ($filter_by_percentage) {
-        $total_sales_amount = $filtered_total_sales;
-    } else {
-        $total_sales_amount = (clone $baseQuery)->sum('grand_total');
-    }
 
-    if($request->input('length') != -1)
-        $limit = $request->input('length');
-    else
-        $limit = $totalData;
+    $limit = $request->input('length') != -1 ? $request->input('length') : $totalData;
     $start = $request->input('start');
-    $order = 'sales.'.$columns[$request->input('order.0.column')];
-    $dir = $request->input('order.0.dir');
-    
-    //fetching custom fields data
+    $order = 'sales.' . $columns[$request->input('order.0.column')];
+    $dir   = $request->input('order.0.dir');
+
+    /* ------------------------------------------------------------------
+     * 7.  Custom fields
+     * ------------------------------------------------------------------ */
     $custom_fields = CustomField::where([
-                    ['belongs_to', 'sale'],
-                    ['is_table', true]
-                ])->pluck('name');
+        ['belongs_to', 'sale'],
+        ['is_table', true]
+    ])->pluck('name');
+
     $field_names = [];
-    foreach($custom_fields as $fieldName) {
+    foreach ($custom_fields as $fieldName) {
         $field_names[] = str_replace(" ", "_", strtolower($fieldName));
     }
-    
-    if(empty($request->input('search.value'))) {
-        // Get paginated results
-        $q = Sale::with('biller', 'customer', 'warehouse', 'user')
-            ->whereDate('created_at', '>=', $starting_date)
-            ->whereDate('created_at', '<=', $ending_date)
+
+    /* ------------------------------------------------------------------
+     * 8.  Fetch results
+     * ------------------------------------------------------------------ */
+    if (empty($request->input('search.value'))) {
+        // ----- No search -----
+        $sales = $baseQuery->with('biller', 'customer', 'warehouse', 'user')
             ->offset($start)
             ->limit($limit)
-            ->orderBy($order, $dir);
-            
-        if($this->isStaff() && config('staff_access') == 'own')
-            $q = $q->where('user_id', Auth::id());
-        if($warehouse_id)
-            $q = $q->where('warehouse_id', $warehouse_id);
-        if($sale_status)
-            $q = $q->where('sale_status', $sale_status);
-        if($payment_status)
-            $q = $q->where('payment_status', $payment_status);
-        
-        // Apply filtered sale IDs from percentage filter
-        if ($filter_by_percentage && count($filtered_sale_ids) > 0) {
-            $q = $q->whereIn('id', $filtered_sale_ids);
-        } elseif ($filter_by_percentage && count($filtered_sale_ids) == 0) {
-            $q = $q->whereIn('id', []);
+            ->orderBy($order, $dir)
+            ->get();
+
+        // Exact percentage of the 100 % total (filterable by warehouse/status/date)
+        if ($filter_by_percentage) {
+            $total_sales_amount = $total_100 * ($sale_percentage / 100);
+        } else {
+            $total_sales_amount = $total_100;
         }
-            
-        $sales = $q->get();
-    }
-    else
-    {
+
+    } else {
+        // ----- Search active -----
         $search = $request->input('search.value');
+
         $q = Sale::join('customers', 'sales.customer_id', '=', 'customers.id')
             ->join('billers', 'sales.biller_id', '=', 'billers.id')
             ->whereDate('sales.created_at', '>=', $starting_date)
             ->whereDate('sales.created_at', '<=', $ending_date)
-            ->where(function($query) use ($search, $field_names) {
+            ->where(function ($query) use ($search, $field_names) {
                 $query->where('sales.reference_no', 'LIKE', "%{$search}%")
                       ->orWhere('customers.name', 'LIKE', "%{$search}%")
                       ->orWhere('customers.phone_number', 'LIKE', "%{$search}%")
                       ->orWhere('billers.name', 'LIKE', "%{$search}%");
-                
+
                 foreach ($field_names as $field_name) {
                     $query->orWhere('sales.' . $field_name, 'LIKE', "%{$search}%");
                 }
             })
             ->select('sales.*')
-            ->with('biller', 'customer', 'warehouse', 'user')
-            ->offset($start)
-            ->limit($limit)
-            ->orderBy($order, $dir);
-            
-        if($this->isStaff() && config('staff_access') == 'own') {
+            ->with('biller', 'customer', 'warehouse', 'user');
+
+        if ($this->isStaff() && config('staff_access') == 'own') {
             $q = $q->where('sales.user_id', Auth::id());
         }
-        if($warehouse_id)
+        if ($warehouse_id) {
             $q = $q->where('sales.warehouse_id', $warehouse_id);
-        if($sale_status)
+        }
+        if ($sale_status) {
             $q = $q->where('sales.sale_status', $sale_status);
-        if($payment_status)
+        }
+        if ($payment_status) {
             $q = $q->where('sales.payment_status', $payment_status);
-        
-        // Apply filtered sale IDs from percentage filter
+        }
+
+        // Apply the same percentage IDs so the table stays consistent
         if ($filter_by_percentage && count($filtered_sale_ids) > 0) {
             $q = $q->whereIn('sales.id', $filtered_sale_ids);
-        } elseif ($filter_by_percentage && count($filtered_sale_ids) == 0) {
+        } elseif ($filter_by_percentage) {
             $q = $q->whereIn('sales.id', []);
         }
-            
-        $sales = $q->get();
-        $totalFiltered = $q->count();
-    }
-    
-    $data = array();
-    if(!empty($sales))
-    {
-        foreach ($sales as $key=>$sale)
-        {
-            $nestedData['id'] = $sale->id;
-            $nestedData['key'] = $key;
-            $nestedData['date'] = date(config('date_format'), strtotime($sale->created_at->toDateString()));
-            $nestedData['reference_no'] = $sale->reference_no;
-            $nestedData['biller'] = $sale->biller->name;
-            $nestedData['customer'] = $sale->customer->name.'<br>'.$sale->customer->phone_number.'<input type="hidden" class="deposit" value="'.($sale->customer->deposit - $sale->customer->expense).'" />'.'<input type="hidden" class="points" value="'.$sale->customer->points.'" />';
 
-            if($sale->sale_status == 1){
-                $nestedData['sale_status'] = '<div class="badge badge-success">'.trans('file.Completed').'</div>';
+        // 100 % total of the SEARCH results (so the card updates when typing)
+        $total_100_search = (clone $q)->sum('sales.grand_total');
+
+        $totalFiltered = $q->count();
+
+        $sales = $q->offset($start)
+                   ->limit($limit)
+                   ->orderBy($order, $dir)
+                   ->get();
+
+        // Exact percentage of the searched 100 % total
+        if ($filter_by_percentage) {
+            $total_sales_amount = $total_100_search * ($sale_percentage / 100);
+        } else {
+            $total_sales_amount = $total_100_search;
+        }
+    }
+
+    /* ------------------------------------------------------------------
+     * 9.  Build DataTables response
+     * ------------------------------------------------------------------ */
+    $data = array();
+
+    if (!empty($sales)) {
+        foreach ($sales as $key => $sale) {
+            $nestedData['id']           = $sale->id;
+            $nestedData['key']          = $key;
+            $nestedData['date']         = date(config('date_format'), strtotime($sale->created_at->toDateString()));
+            $nestedData['reference_no'] = $sale->reference_no;
+            $nestedData['biller']       = $sale->biller->name;
+            $nestedData['customer']     = $sale->customer->name . '<br>' . $sale->customer->phone_number
+                . '<input type="hidden" class="deposit" value="' . ($sale->customer->deposit - $sale->customer->expense) . '" />'
+                . '<input type="hidden" class="points" value="' . $sale->customer->points . '" />';
+
+            if ($sale->sale_status == 1) {
+                $nestedData['sale_status'] = '<div class="badge badge-success">' . trans('file.Completed') . '</div>';
                 $sale_status_text = trans('file.Completed');
-            }
-            elseif($sale->sale_status == 2){
-                $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
+            } elseif ($sale->sale_status == 2) {
+                $nestedData['sale_status'] = '<div class="badge badge-danger">' . trans('file.Pending') . '</div>';
                 $sale_status_text = trans('file.Pending');
-            }
-            elseif($sale->sale_status == 3){
-                $nestedData['sale_status'] = '<div class="badge badge-warning">'.trans('file.Draft').'</div>';
+            } elseif ($sale->sale_status == 3) {
+                $nestedData['sale_status'] = '<div class="badge badge-warning">' . trans('file.Draft') . '</div>';
                 $sale_status_text = trans('file.Draft');
-            }
-            elseif($sale->sale_status == 4){
-                $nestedData['sale_status'] = '<div class="badge badge-danger">'.trans('file.Returned').'</div>';
+            } else {
+                $nestedData['sale_status'] = '<div class="badge badge-danger">' . trans('file.Returned') . '</div>';
                 $sale_status_text = trans('file.Returned');
             }
 
-            if($sale->payment_status == 1)
-                $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Pending').'</div>';
-            elseif($sale->payment_status == 2)
-                $nestedData['payment_status'] = '<div class="badge badge-danger">'.trans('file.Due').'</div>';
-            elseif($sale->payment_status == 3)
-                $nestedData['payment_status'] = '<div class="badge badge-warning">'.trans('file.Partial').'</div>';
-            else
-                $nestedData['payment_status'] = '<div class="badge badge-success">'.trans('file.Paid').'</div>';
-            
-            $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
-            if($delivery_data) {
-                if($delivery_data->status == 1)
-                    $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Packing').'</div>';
-                elseif($delivery_data->status == 2)
-                    $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivering').'</div>';
-                elseif($delivery_data->status == 3)
-                    $nestedData['delivery_status'] = '<div class="badge badge-info">'.trans('file.Delivered').'</div>';
-                elseif($delivery_data->status == 0)
-                    $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
+            if ($sale->payment_status == 1) {
+                $nestedData['payment_status'] = '<div class="badge badge-danger">' . trans('file.Pending') . '</div>';
+            } elseif ($sale->payment_status == 2) {
+                $nestedData['payment_status'] = '<div class="badge badge-danger">' . trans('file.Due') . '</div>';
+            } elseif ($sale->payment_status == 3) {
+                $nestedData['payment_status'] = '<div class="badge badge-warning">' . trans('file.Partial') . '</div>';
+            } else {
+                $nestedData['payment_status'] = '<div class="badge badge-success">' . trans('file.Paid') . '</div>';
             }
-            else
+
+            $delivery_data = DB::table('deliveries')->select('status')->where('sale_id', $sale->id)->first();
+            if ($delivery_data) {
+                if ($delivery_data->status == 1) {
+                    $nestedData['delivery_status'] = '<div class="badge badge-info">' . trans('file.Packing') . '</div>';
+                } elseif ($delivery_data->status == 2) {
+                    $nestedData['delivery_status'] = '<div class="badge badge-info">' . trans('file.Delivering') . '</div>';
+                } elseif ($delivery_data->status == 3) {
+                    $nestedData['delivery_status'] = '<div class="badge badge-info">' . trans('file.Delivered') . '</div>';
+                } else {
+                    $nestedData['delivery_status'] = '<div class="badge badge-danger">Customer Unavailable</div>';
+                }
+            } else {
                 $nestedData['delivery_status'] = 'N/A';
+            }
 
             $nestedData['grand_total'] = number_format($sale->grand_total, config('decimal'));
-            
+
             $returned_amount = DB::table('returns')->where('sale_id', $sale->id)->sum('grand_total');
             $nestedData['returned_amount'] = number_format($returned_amount, config('decimal'));
-            $nestedData['paid_amount'] = number_format($sale->paid_amount, config('decimal'));
-            $nestedData['due'] = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
-            
-            //fetching custom fields data
-            foreach($field_names as $field_name) {
+            $nestedData['paid_amount']     = number_format($sale->paid_amount, config('decimal'));
+            $nestedData['due']             = number_format($sale->grand_total - $returned_amount - $sale->paid_amount, config('decimal'));
+
+            foreach ($field_names as $field_name) {
                 $nestedData[$field_name] = $sale->$field_name;
             }
-            
+
+            // ----- Action buttons -----
             $nestedData['options'] = '<div class="btn-group">
-                        <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'.trans("file.action").'
-                        <span class="caret"></span>
-                        <span class="sr-only">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
-                            <li><a href="'.route('sale.invoice', $sale->id).'" class="btn btn-link"><i class="fa fa-copy"></i> '.trans('file.Generate Invoice').'</a></li>
-                            <li>
-                                <button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> '.trans('file.View').'</button>
-                            </li>';
-            if(in_array("sales-edit", $request['all_permission'])){
-                if($sale->sale_status != 3)
-                    $nestedData['options'] .= '<li>
-                        <a href="'.route('sales.edit', $sale->id).'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
-                        </li>';
-                else
-                    $nestedData['options'] .= '<li>
-                        <a href="'.url('sales/'.$sale->id.'/create').'" class="btn btn-link"><i class="dripicons-document-edit"></i> '.trans('file.edit').'</a>
-                    </li>';
+                <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' . trans("file.action") . '
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
+                    <li><a href="' . route('sale.invoice', $sale->id) . '" class="btn btn-link"><i class="fa fa-copy"></i> ' . trans('file.Generate Invoice') . '</a></li>
+                    <li><button type="button" class="btn btn-link view"><i class="fa fa-eye"></i> ' . trans('file.View') . '</button></li>';
+
+            if (in_array("sales-edit", $request['all_permission'])) {
+                if ($sale->sale_status != 3) {
+                    $nestedData['options'] .= '<li><a href="' . route('sales.edit', $sale->id) . '" class="btn btn-link"><i class="dripicons-document-edit"></i> ' . trans('file.edit') . '</a></li>';
+                } else {
+                    $nestedData['options'] .= '<li><a href="' . url('sales/' . $sale->id . '/create') . '" class="btn btn-link"><i class="dripicons-document-edit"></i> ' . trans('file.edit') . '</a></li>';
+                }
             }
-            if(in_array("sale-payment-index", $request['all_permission']))
-                $nestedData['options'] .=
-                    '<li>
-                        <button type="button" class="get-payment btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-money"></i> '.trans('file.View Payment').'</button>
-                    </li>';
-            if(in_array("sale-payment-add", $request['all_permission']))
-                $nestedData['options'] .=
-                    '<li>
-                        <button type="button" class="add-payment btn btn-link" data-id = "'.$sale->id.'" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> '.trans('file.Add Payment').'</button>
-                    </li>';
 
-            $nestedData['options'] .=
-                '<li>
-                    <button type="button" class="add-delivery btn btn-link" data-id = "'.$sale->id.'"><i class="fa fa-truck"></i> '.trans('file.Add Delivery').'</button>
-                </li>';
-            if(in_array("sales-delete", $request['all_permission']))
-                $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"] ).'
-                        <li>
-                        <button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> '.trans("file.delete").'</button>
-                        </li>'.\Form::close().'
-                    </ul>
-                </div>';
-            
-            // data for sale details by one click
+            if (in_array("sale-payment-index", $request['all_permission'])) {
+                $nestedData['options'] .= '<li><button type="button" class="get-payment btn btn-link" data-id="' . $sale->id . '"><i class="fa fa-money"></i> ' . trans('file.View Payment') . '</button></li>';
+            }
+
+            if (in_array("sale-payment-add", $request['all_permission'])) {
+                $nestedData['options'] .= '<li><button type="button" class="add-payment btn btn-link" data-id="' . $sale->id . '" data-toggle="modal" data-target="#add-payment"><i class="fa fa-plus"></i> ' . trans('file.Add Payment') . '</button></li>';
+            }
+
+            $nestedData['options'] .= '<li><button type="button" class="add-delivery btn btn-link" data-id="' . $sale->id . '"><i class="fa fa-truck"></i> ' . trans('file.Add Delivery') . '</button></li>';
+
+            if (in_array("sales-delete", $request['all_permission'])) {
+                $nestedData['options'] .= \Form::open(["route" => ["sales.destroy", $sale->id], "method" => "DELETE"]) . '
+                    <li><button type="submit" class="btn btn-link" onclick="return confirmDelete()"><i class="dripicons-trash"></i> ' . trans("file.delete") . '</button></li>' . \Form::close();
+            }
+
+            $nestedData['options'] .= '</ul></div>';
+
+            // ----- One-click sale details -----
             $coupon = Coupon::find($sale->coupon_id);
-            if($coupon)
-                $coupon_code = $coupon->code;
-            else
-                $coupon_code = null;
+            $coupon_code = $coupon ? $coupon->code : null;
 
-            if($sale->currency_id)
-                $currency_code = Currency::select('code')->find($sale->currency_id)->code;
-            else
-                $currency_code = 'N/A';
+            $currency_code = $sale->currency_id
+                ? Currency::select('code')->find($sale->currency_id)->code
+                : 'N/A';
 
-            $nestedData['sale'] = array( '[ "'.date(config('date_format'), strtotime($sale->created_at->toDateString())).'"', ' "'.$sale->reference_no.'"', ' "'.$sale_status_text.'"', ' "'.$sale->biller->name.'"', ' "'.$sale->biller->company_name.'"', ' "'.$sale->biller->email.'"', ' "'.$sale->biller->phone_number.'"', ' "'.$sale->biller->address.'"', ' "'.$sale->biller->city.'"', ' "'.$sale->customer->name.'"', ' "'.$sale->customer->phone_number.'"', ' "'.$sale->customer->address.'"', ' "'.$sale->customer->city.'"', ' "'.$sale->id.'"', ' "'.$sale->total_tax.'"', ' "'.$sale->total_discount.'"', ' "'.$sale->total_price.'"', ' "'.$sale->order_tax.'"', ' "'.$sale->order_tax_rate.'"', ' "'.$sale->order_discount.'"', ' "'.$sale->shipping_cost.'"', ' "'.$sale->grand_total.'"', ' "'.$sale->paid_amount.'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->sale_note).'"', ' "'.preg_replace('/[\n\r]/', "<br>", $sale->staff_note).'"', ' "'.$sale->user->name.'"', ' "'.$sale->user->email.'"', ' "'.$sale->warehouse->name.'"', ' "'.$coupon_code.'"', ' "'.$sale->coupon_discount.'"', ' "'.$sale->document.'"', ' "'.$currency_code.'"', ' "'.$sale->exchange_rate.'"]'
+            $nestedData['sale'] = array(
+                '[ "' . date(config('date_format'), strtotime($sale->created_at->toDateString())) . '"',
+                ' "' . $sale->reference_no . '"',
+                ' "' . $sale_status_text . '"',
+                ' "' . $sale->biller->name . '"',
+                ' "' . $sale->biller->company_name . '"',
+                ' "' . $sale->biller->email . '"',
+                ' "' . $sale->biller->phone_number . '"',
+                ' "' . $sale->biller->address . '"',
+                ' "' . $sale->biller->city . '"',
+                ' "' . $sale->customer->name . '"',
+                ' "' . $sale->customer->phone_number . '"',
+                ' "' . $sale->customer->address . '"',
+                ' "' . $sale->customer->city . '"',
+                ' "' . $sale->id . '"',
+                ' "' . $sale->total_tax . '"',
+                ' "' . $sale->total_discount . '"',
+                ' "' . $sale->total_price . '"',
+                ' "' . $sale->order_tax . '"',
+                ' "' . $sale->order_tax_rate . '"',
+                ' "' . $sale->order_discount . '"',
+                ' "' . $sale->shipping_cost . '"',
+                ' "' . $sale->grand_total . '"',
+                ' "' . $sale->paid_amount . '"',
+                ' "' . preg_replace('/[\n\r]/', "<br>", $sale->sale_note) . '"',
+                ' "' . preg_replace('/[\n\r]/', "<br>", $sale->staff_note) . '"',
+                ' "' . $sale->user->name . '"',
+                ' "' . $sale->user->email . '"',
+                ' "' . $sale->warehouse->name . '"',
+                ' "' . $coupon_code . '"',
+                ' "' . $sale->coupon_discount . '"',
+                ' "' . $sale->document . '"',
+                ' "' . $currency_code . '"',
+                ' "' . $sale->exchange_rate . '"]'
             );
-            
+
             $data[] = $nestedData;
         }
     }
-    
+
     $json_data = array(
-        "draw"            => intval($request->input('draw')),
-        "recordsTotal"    => intval($totalData),
-        "recordsFiltered" => intval($totalFiltered),
-        "data"            => $data,
+        "draw"               => intval($request->input('draw')),
+        "recordsTotal"       => intval($totalData),
+        "recordsFiltered"    => intval($totalFiltered),
+        "data"               => $data,
         "total_sales_amount" => $total_sales_amount
     );
-    
+
     echo json_encode($json_data);
 }
 

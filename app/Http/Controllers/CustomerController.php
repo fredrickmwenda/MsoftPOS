@@ -134,7 +134,6 @@ class CustomerController extends Controller
 
     public function store(Request $request)
     {
-        //dd($request->all());
         $this->validate($request, [
             'customer_name' => [
                 'required',

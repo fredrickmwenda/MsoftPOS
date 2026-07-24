@@ -2924,11 +2924,9 @@ class ReportController extends Controller
     public function userReport(Request $request)
     {
         $data = $request->all();
-      // dd($data);
 
         $user_id = $data['user_id'];
         $start_date = $request->input('start_date') ?? date('Y-m-d');
-        // dd($start_date);
         $end_date = $request->input('end_date') ?? date('Y-m-d');
         $lims_product_sale_data = [];
         $lims_product_purchase_data = [];
@@ -5179,46 +5177,12 @@ class ReportController extends Controller
         return view('backend.report.supplier_due_report', compact('lims_purchase_data', 'supplier_summaries', 'start_date', 'end_date', 'general_setting'));
     }
 
-    // public function departmentReport()
-    // {
-    //     $dateFrom = request('date_from') ?? date('Y-m-d');
-    //     $dateTo = request('date_to') ?? date('Y-m-d');
-    //     $departments = CategoryDepartment::where('is_active', true)->get();
-    //     $department_data = [];
-    //     foreach($departments as $department) {
-    //         $categories = Category::where('department_id', $department->id)->pluck('id');
-    //         $total_products = Product::whereIn('category_id', $categories)->count();
-    //         $salesQuery = DB::table('product_sales')
-    //             ->join('products', 'product_sales.product_id', '=', 'products.id')
-    //             ->whereIn('products.category_id', $categories)
-    //             ->whereBetween('product_sales.created_at', [
-    //                 $dateFrom . ' 00:00:00',
-    //                 $dateTo . ' 23:59:59'
-    //             ]);
-    //         $total_sales = $salesQuery->sum('product_sales.qty');
-    //         $total_revenue = $salesQuery->sum('product_sales.total');
-    //         // Cost calculation: sum of (qty * net_unit_price)
-    //         $total_cost = $salesQuery->sum(DB::raw('product_sales.qty * product_sales.net_unit_price'));
-    //         $categories_count = Category::where('department_id', $department->id)->count();
-    //         $department_data[] = [
-    //             'id' => $department->id,
-    //             'name' => $department->name,
-    //             'image' => $department->image,
-    //             'categories_count' => $categories_count,
-    //             'products_count' => $total_products,
-    //             'total_sales' => $total_sales ?? 0,
-    //             'total_revenue' => $total_revenue ?? 0,
-    //             'total_cost' => $total_cost ?? 0
-    //         ];
-    //     }
-    //     return view('backend.report.department_report', compact('department_data'));
-    // }
+  
     public function departmentReport()
     {
         $dateFrom = request('date_from') ?? date('Y-m-d');
         $dateTo = request('date_to') ?? date('Y-m-d');
         $departments = CategoryDepartment::where('is_active', true)->get();
-    // dd($departments);
         $department_data = [];
 
         foreach ($departments as $department) {
@@ -5520,161 +5484,97 @@ class ReportController extends Controller
 
     public function stockTakingData(Request $request)
     {
-        $columns = [
-            1 => 'stock_counts.created_at',
-            2 => 'products.name'
-        ];
-
         $q = DB::table('stock_count_items')
-            ->join(
-                'stock_counts',
-                'stock_count_items.stock_count_id',
-                '=',
-                'stock_counts.id'
-            )
-            ->join(
-                'products',
-                'stock_count_items.product_id',
-                '=',
-                'products.id'
-            )
-            ->leftJoin(
-                'categories',
-                'products.category_id',
-                '=',
-                'categories.id'
-            )
-            ->join(
-                'warehouses',
-                'stock_counts.warehouse_id',
-                '=',
-                'warehouses.id'
-            )
-            ->join(
-                'users',
-                'stock_counts.user_id',
-                '=',
-                'users.id'
-            )
-            ->whereDate(
-                'stock_counts.created_at',
-                '>=',
-                $request->from_date
-            )
-            ->whereDate(
-                'stock_counts.created_at',
-                '<=',
-                $request->to_date
-            );
+            ->join('stock_counts', 'stock_count_items.stock_count_id', '=', 'stock_counts.id')
+            ->join('products', 'stock_count_items.product_id', '=', 'products.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->join('warehouses', 'stock_counts.warehouse_id', '=', 'warehouses.id')
+            ->join('users', 'stock_counts.user_id', '=', 'users.id')
+            ->whereDate('stock_counts.created_at', '>=', $request->from_date)
+            ->whereDate('stock_counts.created_at', '<=', $request->to_date);
 
         if ($request->status) {
-            $q->where(
-                'stock_counts.status',
-                $request->status
-            );
+            $q->where('stock_counts.status', $request->status);
         }
 
         if ($request->category_id) {
-            $q->where(
-                'products.category_id',
-                $request->category_id
-            );
+            $q->where('products.category_id', $request->category_id);
         }
 
-        $totalData = $q->count();
+        /* ── Totals for the footer (all filtered rows) ── */
+        $totals = (clone $q)->select(
+            DB::raw('SUM(stock_count_items.system_qty * products.cost) as sys_cost_total'),
+            DB::raw('SUM(stock_count_items.system_qty * products.price) as sys_selling_total'),
+            DB::raw('SUM(stock_count_items.physical_qty * products.cost) as phy_cost_total'),
+            DB::raw('SUM(stock_count_items.physical_qty * products.price) as phy_selling_total'),
+            DB::raw('SUM(stock_count_items.variance * products.cost) as variance_cost_total'),
+            DB::raw('SUM(stock_count_items.variance * products.price) as variance_selling_total')
+        )->first();
+
+        $totalData     = $q->count();
         $totalFiltered = $totalData;
 
         $limit = $request->length;
         $start = $request->start;
 
         $items = $q->select(
-                'stock_count_items.*',
-                'stock_counts.reference_no',
-                'stock_counts.status',
-                'stock_counts.created_at',
+                'stock_count_items.id',
+                'stock_count_items.system_qty',
+                'stock_count_items.physical_qty',
+                'stock_count_items.variance',
                 'products.name as product_name',
-                'categories.name as category_name',
-                'warehouses.name as warehouse_name',
-                'users.name as user_name'
+                'products.cost as product_cost',
+                'products.price as product_price',
+                DB::raw('(SELECT expired_date FROM product_batches WHERE product_batches.product_id = products.id ORDER BY expired_date DESC LIMIT 1) as expired_date')
             )
             ->offset($start)
             ->limit($limit)
-            ->orderBy(
-                'stock_counts.created_at',
-                'desc'
-            )
+            ->orderBy('stock_counts.created_at', 'desc')
             ->get();
 
         $data = [];
 
         foreach ($items as $item) {
+            $cost  = $item->product_cost  ?? 0;
+            $price = $item->product_price ?? 0;
 
-            $nestedData['date'] =
-                date(
-                    config('date_format') . ' H:i',
-                    strtotime($item->created_at)
-                );
+            $sysCostTotal    = $item->system_qty   * $cost;
+            $sysSellingTotal = $item->system_qty   * $price;
+            $phyCostTotal    = $item->physical_qty * $cost;
+            $phySellingTotal = $item->physical_qty * $price;
+            $varianceCost    = $item->variance     * $cost;
+            $varianceSelling = $item->variance     * $price;
 
-            $nestedData['reference_no'] =
-                $item->reference_no;
-
-            $nestedData['warehouse'] =
-                $item->warehouse_name;
-
-            $nestedData['product'] =
-                $item->product_name;
-
-            $nestedData['category'] =
-                $item->category_name;
-
-            $nestedData['system_qty'] =
-                number_format(
-                    $item->system_qty,
-                    2
-                );
-
-            $nestedData['physical_qty'] =
-                number_format(
-                    $item->physical_qty,
-                    2
-                );
-
-            $nestedData['variance'] =                
-                    $item->variance;
-
-            $nestedData['reason'] =
-                $item->reason;
-
-            if ($item->status == 'approved') {
-                $nestedData['status'] =
-                    '<span class="badge badge-success">
-                        Approved
-                    </span>';
-            }
-            elseif ($item->status == 'pending') {
-                $nestedData['status'] =
-                    '<span class="badge badge-warning">
-                        Pending
-                    </span>';
-            }
-            else {
-                $nestedData['status'] =
-                    '<span class="badge badge-danger">
-                        Denied
-                    </span>';
-            }
-
-            $nestedData['taken_by'] =
-                $item->user_name;
+            $nestedData['product_name']      = $item->product_name;
+            $nestedData['expired_date']       = $item->expired_date
+                ? date(config('date_format'), strtotime($item->expired_date))
+                : '-';
+            $nestedData['system_qty']        = number_format($item->system_qty, 2);
+            $nestedData['sys_cost_total']    = number_format($sysCostTotal, 2);
+            $nestedData['sys_selling_total'] = number_format($sysSellingTotal, 2);
+            $nestedData['physical_qty']      = number_format($item->physical_qty, 2);
+            $nestedData['phy_cost_total']    = 'GH₵ ' . number_format($phyCostTotal, 2);
+            $nestedData['phy_selling_total'] = 'GH₵ ' . number_format($phySellingTotal, 2);
+            $nestedData['variance_qty']      = number_format($item->variance, 2);
+            $nestedData['variance_cost']     = number_format($varianceCost, 2);
+            $nestedData['variance_selling']  = number_format($varianceSelling, 2);
 
             $data[] = $nestedData;
         }
 
         return response()->json([
-            "draw" => intval($request->draw),
-            "recordsTotal" => intval($totalData),
+            "draw"            => intval($request->draw),
+            "recordsTotal"    => intval($totalData),
             "recordsFiltered" => intval($totalFiltered),
-            "data" => $data
+            "data"            => $data,
+            "totals"          => [
+                "sys_cost_total"       => 'GH₵ ' . number_format($totals->sys_cost_total ?? 0, 2),
+                "sys_selling_total"    => 'GH₵ ' . number_format($totals->sys_selling_total ?? 0, 2),
+                "phy_cost_total"       => 'GH₵ ' . number_format($totals->phy_cost_total ?? 0, 2),
+                "phy_selling_total"    => 'GH₵ ' . number_format($totals->phy_selling_total ?? 0, 2),
+                "variance_cost_total"  => number_format($totals->variance_cost_total ?? 0, 2),
+                "variance_selling_total" => number_format($totals->variance_selling_total ?? 0, 2),
+            ]
         ]);
     }
 }

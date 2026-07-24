@@ -106,10 +106,11 @@ Route::get('pos/customer-display', function() {
 })->name('pos.customer-display');
 
 
-Route::get(
-    'stock-count/products',
-    [StockCountController::class, 'getProducts']
-)->name('stock-count.products');
+Route::get('stock-count/products',[StockCountController::class, 'getProducts'])->name('stock-count.products');
+Route::get('stock-count/batches',[StockCountController::class, 'getBatches'])->name('stock-count.batches');
+
+
+
 Route::get('update-coupon', [CouponController::class, 'updateCoupon']);
 
 Route::get('auto-update-dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -141,7 +142,7 @@ Route::group(['middleware' => 'auth'], function() {
     });
 });
 
-Route::group(['middleware' => ['common', 'auth', 'active']], function() {
+Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     Route::controller(HomeController::class)->group(function () {
         Route::get('/', 'index');
         Route::get('/dashboard', 'dashboard');
