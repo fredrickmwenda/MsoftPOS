@@ -3,6 +3,8 @@
 namespace App\Observers;
 
 use App\Models\Customer;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class CustomerObserver
@@ -13,6 +15,18 @@ class CustomerObserver
     public function created(Customer $customer): void
     {
         $this->invalidateCustomerCaches();
+
+        ActivityLog::create([
+            'log_name'    => 'customer',
+            'description' => 'created',
+            'subject_type'=> Customer::class,
+            'subject_id'  => $customer->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $customer->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -21,6 +35,19 @@ class CustomerObserver
     public function updated(Customer $customer): void
     {
         $this->invalidateCustomerCaches();
+
+        ActivityLog::create([
+            'log_name'    => 'customer',
+            'description' => 'updated',
+            'subject_type'=> Customer::class,
+            'subject_id'  => $customer->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'old'        => $customer->getOriginal(),
+                'attributes' => $customer->getChanges(),
+            ],
+        ]);
     }
 
     /**
@@ -29,6 +56,18 @@ class CustomerObserver
     public function deleted(Customer $customer): void
     {
         $this->invalidateCustomerCaches();
+
+        ActivityLog::create([
+            'log_name'    => 'customer',
+            'description' => 'deleted',
+            'subject_type'=> Customer::class,
+            'subject_id'  => $customer->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $customer->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -37,6 +76,18 @@ class CustomerObserver
     public function restored(Customer $customer): void
     {
         $this->invalidateCustomerCaches();
+
+        ActivityLog::create([
+            'log_name'    => 'customer',
+            'description' => 'restored',
+            'subject_type'=> Customer::class,
+            'subject_id'  => $customer->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $customer->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -45,6 +96,18 @@ class CustomerObserver
     public function forceDeleted(Customer $customer): void
     {
         $this->invalidateCustomerCaches();
+
+        ActivityLog::create([
+            'log_name'    => 'customer',
+            'description' => 'force deleted',
+            'subject_type'=> Customer::class,
+            'subject_id'  => $customer->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $customer->getAttributes(),
+            ],
+        ]);
     }
 
     /**

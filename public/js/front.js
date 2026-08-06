@@ -86,7 +86,7 @@ $(document).ready(function () {
     })
     
     $('.pos-page nav.side-navbar').addClass('shrink');
-
+ 
     // ------------------------------------------------------- //
     // Header Dropdown / Right Sidebar
     // ------------------------------------------------------ //

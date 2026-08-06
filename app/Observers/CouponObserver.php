@@ -3,6 +3,8 @@
 namespace App\Observers;
 
 use App\Models\Coupon;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class CouponObserver
@@ -13,6 +15,18 @@ class CouponObserver
     public function created(Coupon $coupon): void
     {
         Cache::forget('coupon_list');
+
+        ActivityLog::create([
+            'log_name'    => 'coupon',
+            'description' => 'created',
+            'subject_type'=> Coupon::class,
+            'subject_id'  => $coupon->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $coupon->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -21,6 +35,19 @@ class CouponObserver
     public function updated(Coupon $coupon): void
     {
         Cache::forget('coupon_list');
+
+        ActivityLog::create([
+            'log_name'    => 'coupon',
+            'description' => 'updated',
+            'subject_type'=> Coupon::class,
+            'subject_id'  => $coupon->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'old'        => $coupon->getOriginal(),
+                'attributes' => $coupon->getChanges(),
+            ],
+        ]);
     }
 
     /**
@@ -29,6 +56,18 @@ class CouponObserver
     public function deleted(Coupon $coupon): void
     {
         Cache::forget('coupon_list');
+
+        ActivityLog::create([
+            'log_name'    => 'coupon',
+            'description' => 'deleted',
+            'subject_type'=> Coupon::class,
+            'subject_id'  => $coupon->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $coupon->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -37,6 +76,18 @@ class CouponObserver
     public function restored(Coupon $coupon): void
     {
         Cache::forget('coupon_list');
+
+        ActivityLog::create([
+            'log_name'    => 'coupon',
+            'description' => 'restored',
+            'subject_type'=> Coupon::class,
+            'subject_id'  => $coupon->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $coupon->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -45,5 +96,17 @@ class CouponObserver
     public function forceDeleted(Coupon $coupon): void
     {
         Cache::forget('coupon_list');
+
+        ActivityLog::create([
+            'log_name'    => 'coupon',
+            'description' => 'force deleted',
+            'subject_type'=> Coupon::class,
+            'subject_id'  => $coupon->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $coupon->getAttributes(),
+            ],
+        ]);
     }
 }

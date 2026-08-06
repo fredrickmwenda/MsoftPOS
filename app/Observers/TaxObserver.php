@@ -3,6 +3,8 @@
 namespace App\Observers;
 
 use App\Models\Tax;
+use App\Models\ActivityLog;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class TaxObserver
@@ -13,6 +15,18 @@ class TaxObserver
     public function created(Tax $tax): void
     {
         Cache::forget('tax_list');
+
+        ActivityLog::create([
+            'log_name'    => 'tax',
+            'description' => 'created',
+            'subject_type'=> Tax::class,
+            'subject_id'  => $tax->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $tax->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -21,6 +35,19 @@ class TaxObserver
     public function updated(Tax $tax): void
     {
         Cache::forget('tax_list');
+
+        ActivityLog::create([
+            'log_name'    => 'tax',
+            'description' => 'updated',
+            'subject_type'=> Tax::class,
+            'subject_id'  => $tax->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'old'        => $tax->getOriginal(),
+                'attributes' => $tax->getChanges(),
+            ],
+        ]);
     }
 
     /**
@@ -29,6 +56,18 @@ class TaxObserver
     public function deleted(Tax $tax): void
     {
         Cache::forget('tax_list');
+
+        ActivityLog::create([
+            'log_name'    => 'tax',
+            'description' => 'deleted',
+            'subject_type'=> Tax::class,
+            'subject_id'  => $tax->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $tax->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -37,6 +76,18 @@ class TaxObserver
     public function restored(Tax $tax): void
     {
         Cache::forget('tax_list');
+
+        ActivityLog::create([
+            'log_name'    => 'tax',
+            'description' => 'restored',
+            'subject_type'=> Tax::class,
+            'subject_id'  => $tax->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $tax->getAttributes(),
+            ],
+        ]);
     }
 
     /**
@@ -45,5 +96,17 @@ class TaxObserver
     public function forceDeleted(Tax $tax): void
     {
         Cache::forget('tax_list');
+
+        ActivityLog::create([
+            'log_name'    => 'tax',
+            'description' => 'force deleted',
+            'subject_type'=> Tax::class,
+            'subject_id'  => $tax->id,
+            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'   => Auth::id(),
+            'properties'  => [
+                'attributes' => $tax->getAttributes(),
+            ],
+        ]);
     }
 }

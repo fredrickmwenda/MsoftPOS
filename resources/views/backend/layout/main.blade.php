@@ -776,15 +776,15 @@
         }
 
         .sidebar {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+          display: flex;
+          flex-direction: column;
+          height: 100vh;
+        }
 
-.sidebar .side-menu {
-  flex: 1;
-  overflow-y: auto;
-}
+        .sidebar .side-menu {
+          flex: 1;
+          overflow-y: auto;
+        }
 
         nav.navbar.navbar-main {
           gap: 8px 12px;
@@ -1900,7 +1900,7 @@
             $('body').addClass('dark-mode');
             $('#switch-theme i').addClass('dripicons-brightness-low');
         }
-        else {
+        else { 
             $('body').removeClass('dark-mode');
             $('#switch-theme i').addClass('dripicons-brightness-max');
         }

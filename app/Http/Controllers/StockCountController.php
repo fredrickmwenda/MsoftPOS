@@ -181,7 +181,9 @@ class StockCountController extends Controller
         return view('backend.stock_count.qty_adjustment', compact('lims_warehouse_list', 'warehouse_id', 'id', 'product_id', 'names', 'code', 'qty', 'action'));
     }
 
-    /** 
+
+
+    /** This is the implementation of the New Stock
      * Get Batches  
      **/
     public function getBatches(Request $request)

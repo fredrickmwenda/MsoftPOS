@@ -485,6 +485,9 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
             //warehouse stock report data
             Route::post('report/warehouse-stock-data', [ReportController::class, 'warehouseStockReportData'])->name('report.warehouseStockData');
 
+            Route::get('stock-coverage', [ReportController::class, 'stockCoverage'])->name('stock-coverage');
+            Route::get('stock-coverage-data', [ReportController::class, 'stockCoverageData'])->name('stock-coverage.data');
+
             Route::get('daily_sale/{year}/{month}', 'dailySale')->name('report.dailySale');
             Route::post('daily_sale/{year}/{month}', 'dailySaleByWarehouse')->name('report.dailySaleByWarehouse');
             Route::get('monthly_sale/{year}', 'monthlySale')->name('report.monthlySale');
@@ -706,5 +709,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
 	Route::resource('custom-fields', CustomFieldController::class);
 
 	Route::post('woocommerce-install', [AddonInstallController::class,'woocommerceInstall'])->name('woocommerce.install');
+
+
 
 });

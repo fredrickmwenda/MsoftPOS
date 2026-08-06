@@ -161,6 +161,15 @@
                     </a>
                 </div>
 
+                {{-- ⭐ NEW: Stock Coverage Report --}}
+                <div class="report-item" data-category="warehouse" data-name="Stock Coverage">
+                    <a href="{{ route('stock-coverage') }}" class="report-link">
+                        <div class="report-icon"><i class="dripicons dripicons-checklist"></i></div>
+                        <h6>Stock Coverage Report</h6>
+                        <span class="badge bg-warning">Warehouse</span>
+                    </a>
+                </div>
+
                 <div class="report-item" data-category="warehouse" data-name="Stock Report">
                     <a href="{{ route('report.warehouseStockReport') }}" class="report-link">
                         <div class="report-icon"><i class="dripicons dripicons-stack"></i></div>

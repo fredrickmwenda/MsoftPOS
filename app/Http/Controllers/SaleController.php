@@ -4239,7 +4239,9 @@ public function saleData(Request $request)
     }
 
     function editAd($id) {
-        $staffs = User::whereIn('role_id', array(1, 2, 4, 6))->get();
+        $staffs = User::whereHas('roles', function ($query) {
+                        $query->whereIn('roles_id', [1, 2, 4, 6]); // use the actual pivot column name
+                    })->get();
         $ad = Ads::find($id);
         return view('backend.sale.editAd', compact('ad', 'staffs'));
     }

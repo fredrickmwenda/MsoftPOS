@@ -584,18 +584,16 @@
                         <td>
                             <input
                                 type="number"
-                                step="0.01"
+                                step="1"
                                 min="0"
                                 class="form-control physical-count"
                                 data-system="${systemQty}"
                                 data-product="${product.id}"
                                 data-batch="${product.batch_id ?? ''}"
-                                value="0.00">
+                                value="0">
                         </td>
 
-                        <td class="variance text-danger">
-                            -${systemQty}
-                        </td>
+                        <td class="variance"></td>
 
                         <td>
                             <button
@@ -625,89 +623,7 @@
             }
         });
     }
-    // function loadProducts(warehouseId, categoryId) {
 
-    //     $('#productTable').html(`
-    //         <tr>
-    //             <td colspan="7" class="text-center">
-    //                 Loading products...
-    //             </td>
-    //         </tr>
-    //     `);
-
-    //     $.ajax({
-    //         url: "{{ route('stock-count.products') }}",
-    //         type: "GET",
-    //         data: {
-    //             warehouse_id: warehouseId,
-    //             category_id: categoryId
-    //         },
-
-    //         success: function (products) {
-
-    //             let html = '';
-
-    //             if(products.length === 0){
-    //                 html = `
-    //                     <tr>
-    //                         <td colspan="7" class="text-center">
-    //                             No products found
-    //                         </td>
-    //                     </tr>
-    //                 `;
-
-    //                 $('#productTable').html(html);
-    //                 return;
-    //             }
-
-    //             // Inside loadProducts success callback, replace the row template:
-    //             products.forEach((product) => {
-    //                 let expiry = product.expiry_date ? product.expiry_date : 'N/A';
-    //                 let systemQty = parseFloat(product.system_qty).toFixed(2);
-
-    //                 html += `
-    //                 <tr>
-    //                     <td>
-    //                         <input type="checkbox" class="product-check" value="${product.id}">
-    //                     </td>
-    //                     <td>${product.id}</td>
-    //                     <td>
-    //                         <strong>${product.name}</strong><br>
-    //                         <small>${product.code}</small>
-    //                     </td>
-    //                     <td>${expiry}</td>
-    //                     <td>${systemQty}</td>
-    //                     <td>
-    //                         <input type="number" 
-    //                             class="form-control physical-count" 
-    //                             data-system="${systemQty}" 
-    //                             data-product="${product.id}" 
-    //                             value="0.00">
-    //                     </td>
-    //                     <td class="variance">${systemQty}</td>   <!-- variance = system + 0 -->
-    //                     <td>
-    //                         <button class="btn btn-success save-row" data-product="${product.id}">
-    //                             <i class="fa fa-save"></i>
-    //                         </button>
-    //                     </td>
-    //                 </tr>`;
-    //             });
-
-    //             $('#productTable').html(html);
-    //         },
-
-    //         error: function () {
-
-    //             $('#productTable').html(`
-    //                 <tr>
-    //                     <td colspan="8" class="text-center text-danger">
-    //                         Failed to load products
-    //                     </td>
-    //                 </tr>
-    //             `);
-    //         }
-    //     });
-    // }
 
 
     // Live Variance Calculation

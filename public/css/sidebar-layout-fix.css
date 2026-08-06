@@ -3,6 +3,10 @@
  * Load this after custom-default.css so these rules take effect.
  */
 
+/* =========================================================
+   BASE SIDEBAR LAYOUT
+   ========================================================= */
+
 /* Sidebar: fixed column on the left only - never full width */
 nav.side-navbar {
   position: fixed !important;
@@ -39,7 +43,9 @@ nav.side-navbar .brand-big {
 }
 
 /* Sidebar menu list takes remaining space and scrolls inside the column */
-nav.side-navbar #side-main-menu {
+nav.side-navbar #side-main-menu,
+nav.side-navbar .side-menu,
+nav.side-navbar > ul {
   flex: 1 1 auto !important;
   min-height: 0 !important;
   overflow-y: auto !important;
@@ -50,13 +56,18 @@ nav.side-navbar #side-main-menu {
 
 /* Submenus stay inside sidebar - no breakout */
 nav.side-navbar .collapse,
-nav.side-navbar .collapse.show {
+nav.side-navbar .collapse.show,
+nav.side-navbar .collapsing {
   position: relative !important;
   left: auto !important;
   right: auto !important;
   width: auto !important;
   max-width: 100% !important;
 }
+
+/* =========================================================
+   MAIN CONTENT OFFSET
+   ========================================================= */
 
 /* Main content: offset by sidebar width on desktop so it's visible to the right */
 @media (min-width: 1200px) {
@@ -78,6 +89,7 @@ nav.side-navbar .collapse.show {
 
 /* When sidebar is collapsed (shrink) or on smaller screens, content full width */
 .page.active,
+.page.active-sm,
 .pos-page .page {
   margin-left: 0 !important;
   width: 100% !important;
@@ -88,7 +100,10 @@ nav.navbar {
   z-index: 1000 !important;
 }
 
-/* Tablet: sidebar as overlay drawer */
+/* =========================================================
+   TABLET SIDEBAR AS OVERLAY DRAWER
+   ========================================================= */
+
 @media (max-width: 1199px) {
   nav.side-navbar {
     width: 280px !important;
@@ -107,21 +122,27 @@ nav.navbar {
   }
 }
 
-/* Mobile: sidebar drawer stays narrow, touch-friendly */
+/* =========================================================
+   MOBILE SIDEBAR MENU VISIBILITY FIX
+   ========================================================= */
+
 @media (max-width: 768px) {
-  nav.side-navbar {
+  nav.side-navbar { 
     width: 280px !important;
     max-width: 280px !important;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
     z-index: 1050 !important;
     -webkit-overflow-scrolling: touch;
   }
+  
   nav.side-navbar.shrink {
     width: 0 !important;
     max-width: 0 !important;
   }
+  
   .page {
     margin-left: 0 !important;
     width: 100% !important;
   }
 }
+

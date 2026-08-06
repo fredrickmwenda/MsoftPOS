@@ -2196,8 +2196,18 @@ class ReportController extends Controller
         }
 
         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-        $lims_biller_list = User::where('is_active', true)->where('role_id', 5)->get();
-        $lims_user_list = User::where('is_active', true)->whereIn('role_id', [2, 4, 6])->get();
+       
+        $lims_biller_list = User::where('is_active', true)
+            ->whereHas('roles', function ($query) {
+                $query->where('roles_id', 5); // pivot column name
+            })
+            ->get();
+        $lims_user_list = User::where('is_active', true)
+                            ->whereHas('roles', function ($query) {
+                                $query->whereIn('roles_id', [2, 4, 6]); // use the correct foreign key column name on the pivot table
+                            })
+                            ->get();
+        
         $lims_category_list = Category::where('is_active', true)->get();
         $lims_department_list = CategoryDepartment::where('is_active', true)->get();
 
@@ -2305,9 +2315,15 @@ class ReportController extends Controller
             $end_date = date("Y-m-d");
         }
         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+        // $lims_biller_list = User::where('is_active', true)
+        //                             ->where('role_id', 5)
+        //                             ->get();
         $lims_biller_list = User::where('is_active', true)
-                                    ->where('role_id', 5)
-                                    ->get();
+            ->whereHas('roles', function ($query) {
+                $query->whereIn('roles_id', [5]);
+            })
+            ->get();
+      
         return view('backend.report.warehouse_report',compact('start_date', 'end_date', 'warehouse_id', 'biller_id', 'lims_warehouse_list', 'lims_biller_list'));
     } 
 
@@ -2959,7 +2975,12 @@ class ReportController extends Controller
             $lims_product_transfer_data[$key] = ProductTransfer::where('transfer_id', $transfer->id)->get();
         }
 
-        $lims_user_list = User::where('is_active', true)->where('role_id', '!=', 1)->get();
+        // $lims_user_list = User::where('is_active', true)->where('role_id', '!=', 1)->get();
+        $lims_user_list = User::where('is_active', true)
+                            ->whereDoesntHave('roles', function ($query) {
+                                $query->where('roles_id', 1);   // use the correct pivot column name
+                            })
+                            ->get();
         return view('backend.report.user_report', compact('lims_sale_data','user_id', 'start_date', 'end_date', 'lims_product_sale_data', 'lims_payment_data', 'lims_user_list', 'lims_purchase_data', 'lims_product_purchase_data', 'lims_quotation_data', 'lims_product_quotation_data', 'lims_transfer_data', 'lims_product_transfer_data', 'lims_expense_data', 'lims_payroll_data') );
     }
 
@@ -5236,9 +5257,13 @@ class ReportController extends Controller
     public function salesPersonReport(Request $request)
     {
         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-        $lims_user_list = User::where('is_active', true)->whereIn('role_id', [2, 4, 6])->get();
-            $start_date = $request->input('start_date', date('Y-m-d')); // was: date('Y-m').'-01'
-            $end_date   = $request->input('end_date',   date('Y-m-d')); //
+        $lims_user_list = User::where('is_active', true)
+                            ->whereHas('roles', function ($query) {
+                                $query->whereIn('roles_id', [2, 4, 6]); // use the correct foreign key column name on the pivot table
+                            })
+                            ->get();
+        $start_date = $request->input('start_date', date('Y-m-d')); // was: date('Y-m').'-01'
+        $end_date   = $request->input('end_date',   date('Y-m-d')); //
         $warehouse_id = (int) $request->input('warehouse_id', 0);
         $user_id = (int) $request->input('user_id', 0);
        
@@ -5469,7 +5494,7 @@ class ReportController extends Controller
 
 
     public function stockTaking()
-    {
+    { 
         $categories = Category::where(
             'is_active',
             true
@@ -5501,14 +5526,14 @@ class ReportController extends Controller
             $q->where('products.category_id', $request->category_id);
         }
 
-        /* ── Totals for the footer (all filtered rows) ── */
+        /* ── Totals for the footer ── */
         $totals = (clone $q)->select(
             DB::raw('SUM(stock_count_items.system_qty * products.cost) as sys_cost_total'),
             DB::raw('SUM(stock_count_items.system_qty * products.price) as sys_selling_total'),
             DB::raw('SUM(stock_count_items.physical_qty * products.cost) as phy_cost_total'),
             DB::raw('SUM(stock_count_items.physical_qty * products.price) as phy_selling_total'),
-            DB::raw('SUM(stock_count_items.variance * products.cost) as variance_cost_total'),
-            DB::raw('SUM(stock_count_items.variance * products.price) as variance_selling_total')
+            DB::raw('SUM(CAST(stock_count_items.variance AS DECIMAL(10,2)) * products.cost) as variance_cost_total'),
+            DB::raw('SUM(CAST(stock_count_items.variance AS DECIMAL(10,2)) * products.price) as variance_selling_total')
         )->first();
 
         $totalData     = $q->count();
@@ -5542,11 +5567,13 @@ class ReportController extends Controller
             $sysSellingTotal = $item->system_qty   * $price;
             $phyCostTotal    = $item->physical_qty * $cost;
             $phySellingTotal = $item->physical_qty * $price;
-            $varianceCost    = $item->variance     * $cost;
-            $varianceSelling = $item->variance     * $price;
+
+            $varianceNumeric = (float) $item->variance;
+            $varianceCost    = $varianceNumeric * $cost;
+            $varianceSelling = $varianceNumeric * $price;
 
             $nestedData['product_name']      = $item->product_name;
-            $nestedData['expired_date']       = $item->expired_date
+            $nestedData['expired_date']      = $item->expired_date
                 ? date(config('date_format'), strtotime($item->expired_date))
                 : '-';
             $nestedData['system_qty']        = number_format($item->system_qty, 2);
@@ -5555,12 +5582,22 @@ class ReportController extends Controller
             $nestedData['physical_qty']      = number_format($item->physical_qty, 2);
             $nestedData['phy_cost_total']    = 'GH₵ ' . number_format($phyCostTotal, 2);
             $nestedData['phy_selling_total'] = 'GH₵ ' . number_format($phySellingTotal, 2);
-            $nestedData['variance_qty']      = number_format($item->variance, 2);
-            $nestedData['variance_cost']     = number_format($varianceCost, 2);
-            $nestedData['variance_selling']  = number_format($varianceSelling, 2);
+
+            /* ── Variance QTY: raw DB value (varchar like +1 / -1) ── */
+            $nestedData['variance_qty']      = $item->variance;
+
+            /* ── Variance Cost & Selling: explicit + / – sign ── */
+            $nestedData['variance_cost']     = ($varianceCost > 0 ? '+' : '') . number_format($varianceCost, 2);
+            $nestedData['variance_selling']  = ($varianceSelling > 0 ? '+' : '') . number_format($varianceSelling, 2);
 
             $data[] = $nestedData;
         }
+
+        /* ── Helper to format footer totals with sign ── */
+        $fmt = function ($val) {
+            if ($val > 0) return '+' . number_format($val, 2);
+            return number_format($val, 2);
+        };
 
         return response()->json([
             "draw"            => intval($request->draw),
@@ -5568,13 +5605,136 @@ class ReportController extends Controller
             "recordsFiltered" => intval($totalFiltered),
             "data"            => $data,
             "totals"          => [
-                "sys_cost_total"       => 'GH₵ ' . number_format($totals->sys_cost_total ?? 0, 2),
-                "sys_selling_total"    => 'GH₵ ' . number_format($totals->sys_selling_total ?? 0, 2),
-                "phy_cost_total"       => 'GH₵ ' . number_format($totals->phy_cost_total ?? 0, 2),
-                "phy_selling_total"    => 'GH₵ ' . number_format($totals->phy_selling_total ?? 0, 2),
-                "variance_cost_total"  => number_format($totals->variance_cost_total ?? 0, 2),
-                "variance_selling_total" => number_format($totals->variance_selling_total ?? 0, 2),
+                "sys_cost_total"         => 'GH₵ ' . number_format($totals->sys_cost_total ?? 0, 2),
+                "sys_selling_total"      => 'GH₵ ' . number_format($totals->sys_selling_total ?? 0, 2),
+                "phy_cost_total"         => 'GH₵ ' . number_format($totals->phy_cost_total ?? 0, 2),
+                "phy_selling_total"      => 'GH₵ ' . number_format($totals->phy_selling_total ?? 0, 2),
+                "variance_cost_total"    => $fmt($totals->variance_cost_total ?? 0),
+                "variance_selling_total" => $fmt($totals->variance_selling_total ?? 0),
             ]
         ]);
     }
+
+    /**
+     * Show the Stock Coverage Report view
+     */
+    public function stockCoverage()
+    {
+        $categories = Category::where('is_active', true)->get();
+        return view('backend.report.stock_coverage', compact('categories'));
+    }
+
+    /**
+     * Datatable data for Stock Coverage Report
+     */
+public function stockCoverageData(Request $request)
+{
+    // Base query: active products, joined with product_warehouse and categories
+    $baseQuery = Product::where('products.is_active', 1)
+        ->leftJoin('product_warehouse', 'products.id', '=', 'product_warehouse.product_id')
+        ->leftJoin('categories', 'products.category_id', '=', 'categories.id');
+
+    // Category filter
+    if ($request->category_id) {
+        $baseQuery->where('products.category_id', $request->category_id);
+    }
+
+    // Date range for stock counts (default: last 30 days)
+    $fromDate = $request->from_date ?? date('Y-m-d', strtotime('-30 days'));
+    $toDate = $request->to_date ?? date('Y-m-d');
+
+    // Subquery: stock count items within date range, aggregated per product
+    $stockCountSub = DB::table('stock_count_items')
+        ->join('stock_counts', 'stock_count_items.stock_count_id', '=', 'stock_counts.id')
+        ->whereBetween('stock_counts.created_at', [$fromDate, $toDate])
+        ->where('stock_counts.status', $request->status ?? 'approved')
+        ->select(
+            'stock_count_items.product_id',
+            DB::raw('MAX(stock_counts.created_at) as last_count_date'),
+            DB::raw('SUM(stock_count_items.physical_qty) as total_physical_qty'),
+            DB::raw('SUM(stock_count_items.variance) as total_variance')
+        )
+        ->groupBy('stock_count_items.product_id');
+
+    // Join subquery
+    $baseQuery->leftJoinSub($stockCountSub, 'counted', function ($join) {
+        $join->on('products.id', '=', 'counted.product_id');
+    });
+
+    // Status filter: counted / not counted
+    if ($request->status_filter === 'counted') {
+        $baseQuery->whereNotNull('counted.product_id');
+    } elseif ($request->status_filter === 'not_counted') {
+        $baseQuery->whereNull('counted.product_id');
+    }
+
+    // ==================== MAIN DATA (paginated) ====================
+    $mainQuery = clone $baseQuery;
+    $mainQuery->groupBy('products.id')
+        ->select(
+            'products.id',
+            'products.name as product_name',
+            'products.code',
+            'categories.name as category_name',
+            DB::raw('COALESCE(SUM(product_warehouse.qty), 0) as total_system_qty'),
+            'counted.last_count_date',
+            'counted.total_physical_qty',
+            'counted.total_variance'
+        );
+
+    // Total records (number of product groups)
+    $totalData = $mainQuery->count();
+
+    // Ordering & pagination
+    $columns = ['id', 'product_name', 'category_name', 'total_system_qty', 'last_count_date', 'total_physical_qty', 'total_variance'];
+    $orderColumn = $columns[$request->order[0]['column']] ?? 'product_name';
+    $orderDir = $request->order[0]['dir'] ?? 'asc';
+
+    $limit = $request->length;
+    $start = $request->start;
+
+    $items = $mainQuery->orderBy($orderColumn, $orderDir)
+        ->offset($start)
+        ->limit($limit)
+        ->get();
+
+    // ==================== TOTALS (no grouping) ====================
+    $totalsQuery = clone $baseQuery;
+    $totals = $totalsQuery->select(
+        DB::raw('COALESCE(SUM(product_warehouse.qty), 0) as total_system_qty'),
+        DB::raw('COALESCE(SUM(counted.total_physical_qty), 0) as total_physical_qty'),
+        DB::raw('COALESCE(SUM(counted.total_variance), 0) as total_variance')
+    )->first();
+
+    // Format data for DataTables
+    $data = [];
+    foreach ($items as $item) {
+        $isCounted = !is_null($item->last_count_date);
+        $data[] = [
+            'product_name' => $item->product_name . '<br><small>' . $item->code . '</small>',
+            'category'     => $item->category_name ?? 'Uncategorized',
+            'system_qty'   => number_format($item->total_system_qty, 2),
+            'last_count_date' => $isCounted ? date(config('date_format'), strtotime($item->last_count_date)) : '-',
+            'physical_qty' => $isCounted ? number_format($item->total_physical_qty, 2) : '-',
+            'variance'     => $isCounted ? number_format($item->total_variance, 2) : '-',
+            'status_badge' => $isCounted 
+                ? '<span class="badge badge-success">Counted</span>' 
+                : '<span class="badge badge-danger">Not Counted</span>',
+        ];
+    }
+
+    return response()->json([
+        'draw'            => intval($request->draw),
+        'recordsTotal'    => intval($totalData),
+        'recordsFiltered' => intval($totalData), // simplified
+        'data'            => $data,
+        'totals'          => [
+            'system_qty'   => number_format($totals->total_system_qty ?? 0, 2),
+            'physical_qty' => number_format($totals->total_physical_qty ?? 0, 2),
+            'variance'     => number_format($totals->total_variance ?? 0, 2),
+        ]
+    ]);
+}
+
+
 }

@@ -13,7 +13,7 @@ class Expense extends Model
     public function warehouse()
     {
     	return $this->belongsTo('App\Models\Warehouse');
-    }
+    } 
 
     public function expenseCategory() {
     	return $this->belongsTo('App\Models\ExpenseCategory');
