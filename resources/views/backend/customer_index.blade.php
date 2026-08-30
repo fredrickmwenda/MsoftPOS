@@ -677,7 +677,7 @@
     }
 
     $('#sale-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'columnDefs': [
             {
                 "orderable": false,
@@ -768,7 +768,7 @@
     }
 
     $('#payment-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'columnDefs': [
             {
                 "orderable": false,
@@ -855,7 +855,7 @@
     }
 
     $('#quotation-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'columnDefs': [
             {
                 "orderable": false,
@@ -946,7 +946,7 @@
     }
 
     $('#return-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'columnDefs': [
             {
                 "orderable": false,

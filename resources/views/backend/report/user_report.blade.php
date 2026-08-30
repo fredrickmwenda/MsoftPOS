@@ -1202,16 +1202,7 @@
         }
     }
 
-// $(".daterangepicker-field").daterangepicker({
-//   callback: function(startDate, endDate, period){
-//     var start_date = startDate.format('YYYY-MM-DD');
-//     var end_date = endDate.format('YYYY-MM-DD');
-//     var title = start_date + ' To ' + end_date;
-//     $(this).val(title);
-//     $('input[name="start_date"]').val(start_date);
-//     $('input[name="end_date"]').val(end_date);
-//   }
-// });
+
 
 </script>
 @endpush

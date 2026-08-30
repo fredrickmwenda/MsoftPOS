@@ -17,15 +17,11 @@ class StockCountItem extends Model
 
     public function stockCount()
     {
-        return $this->belongsTo(
-            StockCount::class
-        );
+        return $this->belongsTo(StockCount::class);
     }
 
     public function product()
     {
-        return $this->belongsTo(
-            Product::class
-        );
+        return $this->belongsTo(Product::class);
     }
 }

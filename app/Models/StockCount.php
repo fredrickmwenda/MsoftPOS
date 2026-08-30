@@ -12,24 +12,18 @@ class StockCount extends Model
     ];
 
 
-        public function warehouse()
+    public function warehouse()
     {
-        return $this->belongsTo(
-            Warehouse::class
-        );
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function user()
     {
-        return $this->belongsTo(
-            User::class
-        );
+        return $this->belongsTo(User::class);
     }
 
     public function items()
     {
-        return $this->hasMany(
-            StockCountItem::class
-        );
+        return $this->hasMany(StockCountItem::class);
     }
 }

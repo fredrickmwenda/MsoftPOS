@@ -29,8 +29,8 @@
                     <td>{{$key}}</td>
                     <td>{{date($general_setting->date_format, strtotime($money_transfer->created_at->toDateString())) . ' '. $money_transfer->created_at->toTimeString() }}</td>
                     <td>{{ $money_transfer->reference_no }}</td>
-                    <td>{{ $money_transfer->fromAccount->name }}</td>
-                    <td>{{ $money_transfer->toAccount->name }}</td>
+                    <td>{{ $money_transfer->fromAccount->name ?? '' }}</td>
+                    <td>{{ $money_transfer->toAccount->name ?? '' }}</td>
                     <td>{{ number_format((float)$money_transfer->amount, $general_setting->decimal, '.', '')}}</td>
                     <td>
                         <div class="btn-group">
@@ -198,7 +198,7 @@
     }
 
     $('#money-transfer-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'language': {
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',

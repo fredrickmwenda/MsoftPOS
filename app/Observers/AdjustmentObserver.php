@@ -8,94 +8,82 @@ use Illuminate\Support\Facades\Auth;
 
 class AdjustmentObserver
 {
-    /**
-     * Handle the Adjustment "created" event.
+     /* Helper method to create a standardized, readable log entry.
      */
-    public function created(Adjustment $adjustment): void
+    private function logActivity(string $action, Adjustment $model, array $properties = []): void
     {
+        // You can replace $model->id with a more friendly identifier if your model has one
+        // For example: $model->return_number or $model->reference_code
+        $identifier = $model->id ?? 'Unknown';
+
         ActivityLog::create([
-            'log_name'    => 'adjustment',
-            'description' => 'created',
+            'log_name'    => 'Adjustment',
+            'description' => "Adjustment #{$identifier} was {$action}.",
             'subject_type'=> Adjustment::class,
-            'subject_id'  => $adjustment->id,
+            'subject_id'  => $model->id,
             'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
             'causer_id'   => Auth::id(),
-            'properties'  => [
-                'attributes' => $adjustment->getAttributes(),
-            ],
+            'properties'  => $properties,
         ]);
     }
 
     /**
-     * Handle the Adjustment "updated" event.
+     * Handle the ProductReturn "created" event.
      */
-    public function updated(Adjustment $adjustment): void
+    public function created(Adjustment $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'adjustment',
-            'description' => 'updated',
-            'subject_type'=> Adjustment::class,
-            'subject_id'  => $adjustment->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => [
-                'old'        => $adjustment->getOriginal(),
-                'attributes' => $adjustment->getChanges(),
-            ],
+        $this->logActivity('created', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 
     /**
-     * Handle the Adjustment "deleted" event.
+     * Handle the ProductReturn "updated" event.
      */
-    public function deleted(Adjustment $adjustment): void
+    public function updated(Adjustment $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'adjustment',
-            'description' => 'deleted',
-            'subject_type'=> Adjustment::class,
-            'subject_id'  => $adjustment->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => [
-                'attributes' => $adjustment->getAttributes(),
-            ],
+        // Get only the fields that actually changed
+        $changes = $model->getChanges();
+        
+        // Get the original values of those specific changed fields
+        $original = collect($model->getOriginal())->only(array_keys($changes))->toArray();
+
+        $this->logActivity('updated', $model, [
+            'old' => $original,
+            'attributes' => $changes
         ]);
     }
 
     /**
-     * Handle the Adjustment "restored" event (only if using SoftDeletes).
+     * Handle the ProductReturn "deleted" event.
      */
-    public function restored(Adjustment $adjustment): void
+    public function deleted(Adjustment $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'adjustment',
-            'description' => 'restored',
-            'subject_type'=> Adjustment::class,
-            'subject_id'  => $adjustment->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => [
-                'attributes' => $adjustment->getAttributes(),
-            ],
+        $this->logActivity('deleted', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 
     /**
-     * Handle the Adjustment "force deleted" event (only if using SoftDeletes).
+     * Handle the ProductReturn "restored" event.
      */
-    public function forceDeleted(Adjustment $adjustment): void
+    public function restored(Adjustment $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'adjustment',
-            'description' => 'force deleted',
-            'subject_type'=> Adjustment::class,
-            'subject_id'  => $adjustment->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => [
-                'attributes' => $adjustment->getAttributes(),
-            ],
+        $this->logActivity('restored', $model, [
+            'attributes' => $model->getAttributes()
+        ]);
+    }
+
+    /**
+     * Handle the ProductReturn "force deleted" event.
+     */
+    public function forceDeleted(Adjustment $model): void
+    {
+        $this->logActivity('permanently deleted', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 }
+
+
+

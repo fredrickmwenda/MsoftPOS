@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main')
+@section('content')
 @if(session()->has('message'))
   <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('message') }}</div>
 @endif
@@ -59,7 +60,7 @@
         </div>
 
         @if(in_array("expenses-add", $all_permission))
-            <button class="btn btn-info" data-toggle="modal" data-target="#expense-modal"><i class="dripicons-plus"></i> {{trans('file.Add Expense')}}</button>
+            <button class="btn btn-info" data-toggle="modal" data-target="#addExpenseModal"><i class="dripicons-plus"></i> {{trans('file.Add Expense')}}</button>
         @endif
     </div>
     <div class="table-responsive">
@@ -90,6 +91,73 @@
     </div>
 </section>
 
+{{-- ========== ADD EXPENSE MODAL ========== --}}
+<div id="addExpenseModal" tabindex="-1" role="dialog" aria-labelledby="addExpenseModalLabel" aria-hidden="true" class="modal fade text-left">
+    <div role="document" class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="addExpenseModalLabel" class="modal-title">{{trans('file.Add Expense')}}</h5>
+                <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+            </div>
+            <div class="modal-body">
+                <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
+                {!! Form::open(['route' => 'expenses.store', 'method' => 'post']) !!}
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Name</label>
+                        <input type="text" name="name" class="form-control">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Date')}}</label>
+                        <input type="text" name="created_at" class="form-control date" placeholder="Choose date" value="{{ date('d-m-Y') }}"/>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Expense Category')}} *</label>
+                        <select name="expense_category_id" class="selectpicker form-control" required data-live-search="true" data-live-search-style="begins" title="Select Expense Category...">
+                            @foreach($lims_expense_category_list as $expense_category)
+                            <option value="{{$expense_category->id}}">{{$expense_category->name . ' (' . $expense_category->code. ')'}}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Warehouse')}} *</label>
+                        <select name="warehouse_id" class="selectpicker form-control" required data-live-search="true" data-live-search-style="begins" title="Select Warehouse...">
+                            @foreach($lims_warehouse_list as $warehouse)
+                            <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Amount')}} *</label>
+                        <input type="number" name="amount" step="any" required class="form-control">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Account')}}</label>
+                        <select class="form-control selectpicker" name="account_id">
+                        @foreach($lims_account_list as $account)
+                            @if($account->is_default)
+                            <option selected value="{{$account->id}}">{{$account->name}} [{{$account->account_no}}]</option>
+                            @else
+                            <option value="{{$account->id}}">{{$account->name}} [{{$account->account_no}}]</option>
+                            @endif
+                        @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{trans('file.Note')}}</label>
+                    <textarea name="note" rows="3" class="form-control"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
+                </div>
+                {{ Form::close() }}
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ========== EDIT EXPENSE MODAL ========== --}}
 <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
     <div role="document" class="modal-dialog">
         <div class="modal-content">
@@ -98,85 +166,72 @@
                 <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
             </div>
             <div class="modal-body">
-              <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
+                <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
                 {!! Form::open(['route' => ['expenses.update', 1], 'method' => 'put']) !!}
-                <?php
-                    $lims_expense_category_list = DB::table('expense_categories')->where('is_active', true)->get();
-                     $isAdmin = Auth::user()->roles->contains(fn($role) => $role->id <= 2);
-                    if($isAdmin)
-                        $lims_warehouse_list = DB::table('warehouses')->where([
-                            ['is_active', true],
-                            ['id', Auth::user()->warehouse_id]
-                        ])->get();
-                    else
-                        $lims_warehouse_list = DB::table('warehouses')->where('is_active', true)->get();
-                ?>
-                  <div class="form-group">
-                      <input type="hidden" name="expense_id">
-                      <label>{{trans('file.reference')}}</label>
-                      <p id="reference">{{'er-' . date("Ymd") . '-'. date("his")}}</p>
-                  </div>
-                    <div class="row">
-                        <div class="col-md-6 form-group">
-                            <label>Name</label>
-                            <input type="text" name="name" class="form-control">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>{{trans('file.Date')}}</label>
-                            <input type="text" name="created_at" class="form-control date" placeholder="Choose date"/>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>{{trans('file.Expense Category')}} *</label>
-                            <select name="expense_category_id" class="selectpicker form-control" required data-live-search="true" data-live-search-style="begins" title="Select Expense Category...">
-                                @foreach($lims_expense_category_list as $expense_category)
-                                <option value="{{$expense_category->id}}">{{$expense_category->name . ' (' . $expense_category->code. ')'}}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>{{trans('file.Warehouse')}} *</label>
-                            <select name="warehouse_id" class="selectpicker form-control" required data-live-search="true" data-live-search-style="begins" title="Select Warehouse...">
-                                @foreach($lims_warehouse_list as $warehouse)
-                                <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label>{{trans('file.Amount')}} *</label>
-                            <input type="number" name="amount" step="any" required class="form-control">
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label> {{trans('file.Account')}}</label>
-                            <select class="form-control selectpicker" name="account_id">
-                            @foreach($lims_account_list as $account)
-                                @if($account->is_default)
-                                <option selected value="{{$account->id}}">{{$account->name}} [{{$account->account_no}}]</option>
-                                @else
-                                <option value="{{$account->id}}">{{$account->name}} [{{$account->account_no}}]</option>
-                                @endif
-                            @endforeach
-                            </select>
-                        </div>
+                <div class="form-group">
+                    <input type="hidden" name="expense_id">
+                    <label>{{trans('file.reference')}}</label>
+                    <p id="reference">{{'er-' . date("Ymd") . '-'. date("his")}}</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 form-group">
+                        <label>Name</label>
+                        <input type="text" name="name" class="form-control">
                     </div>
-                  <div class="form-group">
-                      <label>{{trans('file.Note')}}</label>
-                      <textarea name="note" rows="3" class="form-control"></textarea>
-                  </div>
-                  <div class="form-group">
-                      <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
-                  </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Date')}}</label>
+                        <input type="text" name="created_at" class="form-control date" placeholder="Choose date"/>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Expense Category')}} *</label>
+                        <select name="expense_category_id" class="selectpicker form-control" required data-live-search="true" data-live-search-style="begins" title="Select Expense Category...">
+                            @foreach($lims_expense_category_list as $expense_category)
+                            <option value="{{$expense_category->id}}">{{$expense_category->name . ' (' . $expense_category->code. ')'}}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Warehouse')}} *</label>
+                        <select name="warehouse_id" class="selectpicker form-control" required data-live-search="true" data-live-search-style="begins" title="Select Warehouse...">
+                            @foreach($lims_warehouse_list as $warehouse)
+                            <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Amount')}} *</label>
+                        <input type="number" name="amount" step="any" required class="form-control">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>{{trans('file.Account')}}</label>
+                        <select class="form-control selectpicker" name="account_id">
+                        @foreach($lims_account_list as $account)
+                            @if($account->is_default)
+                            <option selected value="{{$account->id}}">{{$account->name}} [{{$account->account_no}}]</option>
+                            @else
+                            <option value="{{$account->id}}">{{$account->name}} [{{$account->account_no}}]</option>
+                            @endif
+                        @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>{{trans('file.Note')}}</label>
+                    <textarea name="note" rows="3" class="form-control"></textarea>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
+                </div>
                 {{ Form::close() }}
             </div>
         </div>
     </div>
 </div>
 
-
 @endsection
 
 @push('scripts')
 <script type="text/javascript">
-
     $("ul#expense").siblings('a').attr('aria-expanded','true');
     $("ul#expense").addClass("show");
     $("ul#expense #exp-list-menu").addClass("active");
@@ -191,9 +246,8 @@
         }
     });
 
-
-
     $(document).ready(function() {
+        // Edit modal: populate fields
         $(document).on('click', 'button.open-Editexpense_categoryDialog', function() {
             var url = "expenses/";
             var id = $(this).data('id').toString();
@@ -211,244 +265,239 @@
                 $('.selectpicker').selectpicker('refresh');
             });
         });
-    });
 
-    function confirmDelete() {
-    if (confirm("Are you sure want to delete?")) {
-        return true;
-    }
-    return false;
-    }
+        window.confirmDelete = function() {
+            if (confirm("Are you sure want to delete?")) {
+                return true;
+            }
+            return false;
+        };
 
-    var starting_date = $("input[name='starting_date']").val();
-    var ending_date = $("input[name='ending_date']").val();
+        // DataTable initialization
+        var starting_date = $("input[name='starting_date']").val();
+        var ending_date = $("input[name='ending_date']").val();
+        var warehouse_id = $("#warehouse_id").val();
 
-    var warehouse_id = $("#warehouse_id").val();
-    $('#expense-table').DataTable( {
-        "processing": true,
-        "serverSide": true,
-        "ajax":{
-            url:"expenses/expense-data",
-            data:{
-                all_permission: all_permission,
-                starting_date: starting_date,
-                ending_date: ending_date,
-                warehouse_id: warehouse_id
+        $('#expense-table').DataTable( {
+            "processing": true,
+            "serverSide": true,
+            "ajax":{
+                url:"expenses/expense-data",
+                data:{
+                    all_permission: all_permission,
+                    starting_date: starting_date,
+                    ending_date: ending_date,
+                    warehouse_id: warehouse_id
+                },
+                dataSrc: function(json) {
+                    if (json.total_expense !== undefined) {
+                        $('#total-expenses-card-amount').text(parseFloat(json.total_expense).toFixed({{ $general_setting->decimal ?? 2 }}));
+                    } else {
+                        $('#total-expenses-card-amount').text('—');
+                    }
+                    return json.data;
+                },
+                dataType: "json",
+                type:"post",
             },
-            dataSrc: function(json) {
-                if (json.total_expense !== undefined) {
-                    $('#total-expenses-card-amount').text(parseFloat(json.total_expense).toFixed({{ $general_setting->decimal ?? 2 }}));
-                } else {
-                    $('#total-expenses-card-amount').text('—');
-                }
-                return json.data;
+            "createdRow": function( row, data, dataIndex ) {
+                $(row).attr('data-expense_id', data['id']);
             },
-            dataType: "json",
-            type:"post",
-        },
-        "createdRow": function( row, data, dataIndex ) {
-            $(row).attr('data-expense_id', data['id']);
-        },
-        "columns": [
-            {"data": "key"},
-            {"data": "date"},
-            {"data": "reference_no"},
-            {"data": "warehouse"},
-            {"data": "expenseCategory"},
-            {"data": "amount"},
-            {"data": "note"},
-            {"data": "options"}
-        ],
-        'language': {
-
-            'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
-             "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
-            "search":  '{{trans("file.Search")}}',
-            'paginate': {
+            "columns": [
+                {"data": "key"},
+                {"data": "date"},
+                {"data": "reference_no"},
+                {"data": "warehouse"},
+                {"data": "expenseCategory"},
+                {"data": "amount"},
+                {"data": "note"},
+                {"data": "options"}
+            ],
+            'language': {
+                'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
+                "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
+                "search":  '{{trans("file.Search")}}',
+                'paginate': {
                     'previous': '<i class="dripicons-chevron-left"></i>',
                     'next': '<i class="dripicons-chevron-right"></i>'
-            }
-        },
-        order:[['1', 'desc']],
-        'columnDefs': [
-            {
-                "orderable": false,
-                'targets': [0, 3, 4, 6, 7]
+                }
             },
-            {
-                'render': function(data, type, row, meta){
-                    if(type === 'display'){
-                        data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
-                    }
-
-                   return data;
+            order:[['1', 'desc']],
+            'columnDefs': [
+                {
+                    "orderable": false,
+                    'targets': [0, 3, 4, 6, 7]
                 },
-                'checkboxes': {
-                   'selectRow': true,
-                   'selectAllRender': '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>'
+                {
+                    'render': function(data, type, row, meta){
+                        if(type === 'display'){
+                            data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
+                        }
+                        return data;
+                    },
+                    'checkboxes': {
+                        'selectRow': true,
+                        'selectAllRender': '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>'
+                    },
+                    'targets': [0]
+                }
+            ],
+            'select': { style: 'multi',  selector: 'td:first-child'},
+            'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
+            dom: '<"row"lfB>rtip',
+            rowId: 'ObjectID',
+            buttons: [
+                {
+                    extend: 'pdf',
+                    text: '<i title="export to pdf" class="fa fa-file-pdf-o"></i>',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                    action: function(e, dt, button, config) {
+                        datatable_sum(dt, true);
+                        $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
+                        datatable_sum(dt, false);
+                    },
+                    footer:true
                 },
-                'targets': [0]
-            }
-        ],
-        'select': { style: 'multi',  selector: 'td:first-child'},
-        'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
-        dom: '<"row"lfB>rtip',
-        rowId: 'ObjectID',
-        buttons: [
-            {
-                extend: 'pdf',
-                text: '<i title="export to pdf" class="fa fa-file-pdf-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
+                {
+                    extend: 'excel',
+                    text: '<i title="export to excel" class="dripicons-document-new"></i>',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                    action: function(e, dt, button, config) {
+                        datatable_sum(dt, true);
+                        $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
+                        datatable_sum(dt, false);
+                    },
+                    footer:true
                 },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.pdfHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
+                {
+                    extend: 'csv',
+                    text: '<i title="export to csv" class="fa fa-file-text-o"></i>',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                    action: function(e, dt, button, config) {
+                        datatable_sum(dt, true);
+                        $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
+                        datatable_sum(dt, false);
+                    },
+                    footer:true
                 },
-                footer:true
-            },
-            {
-                extend: 'excel',
-                text: '<i title="export to excel" class="dripicons-document-new"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
+                {
+                    extend: 'print',
+                    text: '<i title="print" class="fa fa-print"></i>',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                    action: function(e, dt, button, config) {
+                        datatable_sum(dt, true);
+                        $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
+                        datatable_sum(dt, false);
+                    },
+                    footer:true
                 },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.excelHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'csv',
-                text: '<i title="export to csv" class="fa fa-file-text-o"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.csvHtml5.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                extend: 'print',
-                text: '<i title="print" class="fa fa-print"></i>',
-                exportOptions: {
-                    columns: ':visible:Not(.not-exported)',
-                    rows: ':visible'
-                },
-                action: function(e, dt, button, config) {
-                    datatable_sum(dt, true);
-                    $.fn.dataTable.ext.buttons.print.action.call(this, e, dt, button, config);
-                    datatable_sum(dt, false);
-                },
-                footer:true
-            },
-            {
-                text: '<i title="delete" class="dripicons-cross"></i>',
-                className: 'buttons-delete',
-                action: function ( e, dt, node, config ) {
-                    if(user_verified == '1') {
-                        expense_id.length = 0;
-                        $(':checkbox:checked').each(function(i){
-                            if(i){
-                                expense_id[i-1] = $(this).closest('tr').data('expense_id');
-                            }
-                        });
-                        if(expense_id.length && confirm("Are you sure want to delete?")) {
-                            $.ajax({
-                                type:'POST',
-                                url:'expenses/deletebyselection',
-                                data:{
-                                    expenseIdArray: expense_id
-                                },
-                                success:function(data){
-                                    alert(data);
-                                    //dt.rows({ page: 'current', selected: true }).deselect();
-                                    dt.rows({ page: 'current', selected: true }).remove().draw(false);
+                {
+                    text: '<i title="delete" class="dripicons-cross"></i>',
+                    className: 'buttons-delete',
+                    action: function ( e, dt, node, config ) {
+                        if(user_verified == '1') {
+                            expense_id.length = 0;
+                            $(':checkbox:checked').each(function(i){
+                                if(i){
+                                    expense_id[i-1] = $(this).closest('tr').data('expense_id');
                                 }
                             });
+                            if(expense_id.length && confirm("Are you sure want to delete?")) {
+                                $.ajax({
+                                    type:'POST',
+                                    url:'expenses/deletebyselection',
+                                    data:{
+                                        expenseIdArray: expense_id
+                                    },
+                                    success:function(data){
+                                        alert(data);
+                                        dt.rows({ page: 'current', selected: true }).remove().draw(false);
+                                    }
+                                });
+                            }
+                            else if(!expense_id.length)
+                                alert('Nothing is selected!');
                         }
-                        else if(!expense_id.length)
-                            alert('Nothing is selected!');
+                        else
+                            alert('This feature is disable for demo!');
                     }
-                    else
-                        alert('This feature is disable for demo!');
-                }
-            },
-            {
-                extend: 'colvis',
-                text: '<i title="column visibility" class="fa fa-eye"></i>',
-                columns: ':gt(0)'
-            },
-        ],
-        drawCallback: function () {
-            var api = this.api();
-            datatable_sum(api, false);
-        }
-    } );
-
-    function datatable_sum(dt_selector, is_calling_first) {
-        if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
-            var rows = dt_selector.rows( '.selected' ).indexes();
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-        }
-        else {
-            $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
-        }
-    }
-
-    if(all_permission.indexOf("expenses-delete") == -1)
-        $('.buttons-delete').addClass('d-none');
-
-    // Handle authorize-expense button click
-    $(document).on('click', '.authorize-expense', function(e) {
-        e.preventDefault();
-        var expenseId = $(this).data('id');
-        
-        if(confirm('Are you sure you want to authorize this expense?')) {
-            $.ajax({
-                type: 'POST',
-                url: 'expenses/' + expenseId + '/authorize',
-                success: function(response) {
-                    alert(response.success || 'Expense authorized successfully!');
-                    $('#expense-table').DataTable().ajax.reload();
                 },
-                error: function(xhr) {
-                    var error = xhr.responseJSON ? xhr.responseJSON.error : 'Error authorizing expense';
-                    alert(error);
-                }
-            });
-        }
-    });
-
-    // Handle approve-expense button click
-    $(document).on('click', '.approve-expense', function(e) {
-        e.preventDefault();
-        var expenseId = $(this).data('id');
-        
-        if(confirm('Are you sure you want to approve this expense?')) {
-            $.ajax({
-                type: 'POST',
-                url: 'expenses/' + expenseId + '/approve',
-                success: function(response) {
-                    alert(response.success || 'Expense approved successfully!');
-                    $('#expense-table').DataTable().ajax.reload();
+                {
+                    extend: 'colvis',
+                    text: '<i title="column visibility" class="fa fa-eye"></i>',
+                    columns: ':gt(0)'
                 },
-                error: function(xhr) {
-                    var error = xhr.responseJSON ? xhr.responseJSON.error : 'Error approving expense';
-                    alert(error);
-                }
-            });
-        }
-    });
+            ],
+            drawCallback: function () {
+                var api = this.api();
+                datatable_sum(api, false);
+            }
+        } );
 
+        function datatable_sum(dt_selector, is_calling_first) {
+            if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
+                var rows = dt_selector.rows( '.selected' ).indexes();
+                $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            }
+            else {
+                $( dt_selector.column( 5 ).footer() ).html(dt_selector.cells( rows, 5, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            }
+        }
+
+        if(all_permission.indexOf("expenses-delete") == -1)
+            $('.buttons-delete').addClass('d-none');
+
+        // Authorize expense
+        $(document).on('click', '.authorize-expense', function(e) {
+            e.preventDefault();
+            var expenseId = $(this).data('id');
+            if(confirm('Are you sure you want to authorize this expense?')) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'expenses/' + expenseId + '/authorize',
+                    success: function(response) {
+                        alert(response.success || 'Expense authorized successfully!');
+                        $('#expense-table').DataTable().ajax.reload();
+                    },
+                    error: function(xhr) {
+                        var error = xhr.responseJSON ? xhr.responseJSON.error : 'Error authorizing expense';
+                        alert(error);
+                    }
+                });
+            }
+        });
+
+        // Approve expense
+        $(document).on('click', '.approve-expense', function(e) {
+            e.preventDefault();
+            var expenseId = $(this).data('id');
+            if(confirm('Are you sure you want to approve this expense?')) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'expenses/' + expenseId + '/approve',
+                    success: function(response) {
+                        alert(response.success || 'Expense approved successfully!');
+                        $('#expense-table').DataTable().ajax.reload();
+                    },
+                    error: function(xhr) {
+                        var error = xhr.responseJSON ? xhr.responseJSON.error : 'Error approving expense';
+                        alert(error);
+                    }
+                });
+            }
+        });
+    });
 </script>
 @endpush

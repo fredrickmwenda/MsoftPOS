@@ -468,10 +468,8 @@ class PurchaseController extends Controller
         
         // Handle order taxes
         if(isset($data['order_tax_ids']) && !empty($data['order_tax_ids'])) {
-            // Calculate total order tax rate from multiple taxes
             $order_tax_ids = explode(',', $data['order_tax_ids']);
             $total_order_tax_rate = 0;
-            
             foreach($order_tax_ids as $tax_id) {
                 $tax = Tax::find($tax_id);
                 if($tax) {
@@ -479,8 +477,6 @@ class PurchaseController extends Controller
                 }
             }
             $data['order_tax_rate'] = $total_order_tax_rate;
-            
-            // Store order tax names if provided
             if(isset($data['order_tax_names'])) {
                 $data['order_tax_names'] = $data['order_tax_names'];
             }
@@ -519,10 +515,8 @@ class PurchaseController extends Controller
         else
             $data['created_at'] = date("Y-m-d H:i:s");
 
-        // Create the purchase record
         $lims_purchase_data = Purchase::create($data);
         
-        // Insert custom field data
         $custom_field_data = [];
         $custom_fields = CustomField::where('belongs_to', 'purchase')->select('name', 'type')->get();
         foreach ($custom_fields as $type => $custom_field) {
@@ -537,7 +531,6 @@ class PurchaseController extends Controller
         if(count($custom_field_data))
             DB::table('purchases')->where('id', $lims_purchase_data->id)->update($custom_field_data);
         
-        // Process products
         $product_id = $data['product_id'];
         $product_code = $data['product_code'];
         $qty = $data['qty'];
@@ -547,8 +540,8 @@ class PurchaseController extends Controller
         $purchase_unit = $data['purchase_unit'];
         $net_unit_cost = $data['net_unit_cost'];
         $discount = $data['discount'];
-        $tax_rate = $data['tax_rate']; // This now contains comma-separated tax IDs
-        $tax_names = $data['tax_names'] ?? []; // Comma-separated tax names
+        $tax_rate = $data['tax_rate'];
+        $tax_names = $data['tax_names'] ?? [];
         $tax = $data['tax'];
         $total = $data['subtotal'];
         $imei_numbers = $data['imei_number'] ?? [];
@@ -557,16 +550,28 @@ class PurchaseController extends Controller
         foreach ($product_id as $i => $id) {
             $lims_purchase_unit_data = Unit::where('unit_name', $purchase_unit[$i])->first();
 
-            if ($lims_purchase_unit_data->operator == '*') {
-                $quantity = $recieved[$i] * $lims_purchase_unit_data->operation_value;
+            // ---- FIX: prevent division by zero ----
+            $operator = $lims_purchase_unit_data->operator ?? '/';
+            $operation_value = $lims_purchase_unit_data->operation_value ?? 0;
+
+            if ($operator == '*') {
+                $quantity = $recieved[$i] * $operation_value;
+            } elseif ($operator == '/') {
+                if ($operation_value == 0) {
+                    // Handle error: set quantity to 0 or throw validation error
+                    // For example, redirect back with error message
+                    return redirect()->back()->withErrors(['purchase_unit' => 'Operation value cannot be zero for unit: ' . $purchase_unit[$i]]);
+                }
+                $quantity = $recieved[$i] / $operation_value;
             } else {
-                $quantity = $recieved[$i] / $lims_purchase_unit_data->operation_value;
+                // Fallback: treat as multiplication by 1 (no conversion)
+                $quantity = $recieved[$i];
             }
-            
+            // ---- end of fix ----
+
             $lims_product_data = Product::find($id);
             $price = $lims_product_data->price;
             
-            // Dealing with product batch
             if($batch_no[$i]) {
                 $product_batch_data = ProductBatch::where([
                                         ['product_id', $lims_product_data->id],
@@ -602,14 +607,12 @@ class PurchaseController extends Controller
                 ])->first();
                 $product_purchase['variant_id'] = $lims_product_variant_data->variant_id;
                 
-                // Add quantity to product variant table
                 $lims_product_variant_data->qty += $quantity;
                 $lims_product_variant_data->save();
             }
             else {
                 $product_purchase['variant_id'] = null;
                 if($product_purchase['product_batch_id']) {
-                    // Check for price
                     $lims_product_warehouse_data = Product_Warehouse::where([
                                                     ['product_id', $id],
                                                     ['warehouse_id', $data['warehouse_id']],
@@ -636,11 +639,9 @@ class PurchaseController extends Controller
                 }
             }
             
-            // Add quantity to product table
             $lims_product_data->qty = $lims_product_data->qty + $quantity;
             $lims_product_data->save();
             
-            // Add quantity to warehouse
             if ($lims_product_warehouse_data) {
                 $lims_product_warehouse_data->qty = $lims_product_warehouse_data->qty + $quantity;
                 $lims_product_warehouse_data->product_batch_id = $product_purchase['product_batch_id'];
@@ -657,7 +658,6 @@ class PurchaseController extends Controller
                     $lims_product_warehouse_data->variant_id = $lims_product_variant_data->variant_id;
             }
             
-            // Add IMEI numbers to product_warehouse table
             if(isset($imei_numbers[$i]) && $imei_numbers[$i]) {
                 if($lims_product_warehouse_data->imei_number)
                     $lims_product_warehouse_data->imei_number .= ',' . $imei_numbers[$i];
@@ -674,9 +674,7 @@ class PurchaseController extends Controller
             $product_purchase['purchase_unit_id'] = $lims_purchase_unit_data->id;
             $product_purchase['net_unit_cost'] = $net_unit_cost[$i];
             $product_purchase['discount'] = $discount[$i];
-            // FIX: Check if tax_rate[$i] is not empty before assigning
             $product_purchase['tax_rates'] = (!empty($tax_rate[$i])) ? $tax_rate[$i] : '';
-            // FIX: Check if tax_names[$i] is not empty before assigning
             $product_purchase['tax_names'] = (isset($tax_names[$i]) && !empty($tax_names[$i])) ? $tax_names[$i] : '';
             $product_purchase['tax'] = $tax[$i];
             $product_purchase['total'] = $total[$i];
@@ -690,6 +688,7 @@ class PurchaseController extends Controller
     public function limsProductSearch(Request $request)
     {
         $data = $request->input('data');
+        $warehouse_id = $request->input('warehouse_id');
 
         // Handle "Code: ..." format
         if (strpos($data, 'Code:') === 0) {
@@ -703,25 +702,46 @@ class PurchaseController extends Controller
         $product_info = explode('?', $data);
         $product_code = $product_info[0];
         $qty = isset($product_info[1]) ? $product_info[1] : 1;
-        
+
+        // 🔹 Get product IDs available in the selected warehouse via product_warehouse table
+        $warehouse_product_ids = [];
+        if ($warehouse_id) {
+            $warehouse_product_ids = \DB::table('product_warehouse')
+                ->where('warehouse_id', $warehouse_id)
+                ->pluck('product_id')
+                ->toArray();
+        }
+
         $lims_product_data = Product::where([
-                                ['code', $product_code],
-                                ['is_active', true]
-                            ])
-                            ->whereNull('is_variant')
-                            ->first(); 
+                ['code', $product_code],
+                ['is_active', true]
+            ])
+            ->whereNull('is_variant');
+
+        // 🔹 Filter by warehouse products if warehouse is selected
+        if (!empty($warehouse_product_ids)) {
+            $lims_product_data = $lims_product_data->whereIn('id', $warehouse_product_ids);
+        }
+
+        $lims_product_data = $lims_product_data->first();
+
         $product = [];
-        
+
         if (!$lims_product_data) {
-            // Try variant products
-            $lims_product_data = Product::join('product_variants', 'products.id', 'product_variants.product_id')
+            // Try variant products — also filtered by warehouse
+            $variantQuery = Product::join('product_variants', 'products.id', 'product_variants.product_id')
                 ->where([
                     ['product_variants.item_code', $product_code],
                     ['products.is_active', true]
                 ])
                 ->whereNotNull('is_variant')
-                ->select('products.*', 'product_variants.item_code', 'product_variants.additional_cost')
-                ->first();
+                ->select('products.*', 'product_variants.item_code', 'product_variants.additional_cost');
+
+            if (!empty($warehouse_product_ids)) {
+                $variantQuery = $variantQuery->whereIn('products.id', $warehouse_product_ids);
+            }
+
+            $lims_product_data = $variantQuery->first();
         }
 
         if ($lims_product_data && isset($lims_product_data->additional_cost)) {
@@ -729,7 +749,7 @@ class PurchaseController extends Controller
         }
 
         if(!$lims_product_data) {
-            return response()->json(['error' => 'Product not found'], 404);
+            return response()->json(['error' => 'Product not found in the selected warehouse'], 404);
         }
 
         $product[] = $lims_product_data->name;
@@ -739,12 +759,12 @@ class PurchaseController extends Controller
             $product[] = $lims_product_data->code;
         $product[] = $lims_product_data->cost;
         $product[] = $lims_product_data->price;
-        
+
         // Handle multiple taxes
         $tax_ids = [];
         $tax_names = [];
         $total_tax_rate = 0;
-        
+
         if ($lims_product_data->product_taxes->isNotEmpty()) {
             foreach ($lims_product_data->product_taxes as $product_tax) {
                 $tax_ids[] = $product_tax->tax_id;
@@ -755,10 +775,8 @@ class PurchaseController extends Controller
                 }
             }
         }
-        
-        // Store tax IDs as comma-separated string
+
         $product[] = implode(',', $tax_ids);
-        // Store tax names as comma-separated string
         $product[] = implode(',', $tax_names);
         $product[] = $lims_product_data->tax_method;
 
@@ -786,9 +804,19 @@ class PurchaseController extends Controller
         $product[] = $lims_product_data->id;
         $product[] = $lims_product_data->is_batch;
         $product[] = $lims_product_data->is_imei;
-        
+
         return $product;
     }
+    /**
+     * 🔹 Fetch product list filtered by warehouse via product_warehouse table
+     * Used for the autocomplete source on the purchase create form
+     */
+
+
+    /**
+     * 🔹 Quick store a supplier via AJAX from the purchase create modal
+     */
+
 
     public function productPurchaseData($id)
     {

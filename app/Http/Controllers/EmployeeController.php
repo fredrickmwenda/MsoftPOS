@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Role;
+use App\Models\Roles;
 use App\Models\Warehouse;
 use App\Models\Biller;
 use App\Models\Employee;
@@ -28,7 +28,7 @@ class EmployeeController extends Controller
             if (empty($all_permission)) {
                 $all_permission[] = 'dummy text';
             }
-            $lims_employee_all = Employee::where('is_active', true)->get();
+             $lims_employee_all = Employee::where('is_active', true)->with('department')->get();
             $lims_department_list = Department::where('is_active', true)->get();
             $numberOfEmployee = Employee::where('is_active', true)->count();
             return view('backend.employee.index', compact('lims_employee_all', 'lims_department_list', 'all_permission', 'numberOfEmployee'));
@@ -40,7 +40,7 @@ class EmployeeController extends Controller
     public function create()
     {
         if(Auth::user()->hasPermissionTo('employees-add')){
-            $lims_role_list = Role::where('is_active', true)->get();
+            $lims_role_list = Roles::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_biller_list = Biller::where('is_active', true)->get();
             $lims_department_list = Department::where('is_active', true)->get();
@@ -54,6 +54,7 @@ class EmployeeController extends Controller
 
     public function store(Request $request)
     {
+      //  dd($request->all());
         $data = $request->except('image');
         $message = 'Employee created successfully';
         if(isset($data['user'])){

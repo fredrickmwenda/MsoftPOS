@@ -18,6 +18,7 @@ use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Mail\SupplierCreate;
 use App\Mail\CustomerCreate;
+use App\Models\Product;
 use Mail;
 
 class SupplierController extends Controller
@@ -231,6 +232,62 @@ class SupplierController extends Controller
         return redirect('supplier')->with('not_permitted','Data deleted successfully');
     }
 
+    public function productSearchByWarehouse(Request $request)
+{
+    $warehouse_id = $request->input('warehouse_id');
+
+    if (!$warehouse_id) {
+        return response()->json([]);
+    }
+
+    // Get product IDs that exist in the selected warehouse
+    $product_ids = \DB::table('product_warehouse')
+        ->where('warehouse_id', $warehouse_id)
+        ->pluck('product_id')
+        ->unique()
+        ->toArray();
+
+    if (empty($product_ids)) {
+        return response()->json([]);
+    }
+
+    $productArray = [];
+
+    // Non-variant products
+    $products = Product::whereIn('id', $product_ids)
+        ->where('is_active', true)
+        ->whereNull('is_variant')
+        ->select('id', 'name', 'code', 'price', 'qty', 'shelf')
+        ->get();
+
+    foreach ($products as $product) {
+        $productArray[] = 'Code: ' . $product->code .
+            ' | Name: ' . preg_replace('/[\n\r]/', " ", $product->name) .
+            ' | Price: ' . $product->price .
+            ' | Qty: ' . $product->qty .
+            ' | Shelf: ' . preg_replace('/[\n\r]/', " ", $product->shelf ?? '');
+    }
+
+    // Variant products
+    $variant_products = Product::join('product_variants', 'products.id', 'product_variants.product_id')
+        ->whereIn('products.id', $product_ids)
+        ->where('products.is_active', true)
+        ->whereNotNull('products.is_variant')
+        ->select('products.id', 'products.name', 'product_variants.item_code', 'products.price', 'products.qty', 'products.shelf')
+        ->orderBy('product_variants.position')
+        ->get();
+
+    foreach ($variant_products as $product) {
+        $productArray[] = 'Code: ' . $product->item_code .
+            ' | Name: ' . preg_replace('/[\n\r]/', " ", $product->name) .
+            ' | Price: ' . $product->price .
+            ' | Qty: ' . $product->qty .
+            ' | Shelf: ' . preg_replace('/[\n\r]/', " ", $product->shelf ?? '');
+    }
+
+    return response()->json($productArray);
+}
+
     public function importSupplier(Request $request)
     {
         $upload=$request->file('file');
@@ -319,4 +376,38 @@ class SupplierController extends Controller
 
         return response()->json($html);
     }
+
+
+
+    public function quickStoreSupplier(Request $request)
+{
+    $validator = \Validator::make($request->all(), [
+        'name'         => 'required|string|max:255',
+        'company_name' => 'nullable|string|max:255',
+        'email'        => 'nullable|email|max:255',
+        'phone_number' => 'nullable|string|max:50',
+        'address'      => 'nullable|string|max:500',
+        'city'         => 'nullable|string|max:100',
+        'state'        => 'nullable|string|max:100',
+        'country'      => 'nullable|string|max:100',
+        'vat_number'   => 'nullable|string|max:100',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    $data = $request->all();
+    $data['is_active'] = true;
+
+
+    $supplier = Supplier::create($data);
+
+    return response()->json([
+        'id'           => $supplier->id,
+        'name'         => $supplier->name,
+        'company_name' => $supplier->company_name ?? '',
+        'message'      => 'Supplier created successfully'
+    ]);
+}
 }

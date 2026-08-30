@@ -1,4 +1,58 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+
+@section('content')
+<style>
+    /* Make modals grow with content and show full table */
+    #purchase-details .modal-dialog,
+    #view-payment .modal-dialog {
+        max-width: 95vw;
+        width: auto;
+        min-width: 800px;
+    }
+
+    /* Modal body should scroll vertically if content too tall */
+    #purchase-details .modal-body,
+    #view-payment .modal-body {
+        max-height: 75vh;
+        overflow-y: auto;
+        overflow-x: auto;
+    }
+
+    /* Make tables inside modals full width and scroll horizontally if needed */
+    #purchase-details .table,
+    #view-payment .table {
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+
+    /* Ensure the modal content stretches */
+    #purchase-details .modal-content,
+    #view-payment .modal-content {
+        width: 100%;
+    }
+
+    /* Optional: nicer scrollbar */
+    #purchase-details .modal-body::-webkit-scrollbar,
+    #view-payment .modal-body::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    #purchase-details .modal-body::-webkit-scrollbar-thumb,
+    #view-payment .modal-body::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    /* Force Table Inside Modal to Wrap Long Content */
+    #purchase-details .table td,
+    #purchase-details .table th,
+    #view-payment .table td,
+    #view-payment .table th {
+        white-space: normal;
+        word-break: break-word;
+    }
+</style>
+
 @if(session()->has('message'))
   <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('message') }}</div>
 @endif
@@ -17,9 +71,13 @@
                 <div class="col-md-3">
                     <div class="form-group">
                         <label><strong>{{trans('file.Date')}}</strong></label>
-                        <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                        <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                        <input type="hidden" name="ending_date" value="{{$ending_date}}" />
+                        <input type="date" name="starting_date" id="starting_date"  class="form-control" value="{{$starting_date}}" />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label><strong>{{trans('file.Date')}}</strong></label>                  
+                        <input type="date" name="ending_date" id="ending_date" class="form-control" value="{{$ending_date}}" />
                     </div>
                 </div>
                 <div class="col-md-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
@@ -132,8 +190,9 @@
     </div>
 </section>
 
+<!-- Purchase Details Modal -->
 <div id="purchase-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-    <div role="document" class="modal-dialog">
+    <div role="document" class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="container mt-3 pb-2 border-bottom">
             <div class="row">
@@ -153,72 +212,67 @@
         </div>
             <div id="purchase-content" class="modal-body"></div>
             <br>
-            <table class="table table-bordered product-purchase-list">
-                <thead>
-                    <th>#</th>
-                    <th>{{trans('file.product')}}</th>
-                    <th>{{trans('file.Batch No')}}</th>
-                    <th>Qty</th>
-                    <th>{{trans('file.Unit Cost')}}</th>
-                    <th>{{trans('file.Tax')}}</th>
-                    <th>{{trans('file.Discount')}}</th>
-                    <th>{{trans('file.Subtotal')}}</th>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-bordered product-purchase-list">
+                    <thead>
+                        <th>#</th>
+                        <th>{{trans('file.product')}}</th>
+                        <th>{{trans('file.Batch No')}}</th>
+                        <th>Qty</th>
+                        <th>{{trans('file.Unit Cost')}}</th>
+                        <th>{{trans('file.Tax')}}</th>
+                        <th>{{trans('file.Discount')}}</th>
+                        <th>{{trans('file.Subtotal')}}</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
             <div id="purchase-footer" class="modal-body"></div>
       </div>
     </div>
 </div>
 
+<!-- View Payment Modal -->
 <div id="view-payment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-    <div role="document" class="modal-dialog">
+    <div role="document" class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 id="exampleModalLabel" class="modal-title">{{trans('file.All Payment')}}</h5>
                 <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
             </div>
             <div class="modal-body">
-                <table class="table table-hover payment-list">
-                    <thead>
-                        <tr>
-                            <th>{{trans('file.date')}}</th>
-                            <th>{{trans('file.Reference No')}}</th>
-                            <th>{{trans('file.Account')}}</th>
-                            <th>{{trans('file.Amount')}}</th>
-                            <th>{{trans('file.Paid By')}}</th>
-                            <th>{{trans('file.Status')}}</th>
-                            <th>{{trans('file.action')}}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table table-hover payment-list">
+                        <thead>
+                            <tr>
+                                <th>{{trans('file.date')}}</th>
+                                <th>{{trans('file.Reference No')}}</th>
+                                <th>{{trans('file.Account')}}</th>
+                                <th>{{trans('file.Amount')}}</th>
+                                <th>{{trans('file.Paid By')}}</th>
+                                <th>{{trans('file.Status')}}</th>
+                                <th>{{trans('file.action')}}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
-
-
-
 
 @endsection
 
 @push('scripts')
 <script type="text/javascript">
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
-    });
+
+    var starting_date = $("input[name=starting_date]").val();
+    var ending_date = $("input[name=ending_date]").val();
+    // });
 
     $("ul#purchase").siblings('a').attr('aria-expanded','true');
     $("ul#purchase").addClass("show");
@@ -365,7 +419,7 @@
     $(document).on("click", "table.purchase-list tbody .get-payment", function(event) {
         var id = $(this).data('id').toString();
         $.get('purchases/getpayment/' + id, function(data) {
-            $(".payment-list tbody").remove();
+            $("#view-payment table.payment-list tbody").remove();
             var newBody = $("<tbody>");
             payment_date  = data[0];
             payment_reference = data[1];
@@ -397,7 +451,7 @@
                 cols += '</ul></div></td>';
                 newRow.append(cols);
                 newBody.append(newRow);
-                $("table.payment-list").append(newBody);
+                $("#view-payment table.payment-list").append(newBody);
             });
             $('#view-payment').modal('show');
         });
@@ -703,7 +757,8 @@
         if(purchase[25])
             htmltext += '<strong>{{trans("file.Attach Document")}}: </strong><a href="documents/purchase/'+purchase[25]+'">Download</a><br>';
         htmltext += '<br><div class="row"><div class="col-md-6"><strong>{{trans("file.From")}}:</strong><br>'+purchase[4]+'<br>'+purchase[5]+'<br>'+purchase[6]+'</div><div class="col-md-6"><div class="float-right"><strong>{{trans("file.To")}}:</strong><br>'+purchase[7]+'<br>'+purchase[8]+'<br>'+purchase[9]+'<br>'+purchase[10]+'<br>'+purchase[11]+'<br>'+purchase[12]+'</div></div></div>';
-        $(".product-purchase-list tbody").remove();
+        
+        $("#purchase-details table.product-purchase-list tbody").remove();
         $.get('purchases/product_purchase/' + purchase[3], function(data) {
             if(data == 'Something is wrong!') {
                 var newBody = $("<tbody>");
@@ -788,7 +843,7 @@
                 newRow.append(cols);
                 newBody.append(newRow);
 
-                 $("table.product-purchase-list").append(newBody);
+                 $("#purchase-details table.product-purchase-list").append(newBody);
              }
         });
 
@@ -801,24 +856,12 @@
 
 
 //changes by yogesh
-    document.addEventListener("DOMContentLoaded", function () {
-            const paidBySelect = document.querySelector('[name="paid_by_id"]');
-            const mobileMoneyFields = document.querySelectorAll('.mobile_money_fields');
-            function toggleMobileMoneyFields() {
-                if (paidBySelect.value === '8') {
-                    mobileMoneyFields.forEach(field => field.style.display = 'block');
-                } else {
-                    mobileMoneyFields.forEach(field => field.style.display = 'none');
-                }
-            }
-            toggleMobileMoneyFields();
-            paidBySelect.addEventListener('change', toggleMobileMoneyFields);
-        });
+document.addEventListener("DOMContentLoaded", function () {
+    const paidBySelect = document.querySelector('[name="paid_by_id"]');
+    const mobileMoneyFields = document.querySelectorAll('.mobile_money_fields');
 
-    
-    document.addEventListener("DOMContentLoaded", function () {
-        const paidBySelect = document.querySelector('[name="edit_paid_by_id"]');
-        const mobileMoneyFields = document.querySelectorAll('.edit_mobile_money_fields');
+    // Only run if the payment form is present on this page
+    if (paidBySelect && mobileMoneyFields.length) {
         function toggleMobileMoneyFields() {
             if (paidBySelect.value === '8') {
                 mobileMoneyFields.forEach(field => field.style.display = 'block');
@@ -828,15 +871,37 @@
         }
         toggleMobileMoneyFields();
         paidBySelect.addEventListener('change', toggleMobileMoneyFields);
-    });
-    document.addEventListener("DOMContentLoaded", function () {
-        const dropdown = document.getElementById("mobile_money_operator");
-        const hiddenField = document.getElementById("selected_mobile_op");
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    const paidBySelect = document.querySelector('[name="edit_paid_by_id"]');
+    const mobileMoneyFields = document.querySelectorAll('.edit_mobile_money_fields');
+
+    if (paidBySelect && mobileMoneyFields.length) {
+        function toggleMobileMoneyFields() {
+            if (paidBySelect.value === '8') {
+                mobileMoneyFields.forEach(field => field.style.display = 'block');
+            } else {
+                mobileMoneyFields.forEach(field => field.style.display = 'none');
+            }
+        }
+        toggleMobileMoneyFields();
+        paidBySelect.addEventListener('change', toggleMobileMoneyFields);
+    }
+});
+
+document.addEventListener("DOMContentLoaded", function () {
+    const dropdown = document.getElementById("mobile_money_operator");
+    const hiddenField = document.getElementById("selected_mobile_op");
+
+    if (dropdown && hiddenField) {
         dropdown.addEventListener("change", function () {
             hiddenField.value = dropdown.value;
         });
         hiddenField.value = dropdown.value;
-    });
+    }
+});
 
 
     $(document).on('submit', '.payment-form', function(e) {

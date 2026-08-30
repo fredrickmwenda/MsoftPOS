@@ -9,18 +9,32 @@ use Illuminate\Support\Facades\Auth;
 class ProductReturnObserver
 {
     /**
-     * Handle the ProductReturn "created" event.
+     * Helper method to create a standardized, readable log entry.
      */
-    public function created(ProductReturn $model): void
+    private function logActivity(string $action, ProductReturn $model, array $properties = []): void
     {
+        // You can replace $model->id with a more friendly identifier if your model has one
+        // For example: $model->return_number or $model->reference_code
+        $identifier = $model->id ?? 'Unknown';
+
         ActivityLog::create([
-            'log_name'    => 'product_return',
-            'description' => 'created',
+            'log_name'    => 'Product Return',
+            'description' => "Product Return #{$identifier} was {$action}.",
             'subject_type'=> ProductReturn::class,
             'subject_id'  => $model->id,
             'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
             'causer_id'   => Auth::id(),
-            'properties'  => ['attributes' => $model->getAttributes()],
+            'properties'  => $properties,
+        ]);
+    }
+
+    /**
+     * Handle the ProductReturn "created" event.
+     */
+    public function created(ProductReturn $model): void
+    {
+        $this->logActivity('created', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 
@@ -29,14 +43,15 @@ class ProductReturnObserver
      */
     public function updated(ProductReturn $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'product_return',
-            'description' => 'updated',
-            'subject_type'=> ProductReturn::class,
-            'subject_id'  => $model->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => ['attributes' => $model->getAttributes()],
+        // Get only the fields that actually changed
+        $changes = $model->getChanges();
+        
+        // Get the original values of those specific changed fields
+        $original = collect($model->getOriginal())->only(array_keys($changes))->toArray();
+
+        $this->logActivity('updated', $model, [
+            'old' => $original,
+            'attributes' => $changes
         ]);
     }
 
@@ -45,14 +60,8 @@ class ProductReturnObserver
      */
     public function deleted(ProductReturn $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'product_return',
-            'description' => 'deleted',
-            'subject_type'=> ProductReturn::class,
-            'subject_id'  => $model->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => ['attributes' => $model->getAttributes()],
+        $this->logActivity('deleted', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 
@@ -61,14 +70,8 @@ class ProductReturnObserver
      */
     public function restored(ProductReturn $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'product_return',
-            'description' => 'restored',
-            'subject_type'=> ProductReturn::class,
-            'subject_id'  => $model->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => ['attributes' => $model->getAttributes()],
+        $this->logActivity('restored', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 
@@ -77,14 +80,8 @@ class ProductReturnObserver
      */
     public function forceDeleted(ProductReturn $model): void
     {
-        ActivityLog::create([
-            'log_name'    => 'product_return',
-            'description' => 'force deleted',
-            'subject_type'=> ProductReturn::class,
-            'subject_id'  => $model->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => ['attributes' => $model->getAttributes()],
+        $this->logActivity('permanently deleted', $model, [
+            'attributes' => $model->getAttributes()
         ]);
     }
 }

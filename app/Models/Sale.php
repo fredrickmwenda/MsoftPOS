@@ -27,9 +27,19 @@ class Sale extends Model
         'updated_at'
     ];
 
-    public function biller()
+    public function user()
     {
-        return $this->belongsTo('App\Models\Biller');
+        return $this->belongsTo('App\Models\User');
+    }
+
+    public function table()
+    {
+        return $this->belongsTo('App\Models\Table');
+    }
+
+    public function cash_register()
+    {
+        return $this->belongsTo(CashRegister::class);
     }
 
     public function customer()
@@ -42,15 +52,18 @@ class Sale extends Model
         return $this->belongsTo('App\Models\Warehouse');
     }
 
-    public function table()
+
+
+    public function biller()
     {
-        return $this->belongsTo('App\Models\Table');
+        return $this->belongsTo('App\Models\Biller');
     }
 
-    public function user()
-    {
-        return $this->belongsTo('App\Models\User');
-    }
+
+
+ 
+
+
 
     public function currency()
     {

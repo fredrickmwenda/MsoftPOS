@@ -1,4 +1,50 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+
+@section('content')
+<style>
+    /* Make modal grow with content and show full table */
+    #return-details .modal-dialog {
+        max-width: 95vw;
+        width: auto;
+        min-width: 800px;
+    }
+
+    /* Modal body should scroll vertically if content too tall */
+    #return-details .modal-body {
+        max-height: 75vh;
+        overflow-y: auto;
+        overflow-x: auto;
+    }
+
+    /* Make tables inside modals full width and scroll horizontally if needed */
+    #return-details .table {
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+
+    /* Ensure the modal content stretches */
+    #return-details .modal-content {
+        width: 100%;
+    }
+
+    /* Optional: nicer scrollbar */
+    #return-details .modal-body::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    #return-details .modal-body::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
+    /* Force Table Inside Modal to Wrap Long Content */
+    #return-details .table td,
+    #return-details .table th {
+        white-space: normal;
+        word-break: break-word;
+    }
+</style>
+
 @if(session()->has('message'))
   <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{!! session()->get('message') !!}</div>
 @endif
@@ -14,38 +60,37 @@
             </div>
             {!! Form::open(['route' => 'return-purchase.index', 'method' => 'get']) !!}
             <div class="row mb-3">
-                <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.Date')}} &nbsp;</label>
-                        <div class="">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                                <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                                <input type="hidden" name="ending_date" value="{{$ending_date}}" />
-                            </div>
-                        </div>
+                <div class="col-md-3 mt-3">
+                    <div class="form-group">
+                        <label><strong>From Date</strong></label>
+                        <input type="date" name="starting_date" class="form-control" value="{{$starting_date}}" required />
                     </div>
                 </div>
-                <div class="col-md-4 mt-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.Warehouse')}} &nbsp;</label>
-                        <div class="">
-                            <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
-                                <option value="0">{{trans('file.All Warehouse')}}</option>
-                                @foreach($lims_warehouse_list as $warehouse)
-                                    @if($warehouse->id == $warehouse_id)
-                                        <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @else
-                                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
+                <div class="col-md-3 mt-3">
+                    <div class="form-group">
+                        <label><strong>To Date</strong></label>
+                        <input type="date" name="ending_date" class="form-control" value="{{$ending_date}}" required />
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
+                    <div class="form-group">
+                        <label><strong>{{trans('file.Warehouse')}}</strong></label>
+                        <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
+                            <option value="0">{{trans('file.All Warehouse')}}</option>
+                            @foreach($lims_warehouse_list as $warehouse)
+                                @if($warehouse->id == $warehouse_id)
+                                    <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @else
+                                    <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @endif
+                            @endforeach
+                        </select>
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
-                        <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
+                        <label>&nbsp;</label><br>
+                        <button class="btn btn-primary btn-block" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
             </div>
@@ -84,42 +129,45 @@
     </div>
 </section>
 
+<!-- Return Details Modal -->
 <div id="return-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
-    <div role="document" class="modal-dialog">
+    <div role="document" class="modal-dialog modal-xl modal-dialog-scrollable">
       <div class="modal-content">
         <div class="container mt-3 pb-2 border-bottom">
-        <div class="row">
-            <div class="col-md-6 d-print-none">
-                <button id="print-btn" type="button" class="btn btn-default btn-sm"><i class="dripicons-print"></i> {{trans('file.Print')}}</button>
-            </div>
-            <div class="col-md-6 d-print-none">
-                <button type="button" id="close-btn" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
-            </div>
-            <div class="col-md-12">
-                <h3 id="exampleModalLabel" class="modal-title text-center container-fluid">{{$general_setting->site_title}}</h3>
-            </div>
-            <div class="col-md-12 text-center">
-                <i style="font-size: 15px;">{{trans('file.Purchase Return Details')}}</i>
+            <div class="row">
+                <div class="col-md-6 d-print-none">
+                    <button id="print-btn" type="button" class="btn btn-default btn-sm"><i class="dripicons-print"></i> {{trans('file.Print')}}</button>
+                </div>
+                <div class="col-md-6 d-print-none">
+                    <button type="button" id="close-btn" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+                </div>
+                <div class="col-md-12">
+                    <h3 id="exampleModalLabel" class="modal-title text-center container-fluid">{{$general_setting->site_title}}</h3>
+                </div>
+                <div class="col-md-12 text-center">
+                    <i style="font-size: 15px;">{{trans('file.Purchase Return Details')}}</i>
+                </div>
             </div>
         </div>
-    </div>
             <div id="return-content" class="modal-body">
             </div>
             <br>
-            <table class="table table-bordered product-return-list">
-                <thead>
-                    <th>#</th>
-                    <th>{{trans('file.product')}}</th>
-                    <th>{{trans('file.Batch No')}}</th>
-                    <th>{{trans('file.Qty')}}</th>
-                    <th>{{trans('file.Unit Price')}}</th>
-                    <th>{{trans('file.Tax')}}</th>
-                    <th>{{trans('file.Discount')}}</th>
-                    <th>{{trans('file.Subtotal')}}</th>
-                </thead>
-                <tbody>
-                </tbody>
-            </table>
+            <div class="table-responsive">
+                <table class="table table-bordered product-return-list">
+                    <thead>
+                        <th>#</th>
+                        <th>{{trans('file.product')}}</th>
+                        <th>{{trans('file.Batch No')}}</th>
+                        <th>{{trans('file.Qty')}}</th>
+                        <th>{{trans('file.Unit Price')}}</th>
+                        <th>{{trans('file.Tax')}}</th>
+                        <th>{{trans('file.Discount')}}</th>
+                        <th>{{trans('file.Subtotal')}}</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
             <div id="return-footer" class="modal-body"></div>
       </div>
     </div>
@@ -132,17 +180,6 @@
     $("ul#return").siblings('a').attr('aria-expanded','true');
     $("ul#return").addClass("show");
     $("ul#return #purchase-return-menu").addClass("active");
-
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
-    });
 
     var all_permission = <?php echo json_encode($all_permission) ?>;
     var return_id = [];
@@ -203,7 +240,6 @@
             type:"post"
         },
         "createdRow": function( row, data, dataIndex ) {
-            //alert(data);
             $(row).addClass('return-link');
             $(row).attr('data-return', data['return']);
         },
@@ -218,7 +254,6 @@
             {"data": "options"},
         ],
         'language': {
-
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
             "search":  '{{trans("file.Search")}}',
@@ -375,8 +410,9 @@
         if(returns[23])
             htmltext += '<strong>{{trans("file.Attach Document")}}: </strong><a href="documents/purchase_return/'+returns[23]+'">Download</a><br>';
         htmltext += '<br><div class="row"><div class="col-md-6"><strong>{{trans("file.From")}}:</strong><br>'+returns[2]+'<br>'+returns[3]+'<br>'+returns[4]+'</div><div class="col-md-6"><div class="float-right"><strong>{{trans("file.To")}}:</strong><br>'+returns[5]+'<br>'+returns[6]+'<br>'+returns[7]+'<br>'+returns[8]+'<br>'+returns[9]+', '+returns[10]+'</div></div></div>';
+        
+        $("#return-details table.product-return-list tbody").remove();
         $.get('return-purchase/product_return/' + returns[11], function(data){
-            $(".product-return-list tbody").remove();
             var name_code = data[0];
             var qty = data[1];
             var unit_code = data[2];
@@ -424,7 +460,7 @@
             newRow.append(cols);
             newBody.append(newRow);
 
-            $("table.product-return-list").append(newBody);
+            $("#return-details table.product-return-list").append(newBody);
         });
         var htmlfooter = '<p><strong>{{trans("file.Return Note")}}:</strong> '+returns[18]+'</p><p><strong>{{trans("file.Staff Note")}}:</strong> '+returns[19]+'</p><strong>{{trans("file.Created By")}}:</strong><br>'+returns[20]+'<br>'+returns[21];
         $('#return-content').html(htmltext);

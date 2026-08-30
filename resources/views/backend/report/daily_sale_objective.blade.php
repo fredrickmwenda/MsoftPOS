@@ -15,18 +15,7 @@
             </div>
             {!! Form::open(['route' => 'report.dailySaleObjective', 'method' => 'get']) !!}
             <div class="row mb-3">
-                <!-- <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.Date')}} &nbsp;</label>
-                        <div class="">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                                <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                                <input type="hidden" name="ending_date" value="{{$ending_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
+              
                                 <div class="col-md-3 mt-3 mb-3 ml-2">
                     <div class="form-group">
                         <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
@@ -91,16 +80,7 @@
         }
     });
 
-    // $(".daterangepicker-field").daterangepicker({
-    //   callback: function(startDate, endDate, period){
-    //     var starting_date = startDate.format('YYYY-MM-DD');
-    //     var ending_date = endDate.format('YYYY-MM-DD');
-    //     var title = starting_date + ' To ' + ending_date;
-    //     $(this).val(title);
-    //     $('input[name="starting_date"]').val(starting_date);
-    //     $('input[name="ending_date"]').val(ending_date);
-    //   }
-    // });
+
 
     var starting_date = $("input[name=starting_date]").val();
     var ending_date = $("input[name=ending_date]").val();

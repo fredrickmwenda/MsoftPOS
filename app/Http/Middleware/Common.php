@@ -7,7 +7,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\View;
 use DB;
 use Auth;
-use Cache;
 use Illuminate\Support\Facades\URL;
 
 class Common
@@ -18,47 +17,47 @@ class Common
             URL::forceScheme('https');
         }*/
 
-        // General setting (unchanged)
-        $general_setting = Cache::remember('general_setting', 60*60*24*365, function () {
-            return DB::table('general_settings')->latest()->first();
-        });
+        // General setting — fetched directly, no cache
+        $general_setting = DB::table('general_settings')->latest()->first();
 
-        // Language & theme (unchanged)
+        // Language & theme
         if (isset($_COOKIE['language'])) {
             \App::setLocale($_COOKIE['language']);
         } else {
             \App::setLocale('en');
         }
 
-        
         if (isset($_COOKIE['theme'])) {
             View::share('theme', $_COOKIE['theme']);
         } else {
             View::share('theme', 'light');
         }
 
-        // Currency (unchanged)
-        $currency = Cache::remember('currency', 60*60*24*365, function () {
-            $settingData = DB::table('general_settings')->select('currency')->latest()->first();
-            return \App\Models\Currency::find($settingData->currency);
-        });
+        // Currency — fetched directly, no cache
+        $currency = null;
+        if ($general_setting) {
+            $currency = \App\Models\Currency::find($general_setting->currency);
+        }
 
         View::share('general_setting', $general_setting);
         View::share('currency', $currency);
 
-        config([
-            'staff_access'          => $general_setting->staff_access,
-            'date_format'           => $general_setting->date_format,
-            'currency'              => $currency->code,
-            'currency_position'     => $general_setting->currency_position,
-            'decimal'               => $general_setting->decimal,
-            'is_zatca'              => $general_setting->is_zatca,
-            'company_name'          => $general_setting->company_name,
-            'vat_registration_number'=> $general_setting->vat_registration_number,
-            'without_stock'         => $general_setting->without_stock
-        ]);
+        // Only set config values if general_setting exists
+        if ($general_setting) {
+            config([
+                'staff_access'          => $general_setting->staff_access,
+                'date_format'           => $general_setting->date_format,
+                'currency'              => $currency ? $currency->code : null,
+                'currency_position'     => $general_setting->currency_position,
+                'decimal'               => $general_setting->decimal,
+                'is_zatca'              => $general_setting->is_zatca,
+                'company_name'          => $general_setting->company_name,
+                'vat_registration_number'=> $general_setting->vat_registration_number,
+                'without_stock'         => $general_setting->without_stock
+            ]);
+        }
 
-        // Alert products (unchanged)
+        // Alert products — fetched directly, no cache
         $alert_product = DB::table('products')
             ->where('is_active', true)
             ->whereColumn('alert_quantity', '>', 'qty')
@@ -71,15 +70,13 @@ class Common
         View::share(['alert_product' => $alert_product, 'dso_alert_product_no' => $dso_alert_product_no]);
 
         // ---------------- MULTI-ROLE PERMISSION HANDLING ----------------
-        // Safe handling when the request is not authenticated yet.
         $userRoles = collect();
         $isAdmin = false;
         $allPermissionNames = [];
 
         if (Auth::check()) {
-            $userRoles = Cache::remember('user_roles_' . Auth::id(), 60*60*24, function () {
-                return Auth::user()->roles()->with('permissions')->get();
-            });
+            // Roles fetched directly, no cache
+            $userRoles = Auth::user()->roles()->with('permissions')->get();
 
             // Determine if the user is an admin (any role with ID <= 2)
             $isAdmin = $userRoles->contains(function ($role) {
@@ -94,16 +91,14 @@ class Common
                 ->toArray();
         }
 
-        // Build a collection of objects with 'name' property, like the old $role_has_permissions_list
+        // Build a collection of objects with 'name' property
         $role_has_permissions_list = collect($allPermissionNames)->map(function ($name) {
             return (object) ['name' => $name];
         });
 
-        // Keep the full permission list (all available permissions in the system) – unchanged
+        // Full permission list — fetched directly, no cache
         try {
-            $permission_list = Cache::remember('permissions', 60*60*24*365, function () {
-                return DB::table('permissions')->get();
-            });
+            $permission_list = DB::table('permissions')->get();
         } catch (\Throwable $e) {
             $permission_list = collect();
         }
@@ -116,20 +111,16 @@ class Common
         }
 
         // Share everything with views
-        View::share('userRoles', $userRoles);             // all roles of the user
-        View::share('isAdmin', $isAdmin);                 // shortcut for admin checks
-        View::share('role', $userRoles);                  // keeping old variable name, but now it's a collection
-        View::share('role_has_permissions', collect());   // can be empty now, not used
+        View::share('userRoles', $userRoles);
+        View::share('isAdmin', $isAdmin);
+        View::share('role', $userRoles);
+        View::share('role_has_permissions', collect());
         View::share('role_has_permissions_list', $role_has_permissions_list);
         View::share('permission_list', $permission_list);
 
-        // Categories list (unchanged)
-        $categories_list = Cache::remember('category_list', 60*60*24*365, function () {
-            return DB::table('categories')->where('is_active', true)->get();
-        });
-        $departments_list = Cache::remember('category_departments_list', 60*60*24*365, function () {
-            return DB::table('category_departments')->where('is_active', true)->get();
-        });
+        // Categories list — fetched directly, no cache
+        $categories_list = DB::table('categories')->where('is_active', true)->get();
+        $departments_list = DB::table('category_departments')->where('is_active', true)->get();
         View::share('categories_list', $categories_list);
         View::share('departments_list', $departments_list);
 

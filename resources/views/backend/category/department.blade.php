@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+@section('content')
 
 @if($errors->has('name'))
 <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ $errors->first('name') }}</div>
@@ -36,7 +37,8 @@
 <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
   <div role="document" class="modal-dialog">
     <div class="modal-content">
-        {{ Form::open(['route' => ['category-department.update', 0], 'method' => 'PUT', 'files' => true] ) }}
+        {{-- ADDED id="editDepartmentForm" HERE --}}
+        {{ Form::open(['route' => ['category-department.update', 0], 'method' => 'PUT', 'files' => true, 'id' => 'editDepartmentForm'] ) }}
       <div class="modal-header">
         <h5 id="exampleModalLabel" class="modal-title">{{trans('file.Update Department')}}</h5>
         <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
@@ -91,20 +93,9 @@
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
-    // $(document).on("click", ".open-EditCategoryDialog", function(){
-    //     $("#editModal input[name='is_sync_disable']").prop("checked", false);
-    //     $("#editModal input[name='featured']").prop("checked", false);
-    //     var url ="category/";
-    //     var id = $(this).data('id').toString();
-    //     url = url.concat(id).concat("/edit");
-    //     $.get(url, function(data){
-    //         $("#editModal input[name='name']").val(data['name']);
-
-    //         $("#editModal input[name='short_description']").val(data['short_description']);
-    //         $('.selectpicker').selectpicker('refresh');
-    //     });
-    // });
-    $(document).on("click", ".open-EditDepartmentDialog", function() {
+ 
+    // FIXED: Use the correct class name 'open-EditCategoryDialog' (matches the button in the table)
+    $(document).on("click", ".open-EditCategoryDialog", function() {
         var id = $(this).data('id');
         var url = "/category-department/" + id + "/edit";
 
@@ -113,14 +104,15 @@
             $("#editModal input[name='department_id']").val(data.id);
             $("#editModal input[name='name']").val(data.name);
 
-            // Update form action
+            // Update form action using the form with id 'editDepartmentForm'
             let form = $('#editDepartmentForm');
             let action = form.attr('action'); // e.g. /category-department/0
             let newAction = action.replace(/category-department\/\d+/, 'category-department/' + id);
             form.attr('action', newAction);
-        });
 
-        $('#editModal').modal('show');
+            // Show the modal only after data is loaded
+            $('#editModal').modal('show');
+        });
     });
 
 

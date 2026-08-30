@@ -15,10 +15,10 @@ class Tax extends Model
     // 	return $this->hasMany('App\ModelsProduct');
     // }
 
-public function products()
-{
-    return $this->belongsToMany(Product::class, 'product_tax', 'tax_id', 'product_id');
-}
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'product_tax', 'tax_id', 'product_id');
+    }
 
 
 }

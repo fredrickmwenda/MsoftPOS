@@ -56,7 +56,7 @@ class Product extends Model
 
     public function variant()
     {
-        return $this->belongsToMany('App\Models\Variant', 'product_variants')->withPivot('id', 'item_code', 'additional_cost', 'additional_price');
+        return $this->belongsToMany(Variant::class, 'product_variants')->withPivot('id', 'item_code', 'additional_cost', 'additional_price');
     }
 
     public function scopeActiveStandard($query)

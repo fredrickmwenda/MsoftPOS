@@ -40,7 +40,7 @@
             </thead>
             <tbody>
                 @foreach($lims_employee_all as $key=>$employee)
-                @php $department = \App\Models\Department::find($employee->department_id); @endphp
+                
                 <tr data-id="{{$employee->id}}">
                     <td>{{$key}}</td>
                     @if($employee->image)
@@ -53,7 +53,7 @@
                     <td>{{ $employee->name }}</td>
                     <td>{{ $employee->email}}</td>
                     <td>{{ $employee->phone_number}}</td>
-                    <td>{{ $department->name }}</td>
+                    <td>{{ $employee->department?->name ?? 'N/A' }}</td>
                     <td>{{ $employee->address}}
                             @if($employee->city){{ ', '.$employee->city}}@endif
                             @if($employee->state){{ ', '.$employee->state}}@endif
@@ -211,7 +211,7 @@
     });
 
     $('#employee-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'language': {
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',

@@ -25,38 +25,64 @@ class SettingController extends Controller
     use \App\Traits\CacheForget;
     use \App\Traits\TenantInfo;
 
-    public function emptyDatabase()
-    {
-        if(!env('USER_VERIFIED'))
-            return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
-        //clearing all the cached queries
-        $this->cacheForget('biller_list');
-        $this->cacheForget('brand_list');
-        $this->cacheForget('category_list');
-        $this->cacheForget('coupon_list');
-        $this->cacheForget('customer_list');
-        $this->cacheForget('customer_group_list');
-        $this->cacheForget('product_list');
-        $this->cacheForget('product_list_with_variant');
-        $this->cacheForget('warehouse_list');
-        $this->cacheForget('tax_list');
-        $this->cacheForget('currency');
-        $this->cacheForget('general_setting');
-        $this->cacheForget('pos_setting');
-        $this->cacheForget('user_role');
-        $this->cacheForget('permissions');
-        $this->cacheForget('role_has_permissions');
-        $this->cacheForget('role_has_permissions_list');
 
-        $tables = DB::select('SHOW TABLES');
-        $str = 'Tables_in_' . env('DB_DATABASE');
-        foreach ($tables as $table) {
-            if($table->$str != 'accounts' && $table->$str != 'general_settings' && $table->$str != 'hrm_settings' && $table->$str != 'languages' && $table->$str != 'migrations' && $table->$str != 'password_resets' && $table->$str != 'permissions' && $table->$str != 'pos_setting' && $table->$str != 'roles' && $table->$str != 'role_has_permissions' && $table->$str != 'users' && $table->$str != 'currencies' && $table->$str != 'reward_point_settings') {
-                DB::table($table->$str)->truncate();
-            }
+
+    public function emptyDatabase()
+{
+    if(!env('USER_VERIFIED'))
+        return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
+
+    // Clear all cached queries
+    $this->cacheForget('biller_list');
+    $this->cacheForget('brand_list');
+    $this->cacheForget('category_list');
+    $this->cacheForget('coupon_list');
+    $this->cacheForget('customer_list');
+    $this->cacheForget('customer_group_list');
+    $this->cacheForget('product_list');
+    $this->cacheForget('product_list_with_variant');
+    $this->cacheForget('warehouse_list');
+    $this->cacheForget('tax_list');
+    $this->cacheForget('currency');
+    $this->cacheForget('general_setting');
+    $this->cacheForget('pos_setting');
+    $this->cacheForget('user_role');
+    $this->cacheForget('permissions');
+    $this->cacheForget('role_has_permissions');
+    $this->cacheForget('role_has_permissions_list');
+
+    // Define tables that should NEVER be truncated
+    $protectedTables = [
+        'accounts',
+        'general_settings',
+        'hrm_settings',
+        'languages',
+        'migrations',
+        'password_resets',
+        'permissions',
+        'pos_setting',
+        'roles',
+        'role_has_permissions',
+        'users',
+        'currencies',
+        'reward_point_settings',
+        'roles_user', 
+          // <-- ADD this pivot table
+    ];
+
+    $tables = DB::select('SHOW TABLES');
+    $dbName = env('DB_DATABASE');
+    $str = 'Tables_in_' . $dbName;
+
+    foreach ($tables as $table) {
+        $tableName = $table->$str;
+        if (!in_array($tableName, $protectedTables)) {
+            DB::table($tableName)->truncate();
         }
-        return redirect()->back()->with('message', 'Database cleared successfully');
     }
+
+    return redirect()->back()->with('message', 'Database cleared successfully');
+}
 
     public function generalSetting()
     {

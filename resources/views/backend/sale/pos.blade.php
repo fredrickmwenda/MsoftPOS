@@ -2332,7 +2332,7 @@ $('body').on('click', function(e){
 //         tableData += '</tr></tbody></table>';
 //         $(".table-container").html(tableData);
 //         $('#product-table').DataTable( {
-//           "order": [],
+//           "order": [[0, 'desc']],
 //           'pageLength': product_row_number,
 //            'language': {
 //               'paginate': {
@@ -3893,7 +3893,7 @@ function confirmDelete() {
 
 
 $('#product-table').DataTable( {
-    "order": [],
+    "order": [[0, 'desc']],
     'pageLength': product_row_number,
      'language': {
         'paginate': {

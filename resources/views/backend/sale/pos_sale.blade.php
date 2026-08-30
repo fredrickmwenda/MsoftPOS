@@ -1446,7 +1446,7 @@ $('.category-img').on('click', function(){
             tableData += '</tr></tbody></table>';
             $(".table-container").html(tableData);
             $('#product-table').DataTable( {
-            "order": [],
+            "order": [[0, 'desc']],
             'pageLength': product_row_number,
              'language': {
                 'paginate': {
@@ -1502,7 +1502,7 @@ $('.brand-img').on('click', function(){
             tableData += '</tr></tbody></table>';
             $(".table-container").html(tableData);
             $('#product-table').DataTable( {
-            "order": [],
+            "order": [[0, 'desc']],
             'pageLength': product_row_number,
              'language': {
                 'paginate': {
@@ -1548,7 +1548,7 @@ $('#featured-filter').on('click', function(){
             tableData += '</tr></tbody></table>';
             $(".table-container").html(tableData);
             $('#product-table').DataTable( {
-            "order": [],
+            "order": [[0, 'desc']],
             'pageLength': product_row_number,
              'language': {
                 'paginate': {
@@ -2523,7 +2523,7 @@ $(document).on('submit', '.payment-form', function(e) {
 });
 
 $('#product-table').DataTable( {
-    "order": [],
+    "order": [[0, 'desc']],
     'pageLength': product_row_number,
      'language': {
         'paginate': {

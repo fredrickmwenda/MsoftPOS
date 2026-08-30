@@ -234,6 +234,11 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::post('suppliers/clear-due', 'clearDue')->name('supplier.clearDue');
         Route::get('suppliers/all', 'suppliersAll')->name('supplier.all');
         Route::get('suppliers/all-companies', 'allCompanies')->name('supplier.allCompanies');
+        // Product search filtered by warehouse (for purchase create)
+        Route::get('lims_product_search_warehouse', 'productSearchByWarehouse')->name('lims_product_search_warehouse');
+
+        // Quick supplier creation from modal (AJAX)
+        Route::post('suppliers/quick-store', 'quickStoreSupplier')->name('suppliers.quick_store');
     });
     Route::resource('supplier', SupplierController::class)->except('show');
 
@@ -555,6 +560,10 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
 
             Route::match(['get', 'post'], 'payment-method', 'paymentMethodReport')->name('report.paymentMethod');
             Route::post('payment-method-details', 'paymentMethodReportDetails')->name('report.paymentMethodDetails');
+
+            Route::get('activity-log', 'activityLog')->name('report.activity-log');
+            Route::get('activity-log-data', 'activityLogData')->name('report.activity-log-data');
+            Route::get('activity-log-details/{id}', 'activityLogDetails')->name('report.activity-log-details');
 
 
         });

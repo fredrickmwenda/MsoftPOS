@@ -22,15 +22,29 @@
             </div>
             {!! Form::open(['route' => 'report.warehouse', 'method' => 'post']) !!}
             <div class="row mb-3">
-                <div class="col-md-5 offset-md-1 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
-                                <input type="hidden" name="start_date" value="{{$start_date}}" />
-                                <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            </div> 
+                  <div class="col-md-3 mt-3 mb-3 ml-2">
+                    <div class="form-group">
+                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="start_date"
+                                value="{{ !empty($start_date) ? $start_date : '' }}"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 mb-3">
+                    <div class="form-group">
+                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="end_date"
+                                value="{{ !empty($end_date) ? $end_date : '' }}"
+                            />
                         </div>
                     </div>
                 </div>
@@ -49,11 +63,11 @@
                 </div>
                 <div class="col-md-3 mt-3">
                     <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Cashier')}}</strong> &nbsp;</label>
+                        <label class="d-tc mt-2"><strong>Cashier</strong> &nbsp;</label>
                         <div class="d-tc">
                             <input type="hidden" name="biller_id_hidden" value="{{$biller_id ?? 0}}" />
                             <select id="biller_id" name="biller_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
-                                <option value="0">{{trans('file.All Cashier')}}</option>
+                                <option value="0">All Cashier</option>
                                 @foreach($lims_biller_list as $biller)
                                 <option value="{{$biller->id}}">{{$biller->name}}</option>
                                 @endforeach
@@ -928,16 +942,7 @@
         }
     }
 
-    $(".daterangepicker-field").daterangepicker({
-    callback: function(startDate, endDate, period){
-        var start_date = startDate.format('YYYY-MM-DD');
-        var end_date = endDate.format('YYYY-MM-DD');
-        var title = start_date + ' To ' + end_date;
-        $(this).val(title);
-        $('input[name="start_date"]').val(start_date);
-        $('input[name="end_date"]').val(end_date);
-    }
-    });
+
 
 </script>
 @endpush

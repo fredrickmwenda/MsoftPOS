@@ -39,7 +39,7 @@
                                     <div class="col-md-3">
                                         <div class="form-group">
                                             <label>{{trans('file.Warehouse')}} *</label>
-                                            <select required name="warehouse_id" class="selectpicker form-control" data-live-search="true" title="Select warehouse...">
+                                            <select required name="warehouse_id" id="warehouse_id" class="selectpicker form-control" data-live-search="true" title="Select warehouse...">
                                                 @foreach($lims_warehouse_list as $warehouse)
                                                 <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
                                                 @endforeach
@@ -48,12 +48,19 @@
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-group">
-                                            <label>{{trans('file.Supplier')}}</label>
-                                            <select name="supplier_id" class="selectpicker form-control" data-live-search="true" title="Select supplier...">
-                                                @foreach($lims_supplier_list as $supplier)
-                                                <option value="{{$supplier->id}}">{{$supplier->name .' ('. $supplier->company_name .')'}}</option>
-                                                @endforeach
-                                            </select>
+                                            <label>{{trans('file.Supplier')}} *</label>
+                                            <div class="input-group">
+                                                <select name="supplier_id" id="supplier_id" class="selectpicker form-control" data-live-search="true" title="Select supplier..." required>
+                                                    @foreach($lims_supplier_list as $supplier)
+                                                    <option value="{{$supplier->id}}">{{$supplier->name .' ('. $supplier->company_name .')'}}</option>
+                                                    @endforeach
+                                                </select>
+                                                <div class="input-group-append">
+                                                    <button type="button" id="addSupplierBtn" class="btn btn-sm btn-primary" title="Add new supplier" data-toggle="modal" data-target="#addSupplierModal">
+                                                        <i class="fa fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
@@ -151,9 +158,13 @@
                                     @endforeach
                                     <div class="col-md-12 mt-3">
                                         <label>{{trans('file.Select Product')}}</label>
-                                        <div class="search-box input-group">
+                                        <div id="product-search-warning" class="alert alert-warning py-2">
+                                            <i class="fa fa-exclamation-triangle"></i> 
+                                            <span id="warning-message">Please select a <strong>Warehouse</strong> and <strong>Supplier</strong> first to enable product search.</span>
+                                        </div>
+                                        <div class="search-box input-group" id="product-search-box" style="display:none;">
                                             <button class="btn btn-secondary"><i class="fa fa-barcode"></i></button>
-                                            <input type="text" name="product_code_name" id="lims_productcodeSearch" placeholder="Please type product code and select..." class="form-control" />
+                                            <input type="text" name="product_code_name" id="lims_productcodeSearch" placeholder="Please type product code and select..." class="form-control" disabled />
                                         </div>
                                     </div>
                                 </div>
@@ -359,6 +370,66 @@
             </div>
         </div>
     </div>
+
+    <!-- Add Supplier Modal -->
+    <div id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true" class="modal fade text-left">
+        <div role="document" class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-user-plus"></i> Add New Supplier</h5>
+                    <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addSupplierForm">
+                        @csrf
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>Name *</label>
+                                <input type="text" name="name" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Company Name</label>
+                                <input type="text" name="company_name" class="form-control">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Email</label>
+                                <input type="email" name="email" class="form-control">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Phone Number</label>
+                                <input type="text" name="phone_number" class="form-control">
+                            </div>
+                            <div class="col-md-12 form-group">
+                                <label>Address</label>
+                                <input type="text" name="address" class="form-control">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>City</label>
+                                <input type="text" name="city" class="form-control">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>State</label>
+                                <input type="text" name="state" class="form-control">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>Country</label>
+                                <input type="text" name="country" class="form-control">
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>VAT Number</label>
+                                <input type="text" name="vat_number" class="form-control">
+                            </div>
+
+                        </div>
+                        <div class="text-right">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary"><i class="fa fa-save"></i> Save Supplier</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
 
 @endsection
@@ -384,7 +455,7 @@
 @endpush
 @push('scripts')
 <script>
-$(document).ready(function() {
+ $(document).ready(function() {
     // Initialize tooltip
     $('[data-toggle="tooltip"]').tooltip();
 
@@ -481,34 +552,124 @@ $(document).ready(function() {
         }
     });
 
-    <?php $productArray = []; ?>
-    var lims_product_code = [
-        @foreach($lims_product_list_without_variant as $product)
-            @php
-                $productArray[] =
-                    'Code: ' . htmlspecialchars($product->code) .
-                    ' | Name: ' . preg_replace('/[\n\r]/', "<br>", htmlspecialchars($product->name)) .
-                    ' | Price: ' . htmlspecialchars($product->price) .
-                    ' | Qty: ' . htmlspecialchars($product->qty) .
-                    ' | Shelf: ' . preg_replace('/[\n\r]/', "<br>", htmlspecialchars($product->shelf));
-            @endphp
-        @endforeach
-    
-        @foreach($lims_product_list_with_variant as $product)
-            @php
-                $productArray[] =
-                    'Code: ' . htmlspecialchars($product->code) .
-                    ' | Name: ' . preg_replace('/[\n\r]/', "<br>", htmlspecialchars($product->name)) .
-                    ' | Price: ' . htmlspecialchars($product->price) .
-                    ' | Qty: ' . htmlspecialchars($product->qty) .
-                    ' | Shelf: ' . preg_replace('/[\n\r]/', "<br>", htmlspecialchars($product->shelf));
-            @endphp
-        @endforeach
-    
-        @php
-            echo '"' . implode('","', $productArray) . '"';
-        @endphp
-    ];
+    // =============================================
+    // WAREHOUSE + SUPPLIER DEPENDENT PRODUCT SEARCH
+    // =============================================
+
+    // Dynamic product list based on warehouse
+    var lims_product_code = [];
+
+    function checkWarehouseSupplier() {
+        var warehouse_id = $('select[name="warehouse_id"]').val();
+        var supplier_id = $('select[name="supplier_id"]').val();
+        var $warning = $('#product-search-warning');
+        var $searchBox = $('#product-search-box');
+        var $searchInput = $('#lims_productcodeSearch');
+        var $warningMsg = $('#warning-message');
+
+        if (!warehouse_id && !supplier_id) {
+            $warningMsg.html('Please select a <strong>Warehouse</strong> and <strong>Supplier</strong> first to enable product search.');
+            $warning.show();
+            $searchBox.hide();
+            $searchInput.prop('disabled', true).val('');
+        } else if (!warehouse_id) {
+            $warningMsg.html('Please select a <strong>Warehouse</strong> first to enable product search.');
+            $warning.show();
+            $searchBox.hide();
+            $searchInput.prop('disabled', true).val('');
+        } else if (!supplier_id) {
+            $warningMsg.html('Please select a <strong>Supplier</strong> first (or click the <i class="fa fa-plus"></i> button to add a new one) to enable product search.');
+            $warning.show();
+            $searchBox.hide();
+            $searchInput.prop('disabled', true).val('');
+        } else {
+            $warning.hide();
+            $searchBox.show();
+            $searchInput.prop('disabled', false);
+            loadWarehouseProducts();
+        }
+    }
+
+    function loadWarehouseProducts() {
+        var warehouse_id = $('select[name="warehouse_id"]').val();
+        if (!warehouse_id) {
+            lims_product_code = [];
+            return;
+        }
+
+        $.ajax({
+            type: 'GET',
+            url: '{{ url("lims_product_search_warehouse") }}',
+            data: { warehouse_id: warehouse_id },
+            async: false,
+            success: function(data) {
+                lims_product_code = data;
+            },
+            error: function() {
+                lims_product_code = [];
+            }
+        });
+    }
+
+    // Run on document ready
+    $(document).ready(function() {
+        checkWarehouseSupplier();
+    });
+
+    // Listen for changes on warehouse and supplier selects
+    $('select[name="warehouse_id"]').on('changed.bs.select', function() {
+        checkWarehouseSupplier();
+        // Clear current order table if warehouse changed
+        if ($('table.order-list tbody tr').length > 0) {
+            if (!confirm('Changing the warehouse will clear the current order table. Continue?')) {
+                return;
+            }
+            $('table.order-list tbody').empty();
+            calculateTotal();
+        }
+    });
+
+    $('select[name="supplier_id"]').on('changed.bs.select', function() {
+        checkWarehouseSupplier();
+    });
+
+    // =============================================
+    // ADD SUPPLIER VIA AJAX
+    // =============================================
+    $('#addSupplierForm').on('submit', function(e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+
+        $.ajax({
+            type: 'POST',
+            url: '{{ url("suppliers/quick-store") }}',
+            data: formData,
+            success: function(response) {
+                // Append the new supplier to the dropdown
+                var newOption = '<option value="' + response.id + '">' + response.name + ' (' + (response.company_name || '') + ')</option>';
+                $('select[name="supplier_id"]').append(newOption);
+                $('select[name="supplier_id"]').val(response.id);
+                $('select[name="supplier_id"]').selectpicker('refresh');
+
+                $('#addSupplierModal').modal('hide');
+                $('#addSupplierForm')[0].reset();
+
+                // Re-check if product search can be enabled
+                checkWarehouseSupplier();
+
+                alert('Supplier "' + response.name + '" added successfully!');
+            },
+            error: function(xhr) {
+                var errors = xhr.responseJSON;
+                if (errors && errors.errors) {
+                    var errorMessages = Object.values(errors.errors).join('\n');
+                    alert('Validation Error:\n' + errorMessages);
+                } else {
+                    alert('Error creating supplier. Please try again.');
+                }
+            }
+        });
+    });
 
     var lims_productcodeSearch = $('#lims_productcodeSearch');
  
@@ -724,7 +885,8 @@ $(document).ready(function() {
             type: 'GET',
             url: 'lims_product_search',
             data: {
-                data: ajaxData
+                data: ajaxData,
+                warehouse_id: $('select[name="warehouse_id"]').val()
             }, 
             success: function(data) {
                 var flag = 1;
@@ -1074,7 +1236,7 @@ $(document).ready(function() {
 
 <script type="text/javascript" src="https://js.stripe.com/v3/"></script>
 <script>
-$(document).ready(function() {
+ $(document).ready(function() {
     // Initialize all selectpicker elements
     $('.selectpicker').selectpicker();
 });

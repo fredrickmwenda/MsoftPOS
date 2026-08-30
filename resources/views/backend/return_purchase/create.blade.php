@@ -46,11 +46,17 @@
                                                         }
                                                         else
                                                             $product_variant_id = null;
+                                                        $product_cost = 0; // Initialize with default value
+
                                                         if($product_data->tax_method == 1){
                                                             $product_cost = $product_purchase->net_unit_cost + ($product_purchase->discount / $product_purchase->qty);
                                                         }
                                                         elseif ($product_data->tax_method == 2) {
-                                                            $product_cost =($product_purchase->total / $product_purchase->qty) + ($product_purchase->discount / $product_purchase->qty);
+                                                            $product_cost = ($product_purchase->total / $product_purchase->qty) + ($product_purchase->discount / $product_purchase->qty);
+                                                        }
+                                                        else {
+                                                            // Fallback: use net_unit_cost if tax_method is not 1 or 2
+                                                            $product_cost = $product_purchase->net_unit_cost + ($product_purchase->discount / $product_purchase->qty);
                                                         }
 
                                                         $tax = DB::table('taxes')->where('rate',$product_purchase->tax_rate)->first();

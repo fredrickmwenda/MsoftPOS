@@ -10,8 +10,7 @@ class User extends Authenticatable
     use Notifiable;
 
     protected $fillable = [
-        'name', 'community', 'location', 'region', 'status',
-        'email', 'password', 'phone', 'company_name',
+        'name', 'email', 'password', 'phone', 'company_name',
         'biller_id', 'warehouse_id', 'is_active', 'is_deleted'
     ];
 
@@ -26,7 +25,7 @@ class User extends Authenticatable
             'roles_user',      // pivot table name
             'user_id',         // foreign key from User
             'roles_id'         // foreign key from Roles (use 'role_id' if that's the actual column)
-        );
+        )->withTimestamps();
     }
     // All permissions aggregated from all roles
     public function getAllPermissions()

@@ -8,8 +8,8 @@ class Variant extends Model
 {
     protected $fillable = ['name'];
 
-    public function product()
+    public function products()
     {
-    	return $this->belongsToMany('App\Models\Variant', 'product_variants');
+        return $this->belongsToMany(Product::class, 'product_variants');
     }
 }

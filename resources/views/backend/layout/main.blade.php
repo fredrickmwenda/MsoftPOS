@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    @if(!config('database.connections.saleprosaas_landlord'))
     <link rel="icon" type="image/png" href="{{url('logo', $general_setting->site_favicon)}}" />
     <title>{{$general_setting->site_title}}</title>
     <meta name="description" content="">
@@ -37,9 +36,7 @@
     <noscript><link href="<?php echo asset('vendor/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.css') ?>" rel="stylesheet"></noscript>
 
     @if(Route::current()->getName() != '/')
-    <!-- date range stylesheet-->
-    <link rel="preload" href="<?php echo asset('vendor/daterange/css/daterangepicker.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('vendor/daterange/css/daterangepicker.min.css') ?>" rel="stylesheet"></noscript>
+
     <!-- table sorter stylesheet-->
     <link rel="preload" href="<?php echo asset('vendor/datatable/dataTables.bootstrap4.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link href="<?php echo asset('vendor/datatable/dataTables.bootstrap4.min.css') ?>" rel="stylesheet"></noscript>
@@ -61,847 +58,21 @@
       <link rel="stylesheet" href="<?php echo asset('vendor/bootstrap/css/bootstrap-rtl.min.css') ?>" type="text/css">
       <link rel="stylesheet" href="<?php echo asset('css/custom-rtl.css') ?>" type="text/css" id="custom-style">
     @endif
-    @else
-    <link rel="icon" type="image/png" href="https://admin.dailyfairgh.com/v2/public/logo/20231120015906.png" />
-    <title>{{$general_setting->site_title}}</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="robots" content="all,follow">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="manifest" href="{{url('manifest.json')}}">
-    <!-- Bootstrap CSS-->
-    <link rel="stylesheet" href="<?php echo asset('../../vendor/bootstrap/css/bootstrap.min.css') ?>" type="text/css">
-    <link rel="preload" href="<?php echo asset('../../vendor/bootstrap-toggle/css/bootstrap-toggle.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/bootstrap-toggle/css/bootstrap-toggle.min.css') ?>" rel="stylesheet"></noscript>
-    <link rel="preload" href="<?php echo asset('../../vendor/bootstrap/css/bootstrap-datepicker.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/bootstrap/css/bootstrap-datepicker.min.css') ?>" rel="stylesheet"></noscript>
-    <link rel="preload" href="<?php echo asset('../../vendor/jquery-timepicker/jquery.timepicker.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/jquery-timepicker/jquery.timepicker.min.css') ?>" rel="stylesheet"></noscript>
-    <link rel="preload" href="<?php echo asset('../../vendor/bootstrap/css/awesome-bootstrap-checkbox.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/bootstrap/css/awesome-bootstrap-checkbox.css') ?>" rel="stylesheet"></noscript>
-    <link rel="preload" href="<?php echo asset('../../vendor/bootstrap/css/bootstrap-select.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/bootstrap/css/bootstrap-select.min.css') ?>" rel="stylesheet"></noscript>
-    <!-- Font Awesome CSS-->
-    <link rel="preload" href="<?php echo asset('../../vendor/font-awesome/css/font-awesome.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/font-awesome/css/font-awesome.min.css') ?>" rel="stylesheet"></noscript>
-    <!-- Drip icon font-->
-    <link rel="preload" href="<?php echo asset('../../vendor/dripicons/webfont.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/dripicons/webfont.css') ?>" rel="stylesheet"></noscript>
 
-    <!-- jQuery Circle-->
-    <link rel="preload" href="<?php echo asset('../../css/grasp_mobile_progress_circle-1.0.0.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../css/grasp_mobile_progress_circle-1.0.0.min.css') ?>" rel="stylesheet"></noscript>
-    <!-- Custom Scrollbar-->
-    <link rel="preload" href="<?php echo asset('../../vendor/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.css') ?>" rel="stylesheet"></noscript>
+    <link rel="stylesheet" href="<?php echo asset('css/main.css') ?>" type="text/css">
 
-    @if(Route::current()->getName() != '/')
-    <!-- date range stylesheet-->
-    <link rel="preload" href="<?php echo asset('../../vendor/daterange/css/daterangepicker.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/daterange/css/daterangepicker.min.css') ?>" rel="stylesheet"></noscript>
-    <!-- table sorter stylesheet-->
-    <link rel="preload" href="<?php echo asset('../../vendor/datatable/dataTables.bootstrap4.min.css') ?>" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="<?php echo asset('../../vendor/datatable/dataTables.bootstrap4.min.css') ?>" rel="stylesheet"></noscript>
-    <link rel="preload" href="https://cdn.datatables.net/fixedheader/3.1.6/css/fixedHeader.bootstrap.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="https://cdn.datatables.net/fixedheader/3.1.6/css/fixedHeader.bootstrap.min.css" rel="stylesheet"></noscript>
-    <link rel="preload" href="https://cdn.datatables.net/responsive/2.2.3/css/responsive.bootstrap.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link href="https://cdn.datatables.net/responsive/2.2.3/css/responsive.bootstrap.min.css" rel="stylesheet"></noscript>
-    @endif
 
-    <link rel="stylesheet" href="<?php echo asset('../../css/style.default.css') ?>" id="theme-stylesheet" type="text/css">
-    <link rel="stylesheet" href="<?php echo asset('../../css/dropzone.css') ?>">
-    <!-- Custom stylesheet - for your changes-->
-    <link rel="stylesheet" href="<?php echo asset('../../css/custom-'.$general_setting->theme) ?>" type="text/css" id="custom-style">
-    <link rel="stylesheet" href="<?php echo asset('../../css/sidebar-layout-fix.css') ?>" type="text/css">
-    <link rel="stylesheet" href="<?php echo asset('../../css/modal-select-fix.css') ?>" type="text/css">
-
-    @if( Config::get('app.locale') == 'ar' || $general_setting->is_rtl)
-      <!-- RTL css -->
-      <link rel="stylesheet" href="<?php echo asset('../../vendor/bootstrap/css/bootstrap-rtl.min.css') ?>" type="text/css">
-      <link rel="stylesheet" href="<?php echo asset('../../css/custom-rtl.css') ?>" type="text/css" id="custom-style">
-    @endif
-    @endif
     <!-- Google fonts - Roboto -->
     <link rel="preload" href="https://fonts.googleapis.com/css?family=Nunito:400,500,700" as="style" onload="this.onload=null;this.rel='stylesheet'">
     <noscript><link href="https://fonts.googleapis.com/css?family=Nunito:400,500,700" rel="stylesheet"></noscript>
+
     @stack('css')
 
 {!! ToastMagic::styles() !!}
-
-    <style>
+  <style>
       @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
-      
-      /* Modern Design System */
-      :root {
-        --primary-gradient: linear-gradient(135deg, #c4c6cf 0%, #299e42 100%);
-        --primary-color: #13bd60;
-        --secondary-color: #764ba2;
-        --accent-color: #ffd700;
-        --text-dark:rgb(7, 10, 8);
-        --text-light:#13bd60;
-        --bg-light: #13bd60;
-        --border-color: #e0e0e0;
-        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
-        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
-        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      }
+  </style>
 
-      * {
-        scroll-behavior: smooth;
-      }
-
-      body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        font-size: 15px;
-        color: var(--text-dark);
-        line-height: 1.6;
-        font-weight: 400;
-        /* background: var(--bg-light); */
-        background-color: #c4d0de!important;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-
-      body.dark-mode {
-        background: #0f3460;
-        color: var(--text-light);
-      }
-
-      body.dark-mode .card {
-        background: #16213e;
-        border-color: #333;
-      }
-
-      body.dark-mode .card-header {
-        background: rgba(102, 126, 234, 0.1);
-        border-bottom-color: #333;
-      }
-
-      /* Header Navigation Styling */
-      nav.navbar {
-        background: linear-gradient(to right, #ffffff 0%, #f8f9fa 100%);
-        border-bottom: 1px solid var(--border-color);
-        box-shadow: var(--shadow-sm);
-        padding: 12px 24px;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-      }
-
-      /* Top bar: menu btn + brand + nav menu – separated and responsive */
-      nav.navbar.navbar-main {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 12px 20px;
-      }
-
-      nav.navbar .menu-btn {
-        flex-shrink: 0;
-        order: 1;
-        min-width: 44px;
-        min-height: 44px;
-        padding: 10px 12px;
-        margin: 0;
-        margin-right: 4px;
-        background: transparent !important;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        z-index: 2;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        transition: background 0.2s ease;
-      }
-
-      nav.navbar .menu-btn:hover {
-        background: rgba(0, 0, 0, 0.06) !important;
-      }
-
-      nav.navbar .menu-btn .navbar-toggler-iconx {
-        font-size: 1.25rem;
-        color: #fff;
-      }
-
-      nav.navbar .menu-btn .navbar-toggler-iconx i {
-        color: inherit;
-      }
-
-      nav.navbar .navbar-brand {
-        order: 2;
-        flex: 1 1 auto;
-        min-width: 0;
-        margin: 0;
-        padding: 0 8px;
-        font-size: 22px;
-        font-weight: 800;
-        background: var(--primary-gradient);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        letter-spacing: -1px;
-        display: flex;
-        align-items: center;
-        text-decoration: none;
-      }
-
-      nav.navbar .navbar-brand-title {
-        margin: 0;
-        font-size: inherit;
-        font-weight: inherit;
-        color: #212529;
-        -webkit-text-fill-color: #212529;
-        background: none;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
-      nav.navbar .nav-menu {
-        order: 3;
-        margin-left: auto;
-        flex-shrink: 0;
-      }
-
-      nav.navbar .navbar-brand img {
-        margin-right: 12px;
-        height: 32px;
-        width: auto;
-        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-      }
-
-      /* Navigation Items */
-      nav.navbar .nav-item {
-        margin: 0 8px;
-      }
-
-      nav.navbar .nav-item a {
-        color: var(--text-dark) !important;
-        font-size: 15px;
-        font-weight: 500;
-        padding: 8px 12px !important;
-        border-radius: 6px;
-        transition: var(--transition);
-        position: relative;
-      }
-
-      nav.navbar .nav-item a:before {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 0;
-        height: 2px;
-        background: var(--primary-color);
-        transition: width 0.3s ease;
-      }
-
-      nav.navbar .nav-item a:hover {
-        background: rgba(102, 126, 234, 0.08);
-        color: var(--primary-color) !important;
-      }
-
-      nav.navbar .nav-item a:hover:before {
-        width: 100%;
-      }
-
-      nav.navbar .nav-item a i {
-        font-size: 16px;
-        margin-right: 6px;
-      }
-
-      /* Header right-sidebar: compact, curvy bottom, no extra whitespace */
-      nav.navbar .right-sidebar {
-        height: auto !important;
-        min-height: 0 !important;
-        top: 56px !important;
-        padding: 8px 0 14px 0 !important;
-        border-radius: 0 0 16px 16px !important;
-        max-height: calc(100vh - 72px);
-        overflow-y: auto;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-      }
-      nav.navbar .right-sidebar li {
-        line-height: 40px !important;
-        padding: 0 20px !important;
-      }
-      nav.navbar .right-sidebar li:last-child {
-        border-bottom: none !important;
-      }
-
-      /* Navbar Toggle */
-      .navbar-toggler {
-        border: none;
-        padding: 8px 12px;
-        border-radius: 6px;
-        transition: var(--transition);
-      }
-
-      .navbar-toggler:not(.collapsed) {
-        background: rgba(102, 126, 234, 0.1);
-      }
-
-      .navbar-toggler:focus {
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-      }
-
-      /* Sidebar Navbar */
-      .side-navbar {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        box-shadow: var(--shadow-md);
-        border-radius: 0;
-        overflow: hidden;
-      }
-
-      .side-navbar li a {
-        color: var(--primary-color) !important;
-        font-size: 14px;
-        font-weight: 500;
-        padding: 12px 16px !important;
-        border-left: 3px solid transparent;
-        transition: var(--transition);
-        position: relative;
-      }
-
-      .side-navbar li a:before {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.1);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        z-index: 0;
-      }
-
-      .side-navbar li a {
-        position: relative;
-        z-index: 1;
-      }
-
-      .side-navbar li a:hover {
-        border-left-color: var(--accent-color);
-        background: rgba(255, 255, 255, 0.1);
-        padding-left: 20px !important;
-      }
-
-      .side-navbar li a.active {
-        background: rgba(255, 255, 255, 0.15);
-        border-left-color: var(--accent-color);
-        font-weight: 600;
-      }
-
-      .side-navbar li a i {
-        margin-right: 10px;
-        font-size: 16px;
-        transition: transform 0.3s ease;
-      }
-
-      .side-navbar li a:hover i {
-        transform: translateX(2px);
-      }
-
-      /* Buttons */
-      .btn {
-        font-weight: 600;
-        border-radius: 8px;
-        padding: 10px 20px;
-        transition: var(--transition);
-        border: none;
-        font-size: 14px;
-      }
-
-      .btn-primary {
-        background: var(--primary-gradient);
-        color: white;
-        box-shadow: var(--shadow-sm);
-      }
-
-      .btn-primary:hover {
-        box-shadow: var(--shadow-md);
-        transform: translateY(-2px);
-      }
-
-      .btn-primary:active {
-        transform: translateY(0);
-      }
-
-      .btn-secondary {
-        background: var(--bg-light);
-        color: #f2f2f2;
-        border: 1px solid var(--border-color);
-      }
-
-      .btn-secondary:hover {
-        background: #ffffff;
-        border-color: var(--primary-color);
-        color: var(--primary-color);
-      }
-
-      .btn-pos {
-        background: rgba(255, 255, 255, 0.2) !important;
-        border: 1px solid rgba(255, 255, 255, 0.3) !important;
-        color: var(--primary-color) !important;
-        border-radius: 8px;
-        padding: 10px 18px;
-        font-weight: 600;
-        transition: var(--transition);
-      }
-
-      .btn-pos:hover {
-        background: rgba(255, 255, 255, 0.3) !important;
-        border-color: rgba(255, 255, 255, 0.5) !important;
-        transform: translateY(-2px);
-      }
-
-      .btn-pos i,
-      .btn-pos span {
-        color: var(--primary-color) !important;
-      }
-
-      /* Form Elements */
-      .form-control,
-      .form-select {
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        padding: 10px 14px;
-        font-size: 14px;
-        transition: var(--transition);
-      }
-
-      .form-control:focus,
-      .form-select:focus {
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-      }
-
-      /* Cards */
-      .card {
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        box-shadow: var(--shadow-sm);
-        transition: var(--transition);
-      }
-
-      .card:hover {
-        box-shadow: var(--shadow-md);
-      }
-
-      .card-header {
-        /* background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); */
-        border-bottom: 1px solid var(--border-color);
-        border-radius: 12px 12px 0 0;
-        padding: 16px 20px;
-        font-weight: 600;
-        color: #333333;
-        /* color: var(--text-dark); */
-      }
-
-      /* Collapse/Accordion */
-      .collapse {
-        transition: var(--transition);
-      }
-
-      .collapse.show {
-        animation: slideDown 0.3s ease;
-      }
-
-      @keyframes slideDown {
-        from {
-          opacity: 0;
-          transform: translateY(-10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
-      }
-
-      /* Table Styling */
-      table {
-        font-size: 14px;
-        border-collapse: collapse;
-      }
-
-      table thead th {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-        color: var(--text-dark);
-        font-weight: 600;
-        border: none;
-        padding: 14px 12px;
-        text-transform: uppercase;
-        font-size: 12px;
-        letter-spacing: 0.5px;
-      }
-
-      table tbody td {
-        padding: 12px;
-        border-bottom: 1px solid var(--border-color);
-        vertical-align: middle;
-      }
-
-      table tbody tr {
-        transition: var(--transition);
-      }
-
-      table tbody tr:hover {
-        background: rgba(102, 126, 234, 0.05);
-      }
-
-      /* DataTables top controls layout */
-      .dataTables_wrapper > .row:first-child {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-        min-width: 0;
-        margin-bottom: 0.5rem;
-      }
-
-      .dataTables_wrapper > .row:first-child > * {
-        flex-shrink: 0;
-      }
-
-      /* Last column (dt-buttons): only as wide as the buttons, no extra space */
-      .dataTables_wrapper > .row:first-child > *:last-child {
-        flex: 0 0 auto;
-        width: auto;
-        max-width: none;
-      }
-
-      /* dt-buttons btn-group: end right after the last button */
-      .dataTables_wrapper .dt-buttons.btn-group {
-        width: fit-content;
-        max-width: 100%;
-        flex-wrap: nowrap;
-      }
-
-      /* Let the filter (middle) column shrink so length + buttons + search stay in one row */
-      .dataTables_wrapper > .row:first-child > *:nth-child(2) {
-        flex-shrink: 1;
-        min-width: 140px;
-      }
-
-      .dataTables_wrapper .dataTables_filter input {
-        min-width: 120px;
-      }
-
-      .dataTables_wrapper .dataTables_length,
-      .dataTables_wrapper .dataTables_filter,
-      .dataTables_wrapper .dt-buttons {
-        display: flex;
-        align-items: center;
-        margin-bottom: 0.25rem;
-      }
-
-      .dataTables_wrapper .dt-buttons {
-        flex-wrap: nowrap;
-      }
-
-      /* Length: prevent select overlapping "records per page" text and avoid header distortion */
-      .dataTables_wrapper .dataTables_length label {
-        display: inline-flex;
-        align-items: center;
-        flex-wrap: nowrap;
-        gap: 8px;
-        margin-bottom: 0;
-        white-space: nowrap;
-      }
-      .dataTables_wrapper .dataTables_length select,
-      .dataTables_wrapper .dataTables_length .bootstrap-select {
-        width: auto !important;
-        min-width: 60px;
-        max-width: 80px;
-        margin: 0 2px;
-      }
-      .dataTables_wrapper .dataTables_length .bootstrap-select .dropdown-toggle {
-        min-width: 60px;
-        max-width: 80px;
-      }
-      .dataTables_wrapper .dataTables_length .filter-option-inner-inner {
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      /* Keep length dropdown above other controls when open */
-      .dataTables_wrapper .dataTables_length .bootstrap-select.open .dropdown-menu {
-        z-index: 1060;
-      }
-
-      .dataTables_wrapper .dataTables_filter label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 0;
-      }
-
-      /* On smaller screens, stack the controls and keep even spacing */
-      @media (max-width: 991px) {
-        .dataTables_wrapper > .row:first-child {
-          flex-direction: column;
-          align-items: stretch;
-        }
-
-        .dataTables_wrapper .dataTables_length,
-        .dataTables_wrapper .dataTables_filter,
-        .dataTables_wrapper .dt-buttons {
-          justify-content: space-between;
-        }
-      }
-
-      /* Badge */
-      .badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 12px;
-        letter-spacing: 0.3px;
-      }
-
-      .badge-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-
-      .badge-success {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        color: white;
-      }
-
-      .badge-danger {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
-      }
-
-      .badge-warning {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        color: #fff;
-      }
-
-      /* Loader: z-index below modal (10050) so modals stay on top and interactive */
-      #loader {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(255, 255, 255, 0.9);
-        z-index: 10030;
-        align-items: center;
-        justify-content: center;
-      }
-
-      #loader.show {
-        display: flex;
-      }
-
-      #loader::after {
-        content: '';
-        width: 50px;
-        height: 50px;
-        border: 4px solid var(--border-color);
-        border-top-color: var(--primary-color);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-
-      /* Modal Styling */
-      .modal-content {
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        box-shadow: var(--shadow-lg);
-      }
-
-      .modal-header {
-        background: linear-gradient(135deg, #5cd562 0%, #e2bb0e 100%);
-        color: white;
-        border: none;
-        border-radius: 12px 12px 0 0;
-        padding: 16px 20px;
-        font-weight: 600;
-      }
-      
-
-      .modal-header .close {
-        color: white;
-        opacity: 0.8;
-      }
-
-      .modal-header .close:hover {
-        opacity: 1;
-      }
-
-      /* Alert/Toast */
-      .alert {
-        border: none;
-        border-radius: 8px;
-        padding: 14px 16px;
-        font-weight: 500;
-        box-shadow: var(--shadow-sm);
-      }
-
-      .alert-success {
-        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-        color: white;
-      }
-
-      .alert-danger {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        color: white;
-      }
-
-      .alert-warning {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        color: #fff;
-      }
-
-      .alert-info {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-      }
-
-      /* Responsive Design */
-      @media (max-width: 768px) {
-        nav.navbar {
-          padding: 10px 12px;
-        }
-
-        .sidebar {
-          display: flex;
-          flex-direction: column;
-          height: 100vh;
-        }
-
-        .sidebar .side-menu {
-          flex: 1;
-          overflow-y: auto;
-        }
-
-        nav.navbar.navbar-main {
-          gap: 8px 12px;
-        }
-
-        nav.navbar .menu-btn {
-          min-width: 40px;
-          min-height: 40px;
-          padding: 8px 10px;
-          margin-right: 0;
-        }
-
-        nav.navbar .navbar-brand {
-          font-size: 1rem;
-          padding: 0 6px;
-        }
-
-        nav.navbar .navbar-brand-title {
-          font-size: 1rem;
-        }
-
-        nav.navbar .nav-menu {
-          width: 100%;
-          margin-left: 0;
-          margin-top: 4px;
-          padding-top: 8px;
-          border-top: 1px solid rgba(0, 0, 0, 0.08);
-          justify-content: flex-end;
-        }
-
-        .side-navbar {
-          position: fixed;
-          left: -100%;
-          top: 0;
-          width: 100%;
-          max-width: 280px;
-          height: 100vh;
-          z-index: 1000;
-          transition: left 0.3s ease;
-          box-shadow: 2px 0 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .side-navbar.show {
-          left: 0;
-        }
-      }
-
-      @media (max-width: 480px) {
-        nav.navbar .navbar-brand {
-          font-size: 0.9rem;
-        }
-
-        nav.navbar .navbar-brand-title {
-          font-size: 0.9rem;
-        }
-      }
-
-      /* .btn-group{
-        border: 3px solid #000000!important
-      } */
-
-      /* Dark Mode Support */
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --text-dark: #13bd60;;
-          --text-light: #13bd60;;
-          --bg-light: #13bd60;;
-          --border-color: #13bd60;;
-        }
-
-        nav.navbar {
-          background: linear-gradient(to right, #1a1a2e 0%, #16213e 100%);
-          border-bottom-color: var(--border-color);
-        }
-
-        body {
-          background: #0f3460;
-          color: var(--text-dark);
-        }
-      }
-      .btn-group{
-        border: 1px solid #13bd60!important;
-        border-radius: 8px!important;
-      }
-
-              .ui-autocomplete {
-            z-index: 9999 !important;
-            max-height: 280px;
-            overflow-y: auto;
-            background: #1a1a1a !important;
-            border: 1px solid #333 !important;
-            border-radius: 4px;
-        }
-        .ui-autocomplete .ui-menu-item {
-            border-color: #333 !important;
-        }
-        .ui-autocomplete .ui-menu-item-wrapper {
-            background: #1a1a1a !important;
-            color: #e0e0e0 !important;
-            padding: 8px 12px;
-        }
-        .ui-autocomplete .ui-menu-item-wrapper.ui-state-active,
-        .ui-autocomplete .ui-menu-item-wrapper:hover {
-            background: #333 !important;
-            color: #fff !important;
-            border-color: #333 !important;
-        }
-
-        /* In your stylesheet */
-        .right-sidebar .divider {
-            height: 1px;
-            margin: 5px 0;
-            overflow: hidden;
-            background-color: #e5e5e5;
-        }
-
-    </style>
   </head>
 
   <body class="@if($theme == 'dark')dark-mode dripicons-brightness-low @endif  @if(Route::current()->getName() == 'sale.pos') pos-page @endif" onload="myFunction()">
@@ -1571,14 +742,27 @@
                                 <option value="2">{{trans('file.Credit')}}</option>
                             </select>
                         </div>
-                        <div class="col-md-12 form-group">
+                        <div class="col-md-6 form-group">
                             <label>{{trans('file.Choose Your Date')}}</label>
-                            <div class="input-group">
-                                <input type="text" class="account-statement-daterangepicker-field form-control" required />
-                                <input type="hidden" name="start_date" />
-                                <input type="hidden" name="end_date" />
+                            <div class="">
+                              <input 
+                                  type="date" 
+                                  class="form-control" 
+                                  name="start_date" required
+                              />
                             </div>
                         </div>
+                        <div class="col-md-6 form-group">
+                            <label>{{trans('file.Choose Your Date')}}</label>
+                            <div class="input-group">
+                              <input 
+                                  type="date" 
+                                  class="form-control" 
+                                  name="end_date" required
+                              />
+                            </div>
+                        </div>
+                                   
                       </div>
                       <div class="form-group">
                           <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
@@ -1752,7 +936,6 @@
       </div>
       <!-- end supplier modal -->
 
-    @if(!config('database.connections.saleprosaas_landlord'))
         <script type="text/javascript" src="<?php echo asset('vendor/jquery/jquery.min.js') ?>"></script>
         <script type="text/javascript" src="<?php echo asset('vendor/jquery/jquery-ui.min.js') ?>"></script>
         <script type="text/javascript" src="<?php echo asset('vendor/jquery/bootstrap-datepicker.min.js') ?>"></script>
@@ -1782,7 +965,6 @@
         @if(Route::current()->getName() != '/')
         <script type="text/javascript" src="<?php echo asset('vendor/daterange/js/moment.min.js') ?>"></script>
         <script type="text/javascript" src="<?php echo asset('vendor/daterange/js/knockout-3.4.2.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('vendor/daterange/js/daterangepicker.min.js') ?>"></script>
         <script type="text/javascript" src="<?php echo asset('vendor/tinymce/js/tinymce/tinymce.min.js') ?>"></script>
         <script type="text/javascript" src="<?php echo asset('js/dropzone.js') ?>"></script>
 
@@ -1809,60 +991,7 @@
         <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/responsive.bootstrap.min.js"></script>
         @endif
-    @else
-        <script type="text/javascript" src="<?php echo asset('../../vendor/jquery/jquery.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/jquery/jquery-ui.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/jquery/bootstrap-datepicker.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/jquery/jquery.timepicker.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/popper.js/umd/popper.min.js') ?>">
-        </script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/bootstrap/js/bootstrap.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/bootstrap-toggle/js/bootstrap-toggle.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/bootstrap/js/bootstrap-select.min.js') ?>"></script>
 
-        <script type="text/javascript" src="<?php echo asset('../../js/grasp_mobile_progress_circle-1.0.0.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/jquery.cookie/jquery.cookie.js') ?>">
-        </script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/chart.js/Chart.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../js/charts-custom.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/jquery-validation/jquery.validate.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/malihu-custom-scrollbar-plugin/jquery.mCustomScrollbar.concat.min.js')?>"></script>
-        @if( Config::get('app.locale') == 'ar' || $general_setting->is_rtl)
-          <script type="text/javascript" src="<?php echo asset('../../js/front_rtl.js') ?>"></script>
-        @else
-          <script type="text/javascript" src="<?php echo asset('../../js/front.js') ?>"></script>
-        @endif
-
-        @if(Route::current()->getName() != '/')
-        <script type="text/javascript" src="<?php echo asset('../../vendor/daterange/js/moment.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/daterange/js/knockout-3.4.2.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/daterange/js/daterangepicker.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/tinymce/js/tinymce/tinymce.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../js/dropzone.js') ?>"></script>
-
-        <!-- table sorter js-->
-        @if( Config::get('app.locale') == 'ar')
-            <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/pdfmake_arabic.min.js') ?>"></script>
-            <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/vfs_fonts_arabic.js') ?>"></script>
-        @else
-            <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/pdfmake.min.js') ?>"></script>
-            <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/vfs_fonts.js') ?>"></script>
-        @endif
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/jquery.dataTables.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/dataTables.bootstrap4.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/dataTables.buttons.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/buttons.bootstrap4.min.js') ?>">"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/buttons.colVis.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/buttons.html5.min.js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/buttons.printnew.js') ?>"></script>
-
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/sum().js') ?>"></script>
-        <script type="text/javascript" src="<?php echo asset('../../vendor/datatable/dataTables.checkboxes.min.js') ?>"></script>
-        <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.6/js/dataTables.fixedHeader.min.js"></script>
-        <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
-        <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/responsive.bootstrap.min.js"></script>
-        @endif
-    @endif
     @stack('scripts')
     <script>
       $(document).ready(function() {
@@ -1964,8 +1093,8 @@
 
       $("#add-expense").click(function(e){
         e.preventDefault();
-        console.log('test');
-        $('#loader').css('display','block');
+        // console.log('test');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('expense_category.all')}}",
           type: 'GET',
@@ -2001,7 +1130,7 @@
 
       $("a#send-notification").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('user.notification')}}",
           type: 'GET',
@@ -2023,7 +1152,7 @@
 
       $("a#account-statement").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('account.all')}}",
           type: 'GET',
@@ -2068,7 +1197,7 @@
 
       $("a#warehouse-report-link").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('warehouse.all')}}",
           type: 'GET',
@@ -2085,7 +1214,7 @@
 
       $("a#user-report-link").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('user.all')}}",
           type: 'GET',
@@ -2102,7 +1231,7 @@
 
       $("a#customer-report-link").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+      //  $('#loader') .css('display','block');
         $.ajax({
           url: "{{route('customer.all')}}",
           type: 'GET',
@@ -2118,7 +1247,7 @@
 
       $("a#customer-group-report-link").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('customer_group.all')}}",
           type: 'GET',
@@ -2134,7 +1263,7 @@
 
       $("a#supplier-report-link").click(function(e){
         e.preventDefault();
-        $('#loader').css('display','block');
+        // $('#loader').css('display','block');
         $.ajax({
           url: "{{route('supplier.allCompanies')}}",
           type: 'GET',
@@ -2159,16 +1288,7 @@
         $("#supplier-due-report-form").submit();
       });
 
-      $(".account-statement-daterangepicker-field").daterangepicker({
-          callback: function(startDate, endDate, period){
-            var start_date = startDate.format('YYYY-MM-DD');
-            var end_date = endDate.format('YYYY-MM-DD');
-            var title = start_date + ' To ' + end_date;
-            $(this).val(title);
-            $('#account-statement-modal input[name="start_date"]').val(start_date);
-            $('#account-statement-modal input[name="end_date"]').val(end_date);
-          }
-      });
+
 
       $('.date').datepicker({
          format: "dd-mm-yyyy",

@@ -66,6 +66,7 @@ class UserController extends Controller
    
     public function store(Request $request)
     {
+        //dd($request->all());
         // 1. Basic validation
         $this->validate($request, [
             'name' => [
@@ -117,6 +118,9 @@ class UserController extends Controller
         $userData['is_deleted'] = false;
         $userData['password'] = bcrypt($request->password);
         $userData['phone'] = $request->phone_number;
+        if($request->has('company_name')) {
+            $userData['company_name'] = $request->company_name;
+        }
 
         $user = User::create($userData);
 

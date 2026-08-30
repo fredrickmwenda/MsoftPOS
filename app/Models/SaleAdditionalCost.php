@@ -9,6 +9,7 @@ class SaleAdditionalCost extends Model
 {
     use HasFactory;
     protected $table = 'sale_additional_costs';
+    
     protected $fillable = [
         'sale_id',
         'name',

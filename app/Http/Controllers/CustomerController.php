@@ -194,17 +194,22 @@ class CustomerController extends Controller
         $customer_data['is_active'] = true;
         $prefixMessage = 'Customer';
         if(isset($request->user)) {
-            $customer_data['phone'] = $customer_data['phone_number'];
-            $customer_data['role_id'] = 5;
-            $customer['region']=$customer_data['region'];
-            $customer['location']=$customer_data['location'];
-            $customer['community']=$customer_data['community'];
-            $customer_data['is_deleted'] = false;
-            $customer_data['password'] = bcrypt($customer_data['password']);
-            $user = User::create($customer_data);
+            $customerRoleId = 11;
+            $userData = [
+                'name'       => $request->name,              // from the request (validated)
+                'email'      => $request->email,             // from the request (validated)
+                'password'   => bcrypt($request->password),  // password from request
+                'phone'      => $request->phone_number,      // reuse customer phone as user phone
+                'is_active'  => true,                        // default active
+                'is_deleted' => false,                       // not deleted
+            ];
+
+            $user = User::create($userData);
+            $user->roles()->attach($customerRoleId);
             $customer_data['user_id'] = $user->id;
             $prefixMessage .= ', User';
         }
+
         $customer_data['name'] = $customer_data['customer_name'];
          $customer_data['region']=$customer_data['region'];
          $customer_data['location']=$customer_data['location'];

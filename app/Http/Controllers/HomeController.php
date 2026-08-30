@@ -67,6 +67,7 @@ class HomeController extends Controller
     public function dashboard()
     {
 
+
     
         
         config()->set('database.connections.mysql.strict', false);
@@ -76,10 +77,11 @@ class HomeController extends Controller
             return redirect()->route('login')->with('error', __('Your session is invalid or has expired. Please log in again.'));
         }
         $isCustomer= Auth::user()->roles->contains(function ($role) {
-            return $role->id == 2;
+            return $role->name == "Customer";
         });
 
         if($isCustomer) {
+          
             $customer = Customer::select('id', 'points')->where('user_id', Auth::id())->first();
             if (!$customer) {
                 return redirect()->back()->with('error', __('Customer profile not found for this user. Please contact an administrator.'));
@@ -233,9 +235,6 @@ class HomeController extends Controller
         } 
         // yearly report (same sale_percentage from session then GeneralSetting, applied when set; only if user has permission)
         $apply_sale_percentage = $sale_percentage !== null && $sale_percentage < 100;
-        // if (!Auth::user()->hasPermissionTo('sale-percentage-filter')) {
-        //     $apply_sale_percentage = false;
-        // }
 
         $start = strtotime(date("Y") .'-01-01');
         $end = strtotime(date("Y") .'-12-31');

@@ -16,226 +16,254 @@ use App\Models\GeneralSetting;
 
 class ExpenseController extends Controller
 {
+    // public function index(Request $request)
+    // {
+
+    //     if(Auth::user()->hasPermissionTo('expenses-index')){
+    //        $all_permission = Auth::user()->getAllPermissions();
+
+    //         if (empty($all_permission)) {
+    //             $all_permission[] = 'dummy text';
+    //         }
+
+    //         // Default: today's date for both start and end
+    //         if($request->has('starting_date') && $request->has('ending_date')) {
+    //             $starting_date = $request->starting_date;
+    //             $ending_date = $request->ending_date;
+    //         } else {
+    //             $starting_date = date('Y-m-d');
+    //             $ending_date = date('Y-m-d');
+    //         }
+
+    //         if($request->input('warehouse_id'))
+    //             $warehouse_id = $request->input('warehouse_id');
+    //         else
+    //             $warehouse_id = 0;
+
+    //         $lims_warehouse_list = Warehouse::select('name', 'id')->where('is_active', true)->get();
+    //         // $lims_expense_category_list = DB::table('expense_categories')->where('is_active', true)->get();
+    //         // dd($lims_expense_category_list);
+    //         $lims_account_list = Account::where('is_active', true)->get();
+    //         return view('backend.expense.index', compact('lims_account_list', 'lims_warehouse_list', 'all_permission', 'starting_date', 'ending_date', 'warehouse_id'));
+    //     }
+    //     else
+    //         return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+    // }
+
+
     public function index(Request $request)
-    {
-
-        if(Auth::user()->hasPermissionTo('expenses-index')){
-           $all_permission = Auth::user()->getAllPermissions();
-
-            if (empty($all_permission)) {
-                $all_permission[] = 'dummy text';
-            }
-
-            // Default: today's date for both start and end
-            if($request->has('starting_date') && $request->has('ending_date')) {
-                $starting_date = $request->starting_date;
-                $ending_date = $request->ending_date;
-            } else {
-                $starting_date = date('Y-m-d');
-                $ending_date = date('Y-m-d');
-            }
-
-            if($request->input('warehouse_id'))
-                $warehouse_id = $request->input('warehouse_id');
-            else
-                $warehouse_id = 0;
-
-            $lims_warehouse_list = Warehouse::select('name', 'id')->where('is_active', true)->get();
-            $lims_account_list = Account::where('is_active', true)->get();
-            return view('backend.expense.index', compact('lims_account_list', 'lims_warehouse_list', 'all_permission', 'starting_date', 'ending_date', 'warehouse_id'));
+{
+    if(Auth::user()->hasPermissionTo('expenses-index')){
+        $all_permission = Auth::user()->getAllPermissions();
+        if (empty($all_permission)) {
+            $all_permission[] = 'dummy text';
         }
-        else
-            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+
+        // Default dates
+        if($request->has('starting_date') && $request->has('ending_date')) {
+            $starting_date = $request->starting_date;
+            $ending_date = $request->ending_date;
+        } else {
+            $starting_date = date('Y-m-d');
+            $ending_date = date('Y-m-d');
+        }
+
+        $warehouse_id = $request->input('warehouse_id', 0);
+
+        $lims_warehouse_list = Warehouse::select('name', 'id')->where('is_active', true)->get();
+        // Fetch expense categories
+        $lims_expense_category_list = DB::table('expense_categories')->where('is_active', true)->get();
+        $lims_account_list = Account::where('is_active', true)->get();
+
+        return view('backend.expense.index', compact(
+            'lims_account_list',
+            'lims_warehouse_list',
+            'lims_expense_category_list',  // <-- new
+            'all_permission',
+            'starting_date',
+            'ending_date',
+            'warehouse_id'
+        ));
     }
+    else
+        return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+}
 
    
 
-    public function expenseData(Request $request)
-    {
-        $columns = array(
-            1 => 'created_at',
-            2 => 'reference_no',
-        );
+public function expenseData(Request $request)
+{
+    // Get permissions safely
+    $all_permission = $request->input('all_permission', []);
 
-        $warehouse_id = $request->input('warehouse_id');
+    // Define columns for ordering
+    $columns = [1 => 'created_at', 2 => 'reference_no'];
 
-        // Get percentage filter from General Setting
-        $percentage_filter = GeneralSetting::first()->percentage_filter;
-        info('Expense Percentage Filter: ' . $percentage_filter);
+    // Parameters with fallbacks
+    $warehouse_id = $request->input('warehouse_id', 0);
+    $starting_date = $request->input('starting_date', date('Y-m-d', strtotime('-30 days')));
+    $ending_date = $request->input('ending_date', date('Y-m-d'));
 
-        $filtered_expense_ids = [];
-        $filtered_total_expenses = 0;
+    // Base query
+    $baseQuery = Expense::whereDate('created_at', '>=', $starting_date)
+                        ->whereDate('created_at', '<=', $ending_date);
 
-        // ---------- Base query (common filters) ----------
-        $baseQuery = Expense::whereDate('created_at', '>=', $request->input('starting_date'))
-                            ->whereDate('created_at', '<=', $request->input('ending_date'));
+    // Staff access
+    $isStaff = Auth::user()->roles->contains(fn($role) => $role->id > 2);
+    if ($isStaff && config('staff_access', 'all') === 'own') {
+        $baseQuery->where('user_id', Auth::id());
+    }
 
-        $isStaff = Auth::user()->roles->contains(function ($role) {
-            return $role->id > 2;
-        });
-        if ($isStaff && config('staff_access') == 'own')
-            $baseQuery = $baseQuery->where('user_id', Auth::id());
-        if ($warehouse_id)
-            $baseQuery = $baseQuery->where('warehouse_id', $warehouse_id);
+    // Warehouse
+    if ($warehouse_id) {
+        $baseQuery->where('warehouse_id', $warehouse_id);
+    }
 
-        // ---------- Apply percentage filter (top X% by amount) ----------
-        if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
-            $all_expenses = (clone $baseQuery)->orderBy('amount', 'desc')->get(['id', 'amount']);
-            $total_value = $all_expenses->sum('amount');
-            info('Total Expense Value: ' . $total_value);
+    // Percentage filter (only if > 0 and < 100)
+    $percentage_filter = GeneralSetting::first()->percentage_filter ?? null;
+    $filtered_expense_ids = [];
+    $filtered_total_expenses = 0;
+
+    if ($percentage_filter !== null && $percentage_filter > 0 && $percentage_filter < 100) {
+        $all_expenses = (clone $baseQuery)->orderBy('amount', 'desc')->get(['id', 'amount']);
+        $total_value = $all_expenses->sum('amount');
+        if ($total_value > 0) {
             $target_value = $total_value * ($percentage_filter / 100);
-            info('Target Value for Top ' . $percentage_filter . '%: ' . $target_value);
-
             $running = 0;
-            foreach ($all_expenses as $expense) {
-                $filtered_expense_ids[] = $expense->id;
-                $running += $expense->amount;
+            foreach ($all_expenses as $exp) {
+                $filtered_expense_ids[] = $exp->id;
+                $running += $exp->amount;
                 $filtered_total_expenses = $running;
                 if ($running >= $target_value) break;
             }
-            $baseQuery = $baseQuery->whereIn('id', $filtered_expense_ids);
-        }
-
-        // ---------- Counts & total expense sum ----------
-        $totalData = $baseQuery->count();
-        $totalFiltered = $totalData;
-
-        if ($percentage_filter !== null && $percentage_filter !== '' && $percentage_filter < 100) {
-            $total_expense_sum = $filtered_total_expenses;
-        } else {
-            $total_expense_sum = (clone $baseQuery)->sum('amount');
-        }
-
-        // ---------- Pagination & ordering ----------
-        if ($request->input('length') != -1)
-            $limit = $request->input('length');
-        else
-            $limit = $totalData;
-        $start = $request->input('start');
-        $order = 'expenses.' . $columns[$request->input('order.0.column')];
-        $dir = $request->input('order.0.dir');
-
-        // ---------- Fetch data (two branches) ----------
-        if (empty($request->input('search.value'))) {
-            $expenses = (clone $baseQuery)
-                            ->with('warehouse', 'expenseCategory')
-                            ->offset($start)
-                            ->limit($limit)
-                            ->orderBy($order, $dir)
-                            ->get();
-        } else {
-            $search = $request->input('search.value');
-            $searchDate = date('Y-m-d', strtotime(str_replace('/', '-', $search)));
-
-            $searchQuery = Expense::whereDate('expenses.created_at', '=', $searchDate);
-
-            // Re‑apply percentage filter if active
             if (!empty($filtered_expense_ids)) {
-                $searchQuery->whereIn('expenses.id', $filtered_expense_ids);
-            }
-            $isStaff = Auth::user()->roles->contains(function ($role) {
-                return $role->id > 2;
-            });
-
-            if ($isStaff && config('staff_access') == 'own') {
-                $searchQuery = $searchQuery->where('expenses.user_id', Auth::id())
-                    ->orWhere([
-                        ['reference_no', 'LIKE', "%{$search}%"],
-                        ['user_id', Auth::id()]
-                    ]);
-                $totalFiltered = (clone $searchQuery)->count();
-                $expenses = $searchQuery->select('expenses.*')
-                                        ->with('warehouse', 'expenseCategory')
-                                        ->offset($start)
-                                        ->limit($limit)
-                                        ->orderBy($order, $dir)
-                                        ->get();
+                $baseQuery->whereIn('id', $filtered_expense_ids);
             } else {
-                $searchQuery = $searchQuery->orWhere('reference_no', 'LIKE', "%{$search}%");
-                $totalFiltered = (clone $searchQuery)->count();
-                $expenses = $searchQuery->select('expenses.*')
-                                        ->with('warehouse', 'expenseCategory')
-                                        ->offset($start)
-                                        ->limit($limit)
-                                        ->orderBy($order, $dir)
-                                        ->get();
+                $baseQuery->whereRaw('1 = 0');
+                $filtered_total_expenses = 0;
             }
         }
-
-        // ---------- Build DataTable response ----------
-        $data = [];
-        if (!empty($expenses)) {
-            foreach ($expenses as $key => $expense) {
-                $nestedData = [];
-                $nestedData['id'] = $expense->id;
-                $nestedData['key'] = $key;
-                $nestedData['date'] = date(config('date_format'), strtotime($expense->created_at->toDateString()));
-                $nestedData['reference_no'] = $expense->reference_no;
-                $nestedData['warehouse'] = $expense->warehouse->name;
-                $nestedData['expenseCategory'] = $expense->expenseCategory->name;
-                $nestedData['amount'] = number_format($expense->amount, config('decimal'));
-                $nestedData['note'] = $expense->note;
-                $nestedData['options'] = '<div class="btn-group">
-                    <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
-                        . trans("file.action") . '
-                        <span class="caret"></span>
-                        <span class="sr-only">Toggle Dropdown</span>
-                    </button>
-                    <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">';
-
-                if (in_array("expenses-edit", $request['all_permission'])) {
-                    $nestedData['options'] .= '
-                        <li>
-                            <button type="button" data-id="' . $expense->id . '" 
-                                class="open-Editexpense_categoryDialog btn btn-link" 
-                                data-toggle="modal" data-target="#editModal">
-                                <i class="dripicons-document-edit"></i> ' . trans('file.edit') . '
-                            </button>
-                        </li>';
-                }
-
-                if (in_array("expenses-delete", $request['all_permission'])) {
-                    $nestedData['options'] .= \Form::open(["route" => ["expenses.destroy", $expense->id], "method" => "DELETE"]) . '
-                        <li>
-                            <button type="submit" class="btn btn-link" onclick="return confirmDelete()">
-                                <i class="dripicons-trash"></i> ' . trans("file.delete") . '
-                            </button>
-                        </li>' . \Form::close();
-                }
-
-                if ($expense->status === 'draft') {
-                    $nestedData['options'] .= '
-                        <li>
-                            <button type="button" class="btn btn-link authorize-expense" 
-                                data-id="' . $expense->id . '">
-                                <i class="dripicons-checkmark"></i> Authorize
-                            </button>
-                        </li>';
-                }
-
-                if ($expense->status === 'waiting_approval') {
-                    $nestedData['options'] .= '
-                        <li>
-                            <button type="button" class="btn btn-link approve-expense" 
-                                data-id="' . $expense->id . '">
-                                <i class="dripicons-thumbs-up"></i> Approve
-                            </button>
-                        </li>';
-                }
-
-                $nestedData['options'] .= '</ul></div>';
-                $data[] = $nestedData;
-            }
-        }
-
-        return response()->json([
-            "draw"            => intval($request->input('draw')),
-            "recordsTotal"    => intval($totalData),
-            "recordsFiltered" => intval($totalFiltered),
-            "total_expense"   => $total_expense_sum,
-            "data"            => $data,
-        ]);
     }
+
+    // Counts and sum
+    $totalData = $baseQuery->count();
+    $totalFiltered = $totalData;
+    $total_expense_sum = (!empty($filtered_expense_ids))
+        ? $filtered_total_expenses
+        : (clone $baseQuery)->sum('amount');
+
+    // Pagination & ordering
+    $limit = $request->input('length') != -1 ? $request->input('length') : $totalData;
+    $start = $request->input('start', 0);
+    $orderColumn = $columns[$request->input('order.0.column')] ?? 'created_at';
+    $dir = $request->input('order.0.dir', 'desc');
+
+    // Fetch with search
+    if (empty($request->input('search.value'))) {
+        $expenses = (clone $baseQuery)
+                        ->with(['warehouse', 'expenseCategory'])
+                        ->offset($start)
+                        ->limit($limit)
+                        ->orderBy('expenses.' . $orderColumn, $dir)
+                        ->get();
+    } else {
+        $search = $request->input('search.value');
+        $searchDate = date('Y-m-d', strtotime(str_replace('/', '-', $search)));
+        $searchQuery = clone $baseQuery;
+        $searchQuery->where(function($q) use ($search, $searchDate) {
+            $q->where('reference_no', 'LIKE', "%{$search}%")
+              ->orWhereDate('created_at', '=', $searchDate);
+        });
+        $totalFiltered = $searchQuery->count();
+        $expenses = $searchQuery->with(['warehouse', 'expenseCategory'])
+                                ->offset($start)
+                                ->limit($limit)
+                                ->orderBy('expenses.' . $orderColumn, $dir)
+                                ->get();
+    }
+
+    // Build data array using the original button generation
+    $data = [];
+    $dateFormat = config('date_format', 'd-m-Y');
+    $decimalPlaces = config('decimal', 2);
+
+    foreach ($expenses as $key => $expense) {
+        $warehouseName = $expense->warehouse ? $expense->warehouse->name : 'N/A';
+        $categoryName = $expense->expenseCategory ? $expense->expenseCategory->name : 'N/A';
+
+        // ----- Original button HTML (copied from your first code) -----
+        $options = '<div class="btn-group">
+            <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">'
+                . trans("file.action") . '
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">';
+
+        if (in_array("expenses-edit", $all_permission)) {
+            $options .= '
+                <li>
+                    <button type="button" data-id="' . $expense->id . '" 
+                        class="open-Editexpense_categoryDialog btn btn-link" 
+                        data-toggle="modal" data-target="#editModal">
+                        <i class="dripicons-document-edit"></i> ' . trans('file.edit') . '
+                    </button>
+                </li>';
+        }
+
+        if (in_array("expenses-delete", $all_permission)) {
+            $options .= \Form::open(["route" => ["expenses.destroy", $expense->id], "method" => "DELETE"]) . '
+                <li>
+                    <button type="submit" class="btn btn-link" onclick="return confirmDelete()">
+                        <i class="dripicons-trash"></i> ' . trans("file.delete") . '
+                    </button>
+                </li>' . \Form::close();
+        }
+
+        if ($expense->status === 'draft') {
+            $options .= '
+                <li>
+                    <button type="button" class="btn btn-link authorize-expense" 
+                        data-id="' . $expense->id . '">
+                        <i class="dripicons-checkmark"></i> Authorize
+                    </button>
+                </li>';
+        }
+
+        if ($expense->status === 'waiting_approval') {
+            $options .= '
+                <li>
+                    <button type="button" class="btn btn-link approve-expense" 
+                        data-id="' . $expense->id . '">
+                        <i class="dripicons-thumbs-up"></i> Approve
+                    </button>
+                </li>';
+        }
+
+        $options .= '</ul></div>';
+
+        // Build row
+        $data[] = [
+            'id' => $expense->id,
+            'key' => $key,
+            'date' => date($dateFormat, strtotime($expense->created_at->toDateString())),
+            'reference_no' => $expense->reference_no,
+            'warehouse' => $warehouseName,
+            'expenseCategory' => $categoryName,
+            'amount' => number_format($expense->amount, $decimalPlaces),
+            'note' => $expense->note,
+            'options' => $options,
+        ];
+    }
+
+    return response()->json([
+        "draw"            => intval($request->input('draw')),
+        "recordsTotal"    => intval($totalData),
+        "recordsFiltered" => intval($totalFiltered),
+        "total_expense"   => $total_expense_sum,
+        "data"            => $data,
+    ]);
+}
 
     public function create()
     {

@@ -140,7 +140,7 @@
     $("ul#report li#payment-report-menu").addClass("active");
 
     var table = $('#report-table').DataTable( {
-        "order": [[1, 'desc']],
+        "order": [[0, 'desc']],
         "pageLength": 10,
         'language': {
             'lengthMenu': '_MENU_ records per page',

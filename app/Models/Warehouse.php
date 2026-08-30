@@ -20,8 +20,6 @@ class Warehouse extends Model
 
     public function stockCounts()
     {
-        return $this->hasMany(
-            StockCount::class
-        );
+        return $this->hasMany( StockCount::class);
     }
 }

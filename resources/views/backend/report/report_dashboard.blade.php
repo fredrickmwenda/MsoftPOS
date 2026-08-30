@@ -15,7 +15,7 @@
                 <div class="card bg-light border-0">
                     <div class="card-body"> 
                         <small class="text-muted">Total Reports</small>
-                        <h3 class="mb-0">26</h3>
+                        <h3 class="mb-0">30</h3>
                     </div>
                 </div>
             </div>
@@ -45,6 +45,9 @@
             </div>
             <div class="category-tab" data-category="product">
                 <i class="dripicons dripicons-box me-1"></i> Product
+            </div>
+            <div class="category-tab" data-category="audit">
+                <i class="dripicons dripicons-clipboard me-1"></i> Audit
             </div>
         </div>
     </div>
@@ -342,6 +345,15 @@
                         <div class="report-icon"><i class="dripicons dripicons-photo-group"></i></div>
                         <h6>Department Report</h6>
                         <span class="badge bg-danger">Financial</span>
+                    </a>
+                </div>
+
+                <!-- Audit Reports Section -->
+                <div class="report-item" data-category="audit" data-name="Activity Log">
+                    <a href="{{ route('report.activity-log') }}" class="report-link">
+                        <div class="report-icon"><i class="dripicons dripicons-message"></i></div>
+                        <h6>Activity Log</h6>
+                        <span class="badge bg-dark">Audit</span>
                     </a>
                 </div>
             </div>

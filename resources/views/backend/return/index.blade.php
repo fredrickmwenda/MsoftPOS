@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main')
+@section('content')
 @if(session()->has('message'))
   <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{!! session()->get('message') !!}</div>
 @endif
@@ -14,43 +15,42 @@
             </div>
             {!! Form::open(['route' => 'return-sale.index', 'method' => 'get']) !!}
             <div class="row mb-3">
-                <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.Date')}} &nbsp;</label>
-                        <div class="">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                                <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                                <input type="hidden" name="ending_date" value="{{$ending_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4 mt-3 @if(\Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.Warehouse')}} &nbsp;</label>
-                        <div class="">
-                            <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
-                                <option value="0">{{trans('file.All Warehouse')}}</option>
-                                @foreach($lims_warehouse_list as $warehouse)
-                                    @if($warehouse->id == $warehouse_id)
-                                        <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @else
-                                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-2 mt-3">
+                <div class="col-md-3 offset-md-2 mt-3">
                     <div class="form-group">
-                        <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
+                        <label>{{trans('file.From')}}</label>
+                        <input type="date" name="starting_date" id="starting_date" class="form-control" value="{{$starting_date}}" required />
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3">
+                    <div class="form-group">
+                        <label>{{trans('file.To')}}</label>
+                        <input type="date" name="ending_date" id="ending_date" class="form-control" value="{{$ending_date}}" required />
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 @if(\Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
+                    <div class="form-group">
+                        <label>{{trans('file.Warehouse')}}</label>
+                        <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
+                            <option value="0">{{trans('file.All Warehouse')}}</option>
+                            @foreach($lims_warehouse_list as $warehouse)
+                                @if($warehouse->id == $warehouse_id)
+                                    <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @else
+                                    <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-1 mt-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary btn-block" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
             </div>
             {!! Form::close() !!}
-        </div> 
+        </div>
         @if(in_array("returns-add", $all_permission))
             <a href="#" data-toggle="modal" data-target="#add-sale-return" class="btn btn-info"><i class="dripicons-plus"></i> {{trans('file.Add Return')}}</a>
         @endif
@@ -139,17 +139,6 @@
     $("ul#return").addClass("show");
     $("ul#return #sale-return-menu").addClass("active");
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
-    });
-
     var all_permission = <?php echo json_encode($all_permission) ?>;
     var return_id = [];
     var user_verified = <?php echo json_encode(env('USER_VERIFIED')) ?>;
@@ -167,7 +156,7 @@
         return false;
     }
 
-     $(document).on("click", "tr.return-link td:not(:first-child, :last-child)", function() {
+    $(document).on("click", "tr.return-link td:not(:first-child, :last-child)", function() {
         var returns = $(this).parent().data('return');
         returnDetails(returns);
     });
@@ -209,7 +198,6 @@
             type:"post"
         },
         "createdRow": function( row, data, dataIndex ) {
-            //alert(data);
             $(row).addClass('return-link');
             $(row).attr('data-return', data['return']);
         },
@@ -225,7 +213,6 @@
             {"data": "options"},
         ],
         'language': {
-
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
             "search":  '{{trans("file.Search")}}',
@@ -245,7 +232,6 @@
                     if(type === 'display'){
                         data = '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
                     }
-
                    return data;
                 },
                 'checkboxes': {
@@ -337,7 +323,6 @@
                                 },
                                 success:function(data){
                                     alert(data);
-                                    //dt.rows({ page: 'current', selected: true }).deselect();
                                     dt.rows({ page: 'current', selected: true }).remove().draw(false);
                                 }
                             });
@@ -361,11 +346,9 @@
         }
     } );
 
-
     function datatable_sum(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
             var rows = dt_selector.rows( '.selected' ).indexes();
-
             $( dt_selector.column( 7 ).footer() ).html(dt_selector.cells( rows, 7, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
         }
         else {

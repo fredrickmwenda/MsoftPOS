@@ -655,9 +655,40 @@
     });
 
     // Keep hidden in sync with percentage select so form submit and DataTable always have the value
+    // $('#percentage_filter_select').on('change', function() {
+    //     $('#percentage_filter_value').val($(this).val() || '');
+    // });
+
+    // // Reset filters
+    // $('#reset-filters').on('click', function() {
+    //     $('input[name="starting_date"]').val('');
+    //     $('input[name="ending_date"]').val('');
+    //     $('#percentage_filter_value').val('');
+    //     $('#percentage_filter_select').val('');
+    //     $('#warehouse_id').val(0);
+    //     $('#sale-status').val(0);
+    //     $('#payment-status').val(0);
+    //     $('.selectpicker').selectpicker('refresh');
+    //     $('#filter-form').submit();
+    // });
+
+        // Keep hidden in sync with percentage select so form submit and DataTable always have the value
     $('#percentage_filter_select').on('change', function() {
         $('#percentage_filter_value').val($(this).val() || '');
     });
+
+    // ===== ADD THIS BLOCK =====
+    // Intercept the filter form submission
+    $('#filter-form').on('submit', function(e) {
+        e.preventDefault(); // Stop the page from reloading
+        
+        // Make sure selectpickers have updated their hidden select elements
+        $('.selectpicker').selectpicker('refresh');
+        
+        // Reload the DataTable using the new filter inputs
+        $('#sale-table').DataTable().ajax.reload();
+    });
+    // ===========================
 
     // Reset filters
     $('#reset-filters').on('click', function() {
@@ -669,7 +700,9 @@
         $('#sale-status').val(0);
         $('#payment-status').val(0);
         $('.selectpicker').selectpicker('refresh');
-        $('#filter-form').submit();
+
+        $('#sale-table').DataTable().ajax.reload(); 
+
     });
 
     $(".gift-card").hide();
@@ -998,15 +1031,17 @@
         "processing": true,
         "serverSide": true,
         "ajax":{
-            url:"sales/sale-data",
-            data:{
-                all_permission: all_permission,
-                starting_date: function() { return $('input[name="starting_date"]').val(); },
-                ending_date: function() { return $('input[name="ending_date"]').val(); },
-                warehouse_id: function() { return $('#warehouse_id').val(); },
-                sale_status: function() { return $('#sale-status').val(); },
-                payment_status: function() { return $('#payment-status').val(); },
-                percentage_filter: function() { return $('#percentage_filter_value').val() || $('select#percentage_filter_select').val(); }
+            url: "sales/sale-data",
+            type: "POST",
+            // Use a single function to gather all dynamic data
+            data: function ( d ) {
+                d.all_permission = all_permission;
+                d.starting_date = $('input[name="starting_date"]').val();
+                d.ending_date = $('input[name="ending_date"]').val();
+                d.warehouse_id = $('#warehouse_id').val();
+                d.sale_status = $('#sale-status').val();
+                d.payment_status = $('#payment-status').val();
+                d.percentage_filter = $('#percentage_filter_value').val() || $('select#percentage_filter_select').val();
             },
             dataSrc: function(json) {
                 if (json.total_sales_amount !== undefined) {
@@ -1016,9 +1051,9 @@
                 }
                 return json.data;
             },
-            dataType: "json",
-            type:"post"
+            dataType: "json"
         },
+        // ... keep the rest of your DataTable configuration exactly the same
         "createdRow": function( row, data, dataIndex ) {
             $(row).addClass('sale-link');
             $(row).attr('data-sale', data['sale']);
@@ -1033,7 +1068,7 @@
                     'next': '<i class="dripicons-chevron-right"></i>'
             }
         },
-        order:[['1', 'asc']],
+        order:[['1', 'desc']],
         'columnDefs': [
             {
                 "orderable": false,

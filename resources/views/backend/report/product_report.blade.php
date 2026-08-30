@@ -12,18 +12,6 @@
             </div>
             {!! Form::open(['route' => 'report.product', 'method' => 'get']) !!}
             <div class="row mb-3 product-report-filter">
-                <!-- <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
-                                <input type="hidden" name="start_date" value="{{$start_date}}" />
-                                <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
                 <div class="col-md-3 mt-3 mb-3 ml-2">
                     <div class="form-group">
                         <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
@@ -131,16 +119,6 @@
     $('.product-report-filter select[name="warehouse_id"]').val(warehouse_id);
     $('.selectpicker').selectpicker('refresh');
 
-    // $(".daterangepicker-field").daterangepicker({
-    //   callback: function(startDate, endDate, period){
-    //     var start_date = startDate.format('YYYY-MM-DD');
-    //     var end_date = endDate.format('YYYY-MM-DD');
-    //     var title = start_date + ' To ' + end_date;
-    //     $(this).val(title);
-    //     $(".product-report-filter input[name=start_date]").val(start_date);
-    //     $(".product-report-filter input[name=end_date]").val(end_date);
-    //   }
-    // });
 
     var start_date = $(".product-report-filter input[name=start_date]").val();
     var end_date = $(".product-report-filter input[name=end_date]").val();

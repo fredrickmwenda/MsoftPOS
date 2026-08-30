@@ -620,7 +620,7 @@ function populateProduct(data) {
         tableData += '</tr></tbody></table>';
         $(".table-container").html(tableData);
         $('#product-table').DataTable({
-            "order": [],
+            "order": [[0, 'desc']],
             'pageLength': window.PosConfig.product_row_number,
             'language': {
                 'paginate': {
@@ -2062,7 +2062,7 @@ function confirmDelete() {
 
 
 $('#product-table').DataTable({
-    "order": [],
+    "order": [[0, 'desc']],
     'pageLength': window.PosConfig.product_row_number,
     'language': {
         'paginate': {

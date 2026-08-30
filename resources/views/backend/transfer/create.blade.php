@@ -1,7 +1,16 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+@section('content')
 @if(session()->has('not_permitted'))
-  <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
+  <div class="alert alert-danger alert-dismissible text-center">
+    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    {{ session()->get('not_permitted') }}
+  </div>
 @endif
+
+
+
 <section class="forms">
     <div class="container-fluid">
         <div class="row">
@@ -12,7 +21,9 @@
                     </div>
                     <div class="card-body">
                         <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
+                        
                         {!! Form::open(['route' => 'transfers.store', 'method' => 'post', 'files' => true, 'id' => 'transfer-form']) !!}
+                        
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="row">
@@ -53,18 +64,20 @@
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="row mt-3">
                                     <div class="col-md-12">
                                         <label>{{trans('file.Select Product')}}</label>
                                         <div class="search-box input-group">
-                                            <button type="button" class="btn btn-secondary btn-lg"><i class="fa fa-barcode"></i></button>
-                                            <input type="text" name="product_code_name" id="lims_productcodeSearch" placeholder="Please type product code and select..." class="form-control" />
+                                            <button type="button" class="btn btn-secondary btn-lg" id="openBarcodeScanner" data-toggle="tooltip" title="Scan / Enter Barcode"><i class="fa fa-barcode"></i></button>
+                                            <input type="text" name="product_code_name" id="lims_productcodeSearch" placeholder="Please type product code or name..." class="form-control" autocomplete="off"/>
                                         </div>
+                                        <small class="text-muted" id="search-status"></small>
                                     </div>
                                 </div>
+                                
                                 <div class="row mt-5">
                                     <div class="col-md-12">
-
                                         <h5>{{trans('file.Order Table')}} *</h5>
                                         <div class="table-responsive mt-3">
                                             <table id="myTable" class="table table-hover order-list">
@@ -80,8 +93,7 @@
                                                         <th><i class="dripicons-trash"></i></th>
                                                     </tr>
                                                 </thead>
-                                                <tbody>
-                                                </tbody>
+                                                <tbody></tbody>
                                                 <tfoot class="tfoot active">
                                                     <th colspan="2">{{trans('file.Total')}}</th>
                                                     <th></th>
@@ -95,27 +107,12 @@
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="row">
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <input type="hidden" name="total_qty" />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <input type="hidden" name="total_discount" />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <input type="hidden" name="total_tax" />
-                                        </div>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <div class="form-group">
-                                            <input type="hidden" name="total_cost" />
-                                        </div>
-                                    </div>
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_qty" /></div></div>
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_discount" /></div></div>
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_tax" /></div></div>
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_cost" /></div></div>
                                     <div class="col-md-2">
                                         <div class="form-group">
                                             <input type="hidden" name="item" />
@@ -130,6 +127,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="row mt-3">
                                     <div class="col-md-4">
                                         <div class="form-group">
@@ -143,13 +141,12 @@
                                             <i class="dripicons-question" data-toggle="tooltip" title="Only jpg, jpeg, png, gif, pdf, csv, docx, xlsx and txt file is supported"></i>
                                             <input type="file" name="document" class="form-control" />
                                             @if($errors->has('extension'))
-                                                <span>
-                                                   <strong>{{ $errors->first('extension') }}</strong>
-                                                </span>
+                                                <span><strong>{{ $errors->first('extension') }}</strong></span>
                                             @endif
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="form-group">
@@ -158,6 +155,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="form-group">
                                     <input type="submit" value="{{trans('file.submit')}}" class="btn btn-primary" id="submit-button">
                                 </div>
@@ -169,6 +167,7 @@
             </div>
         </div>
     </div>
+    
     <div class="container-fluid">
         <table class="table table-bordered table-condensed totals">
             <td><strong>{{trans('file.Items')}}</strong>
@@ -185,6 +184,8 @@
             </td>
         </table>
     </div>
+    
+    <!-- Edit Modal -->
     <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
         <div role="document" class="modal-dialog">
             <div class="modal-content">
@@ -205,469 +206,753 @@
                             </div>
                             <div class="col-md-4 form-group">
                                 <label>{{trans('file.Product Unit')}}</label>
-                                <select name="edit_unit" class="form-control selectpicker">
-                                </select>
+                                <select name="edit_unit" class="form-control selectpicker"></select>
                             </div>
                         </div>
-                            <button type="button" name="update_btn" class="btn btn-primary">{{trans('file.update')}}</button>
+                        <button type="button" name="update_btn" class="btn btn-primary">{{trans('file.update')}}</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Barcode Scanner Modal -->
+    <div id="barcodeModal" tabindex="-1" role="dialog" aria-hidden="true" class="modal fade text-left" data-backdrop="static">
+        <div role="document" class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fa fa-barcode"></i> Scan Barcode</h5>
+                    <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="cameraContainer" style="position: relative; display: none;">
+                        <video id="barcodeVideo" autoplay playsinline style="width: 100%; border-radius: 5px; background: #000;"></video>
+                        <div style="position: absolute; top: 10%; left: 10%; right: 10%; bottom: 10%; border: 2px solid rgba(255,0,0,0.5); border-radius: 3px; pointer-events: none;"></div>
+                    </div>
+                    <div id="manualEntryContainer" style="display: none;">
+                        <p class="text-muted text-center">Camera not available. Enter manually:</p>
+                        <form id="barcodeForm">
+                            <div class="form-group">
+                                <input type="text" id="barcode_input" class="form-control form-control-lg text-center" placeholder="Enter barcode..." autocomplete="off" autofocus/>
+                            </div>
+                        </form>
+                    </div>
+                    <p id="scanStatus" class="mt-2 text-primary small"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Done</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </section>
-
 @endsection
 
 @push('scripts')
+<!-- Barcode Detector Polyfill -->
+<script src="https://cdn.jsdelivr.net/npm/barcode-detector@2.2.2/dist/barcode-detector.min.js"></script>
+
 <script type="text/javascript">
+  
+    
+
+
+    // =============================
+    // MENU ACTIVE STATE
+    // =============================
     $("ul#transfer").siblings('a').attr('aria-expanded','true');
     $("ul#transfer").addClass("show");
     $("ul#transfer #transfer-create-menu").addClass("active");
-// array data depend on warehouse
-var lims_product_array = [];
 
-var product_code = [];
-var product_name = [];
-var product_qty = [];
+    // =============================
+    // DATA ARRAYS
+    // =============================
+    var lims_product_array = [];
+    var product_code = [];
+    var product_name = [];
+    var product_qty = [];
+    var product_cost = [];
+    var tax_rate = [];
+    var tax_name = [];
+    var tax_method = [];
+    var unit_name = [];
+    var unit_operator = [];
+    var unit_operation_value = [];
+    var is_imei = [];
+    var temp_unit_name = [];
+    var temp_unit_operator = [];
+    var temp_unit_operation_value = [];
+    var rowindex;
+    var row_product_cost;
 
-// array data with selection
-var product_cost = [];
-var tax_rate = [];
-var tax_name = [];
-var tax_method = [];
-var unit_name = [];
-var unit_operator = [];
-var unit_operation_value = [];
-var is_imei = [];
+    // =============================
+    // URLS (with subdirectory fix)
+    // =============================
+    var BASE_URL = "{{ url('/') }}";
+    var GET_PRODUCT_URL    = BASE_URL + "/transfers/getproduct";
+    var PRODUCT_SEARCH_URL = BASE_URL + "/transfers/lims_product_search";
+    var BATCH_CHECK_URL    = BASE_URL + "/check-batch-availability";
 
-// temporary array
-var temp_unit_name = [];
-var temp_unit_operator = [];
-var temp_unit_operation_value = [];
 
-var rowindex;
-var row_product_cost;
 
-$('.selectpicker').selectpicker({
-    style: 'btn-link',
-});
+    $('.selectpicker').selectpicker({ style: 'btn-link' });
+    $('[data-toggle="tooltip"]').tooltip();
 
-$('[data-toggle="tooltip"]').tooltip();
+    // =============================
+    // WAREHOUSE CHANGE → LOAD PRODUCTS
+    // =============================
+    $('select[name="from_warehouse_id"]').on('change', function() {
+        var id = $(this).val();
+        if (!id) { 
+            lims_product_array = []; 
+  
+            return; 
+        }
 
-$('select[name="from_warehouse_id"]').on('change', function() {
-    var id = $(this).val();
-    $.get('getproduct/' + id, function(data) {
-        lims_product_array = [];
-        product_code = data[0];
-        product_name = data[1];
-        product_qty = data[2];
-        product_warehouse_price = data[3];
-        product_shelf = data[4];
-        // add product price and product shelf
-        $.each(product_code, function(index) {
-            lims_product_array.push(
-                'Code:' + product_code[index] +
-                '|Name: ' + product_name[index] +
-                ' | Price: ' + product_warehouse_price[index] +
-                ' | Qty: ' + product_qty[index] +
-                ' | Shelf: ' + product_shelf[index]
-            );
+        $('#search-status').text('Loading products...');
+
+        $.ajax({
+            url: GET_PRODUCT_URL + '/' + id,
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                lims_product_array = [];
+                product_code              = data[0] || [];
+                product_name              = data[1] || [];
+                product_qty               = data[2] || [];
+                var product_warehouse_price = data[3] || [];
+                var product_shelf         = data[4] || [];
+
+                $.each(product_code, function(index) {
+                    lims_product_array.push(
+                        'Code:' + product_code[index] +
+                        '|Name: ' + product_name[index] +
+                        ' | Price: ' + (product_warehouse_price[index] || 'NA') +
+                        ' | Qty: ' + product_qty[index] +
+                        ' | Shelf: ' + (product_shelf[index] || 'NA')
+                    );
+                });
+                $('#search-status').text(product_code.length + ' products loaded');
+            },
+            error: function(xhr, status, error) {
+                showError('Failed to load warehouse products', 
+                    'Status: ' + status + '\nError: ' + error + '\nURL: ' + GET_PRODUCT_URL + '/' + id + 
+                    '\nResponse: ' + xhr.responseText.substring(0, 500));
+                lims_product_array = [];
+                $('#search-status').text('Failed to load products');
+            }
         });
     });
-});
 
-$('#lims_productcodeSearch').on('input', function(){
-    var warehouse_id = $('select[name="from_warehouse_id"]').val();
-    temp_data = $('#lims_productcodeSearch').val();
+    // =============================
+    // GUARD INPUT
+    // =============================
+    $('#lims_productcodeSearch').on('input', function(){
+        var warehouse_id = $('select[name="from_warehouse_id"]').val();
+        if (!warehouse_id) {
+            var v = $(this).val();
+            $(this).val(v.substring(0, v.length - 1));
+            alert('Please select Warehouse!');
+            return false; 
+        }
+    });
 
-    if(!warehouse_id){
-        $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
-        alert('Please select Warehouse!');
+    // =============================
+    // AUTOCOMPLETE
+    // =============================
+    var lims_productcodeSearch = $('#lims_productcodeSearch');
+
+    lims_productcodeSearch.autocomplete({
+        minLength: 1,
+        autoFocus: false,
+        source: function(request, response) {
+            var term   = $.ui.autocomplete.escapeRegex(request.term || '');
+            var matcher = new RegExp(term, "i");
+            response($.grep(lims_product_array, function(item) {
+                return matcher.test(item);
+            }));
+        },
+        select: function(event, ui) {
+            productSearch(ui.item.value);
+            $(this).val(''); 
+            return false; 
+        }
+    });
+
+    // =============================
+    // BARCODE SCANNER
+    // =============================
+    let barcodeDetector;
+    let videoStream;
+    let isScanning = false;
+    let lastScannedCode = null;
+    let lastScannedTime = 0;
+
+    $('#openBarcodeScanner').on('click', function() {
+        var warehouse_id = $('select[name="from_warehouse_id"]').val();
+        if (!warehouse_id) {
+            alert('Please select Warehouse!');
+            return;
+        }
+        $('#barcodeModal').modal('show');
+    });
+
+    $('#barcodeModal').on('shown.bs.modal', async function () {
+        const video = document.getElementById('barcodeVideo');
+        const cameraContainer = document.getElementById('cameraContainer');
+        const manualContainer = document.getElementById('manualEntryContainer');
+        const scanStatus = document.getElementById('scanStatus');
+
+        if (!('BarcodeDetector' in window)) {
+            scanStatus.textContent = 'Scanner API failed to load. Enter manually below.';
+            cameraContainer.style.display = 'none';
+            manualContainer.style.display = 'block';
+            $('#barcode_input').focus();
+            return;
+        }
+
+        try {
+            try {
+                barcodeDetector = new BarcodeDetector({ formats: ['code_39', 'codabar', 'ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'] });
+            } catch (e) {
+                barcodeDetector = new BarcodeDetector();
+            }
+            
+            videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+            video.srcObject = videoStream;
+            await video.play();
+
+            cameraContainer.style.display = 'block';
+            manualContainer.style.display = 'none';
+            scanStatus.textContent = 'Scanning... Point camera at barcode.';
+            isScanning = true;
+            detectBarcodes();
+
+        } catch (err) {
+            console.error('Camera access denied or error:', err);
+            let errorMsg = 'Camera access denied. Enter manually below.';
+            if (window.isSecureContext === false) {
+                errorMsg = 'Camera requires HTTPS or localhost. Enter manually below.';
+            }
+            scanStatus.textContent = errorMsg;
+            cameraContainer.style.display = 'none';
+            manualContainer.style.display = 'block';
+            $('#barcode_input').focus();
+        }
+    });
+
+    async function detectBarcodes() {
+        if (!isScanning) return;
+        
+        const video = document.getElementById('barcodeVideo');
+        try {
+            const barcodes = await barcodeDetector.detect(video);
+            if (barcodes.length > 0) {
+                const code = barcodes[0].rawValue;
+                const now = Date.now();
+                
+                if (code !== lastScannedCode || (now - lastScannedTime > 2500)) {
+                    lastScannedCode = code;
+                    lastScannedTime = now;
+                    
+                    playBeep();
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    productSearch(code);
+                }
+            }
+        } catch (e) {
+            // Silent catch
+        }
+        
+        if (isScanning) {
+            requestAnimationFrame(detectBarcodes);
+        }
     }
-});
 
-var lims_productcodeSearch = $('#lims_productcodeSearch');
-
-lims_productcodeSearch.autocomplete({
-    source: function(request, response) {
-        var matcher = new RegExp(".?" + $.ui.autocomplete.escapeRegex(request.term), "i");
-        response($.grep(lims_product_array, function(item) {
-            return matcher.test(item);
-        }));
-    },
-    response: function(event, ui) {
-        if (ui.content.length == 1) {
-            var data = ui.content[0].value;
-            $(this).autocomplete( "close" );
-            productSearch(data);
-        };
-    },
-    select: function(event, ui) {
-        var data = ui.item.value;
-        productSearch(data);
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'square';
+            oscillator.frequency.value = 1000;
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 150);
+        } catch(e) {
+            console.warn('Audio beep failed');
+        }
     }
-});
 
-//Change quantity
-$("#myTable").on('input', '.qty', function() {
-    rowindex = $(this).closest('tr').index();
-    checkQuantity($(this).val(), true);
-});
+    $('#barcodeModal').on('hidden.bs.modal', function () {
+        isScanning = false;
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+    });
 
-$("#myTable").on("change", ".batch-no", function () {
-    rowindex = $(this).closest('tr').index();
-    var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-id').val();
-    var warehouse_id = $('#from-warehouse-id').val();
-    $.get('../check-batch-availability/' + product_id + '/' + $(this).val() + '/' + warehouse_id, function(data) {
-        if(data['message'] != 'ok') {
-            alert(data['message']);
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.batch-no').val('');
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val('');
+    $('#barcodeForm').on('submit', function(e) {
+        e.preventDefault();
+        var barcode = $('#barcode_input').val().trim();
+        if (barcode) {
+            productSearch(barcode);
+            $('#barcode_input').val('');
+            $('#barcode_input').focus();
+        }
+    });
+
+    // =============================
+    // PRODUCT SEARCH (WITH FULL ERROR IDENTIFICATION)
+    // =============================
+    function productSearch(data){
+        
+        var searched_code = '';
+
+        if (typeof data === 'string' && data.indexOf('Code:') !== -1) {
+            var code_match  = data.match(/Code:\s*([^|]+)/);
+            searched_code = code_match ? code_match[1].trim() : '';
+        } else {
+            searched_code = String(data).trim();
+        }
+
+        if (!searched_code) {
+            showError('Empty product code', 'The scanner or autocomplete returned an empty code.');
+            return;
+        }
+
+        $('#search-status').text('Searching: ' + searched_code + '...');
+
+        var pre_qty = 0;
+        $(".product-code").each(function(i) {
+            if ($(this).val() == searched_code) {
+                rowindex = i;
+                pre_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val() || 0;
+            }
+        });
+
+        var ajaxData = searched_code + '?' + (parseFloat(pre_qty) + 1);
+
+
+        $.ajax({
+            type: 'GET',
+            url: PRODUCT_SEARCH_URL, 
+            data: { data: ajaxData },
+            dataType: 'json',  // Forces JSON parsing; triggers error if HTML returned
+            beforeSend: function(xhr) {
+                console.log('AJAX beforeSend', 'Request starting...');
+            },
+            success: function(data, textStatus, jqXHR) {
+
+
+                // === ERROR IDENTIFICATION #1: Response is not an array ===
+                if (!Array.isArray(data)) {
+                    showError(
+                        'Server returned non-array response (likely HTML redirect/login page)',
+                        'Type: ' + (typeof data) + '\n' +
+                        'Content-Type: ' + jqXHR.getResponseHeader('Content-Type') + '\n' +
+                        'First 300 chars: ' + String(data).substring(0, 300)
+                    );
+                    $('#search-status').text('Server error: invalid response format');
+                    return;
+                }
+
+                // === ERROR IDENTIFICATION #2: Array is too short ===
+                if (data.length < 2) {
+                    showError(
+                        'Server returned incomplete product data',
+                        'Array length: ' + data.length + '\nData: ' + JSON.stringify(data)
+                    );
+                    $('#search-status').text('Server error: incomplete data');
+                    return;
+                }
+
+                // === ERROR IDENTIFICATION #3: Product code is missing/empty ===
+                if (!data[1]) {
+                    showError(
+                        'Server returned empty product code',
+                        'data[1] is empty. Full response: ' + JSON.stringify(data)
+                    );
+                    $('#search-status').text('Server error: missing product code');
+                    return;
+                }
+
+                var flag = 1;
+                $(".product-code").each(function(i) {
+                    if ($(this).val() == data[1]) {
+                        rowindex = i;
+                        var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) + 1;
+                        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
+                        checkQuantity(String(qty), true);
+                        flag = 0;
+                    }
+                });
+                $("input[name='product_code_name']").val('');
+                $('#search-status').text('');
+                
+                if(flag){
+                    var newRow = $("<tr>");
+                    var cols = '';
+                    temp_unit_name = (data[6]).split(',');
+                    cols += '<td>' + data[0] + '<button type="button" class="edit-product btn btn-link" data-toggle="modal" data-target="#editModal"> <i class="dripicons-document-edit"></i></button></td>';
+                    cols += '<td>' + data[1] + '</td>';
+                    if(data[11])
+                        cols += '<td><input type="text" class="form-control batch-no" required/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
+                    else
+                        cols += '<td><input type="text" class="form-control batch-no" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
+                    cols += '<td><input type="number" class="form-control qty" name="qty[]" value="1" step="any" required/></td>';
+                    cols += '<td class="net_unit_cost"></td>';
+                    cols += '<td class="tax"></td>';
+                    cols += '<td class="sub-total"></td>';
+                    cols += '<td><button type="button" class="ibtnDel btn btn-md btn-danger">{{trans("file.delete")}}</button></td>';
+                    cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
+                    cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[9] + '"/>';
+                    cols += '<input type="hidden" class="purchase-unit" name="purchase_unit[]" value="' + temp_unit_name[0] + '"/>';
+                    cols += '<input type="hidden" class="net_unit_cost" name="net_unit_cost[]" />';
+                    cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + data[3] + '"/>';
+                    cols += '<input type="hidden" class="tax-value" name="tax[]" />';
+                    cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" />';
+                    cols += '<input type="hidden" class="imei-number" name="imei_number[]" />';
+
+                    newRow.append(cols);
+                    $("table.order-list tbody").prepend(newRow);
+                    rowindex = newRow.index();
+                    product_cost.splice(rowindex, 0, parseFloat(data[2]));
+                    tax_rate.splice(rowindex, 0, parseFloat(data[3]));
+                    tax_name.splice(rowindex, 0, data[4]);
+                    tax_method.splice(rowindex, 0, data[5]);
+                    unit_name.splice(rowindex, 0, data[6]);
+                    unit_operator.splice(rowindex, 0, data[7]);
+                    unit_operation_value.splice(rowindex, 0, data[8]);
+                    is_imei.splice(rowindex, 0, data[12]);
+                    checkQuantity(1, true);
+                    if(data[12]) {
+                        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
+                    }
+                }
+            },
+            error: function(xhr, textStatus, errorThrown) {
+                var detail = '';
+                
+                // === ERROR IDENTIFICATION #4: HTTP Status Codes ===
+                if (xhr.status === 0) {
+                    detail = 'Request failed. Possible causes:\n' +
+                             '1. Server is down\n' +
+                             '2. CORS blocked (if calling different domain)\n' +
+                             '3. URL is wrong / app in subdirectory\n' +
+                             '4. Browser blocked mixed content (HTTP vs HTTPS)\n' +
+                             'Attempted URL: ' + PRODUCT_SEARCH_URL;
+                } else if (xhr.status === 404) {
+                    detail = 'Route NOT FOUND (404).\n' +
+                             'The URL "' + PRODUCT_SEARCH_URL + '" does not exist on the server.\n' +
+                             'Fix: Check routes/web.php and .htaccess mod_rewrite.';
+                } else if (xhr.status === 500) {
+                    detail = 'Server Error (500).\n' +
+                             'Check Laravel logs: storage/logs/laravel.log\n' +
+                             'Response: ' + xhr.responseText.substring(0, 800);
+                } else if (xhr.status === 403) {
+                    detail = 'Forbidden (403). Authentication or permission issue.\n' +
+                             'The route may be behind auth middleware and the session expired.';
+                } else if (xhr.status === 302 || xhr.status === 301) {
+                    detail = 'Redirect detected (' + xhr.status + ').\n' +
+                             'The server is redirecting to another page (likely login).\n' +
+                             'This usually means the session expired or the route requires login.';
+                } else {
+                    detail = 'Status: ' + xhr.status + ' ' + textStatus + '\n' +
+                             'Error: ' + errorThrown + '\n' +
+                             'Response: ' + xhr.responseText.substring(0, 800);
+                }
+
+                showError('Product search AJAX failed', detail);
+                $('#search-status').text('Search failed (see alert/console)');
+            },
+            complete: function(xhr, textStatus) {
+                console.log('AJAX complete', 'Status: ' + textStatus + ' | HTTP: ' + xhr.status);
+            }
+        });
+    }
+
+    // =============================
+    // QUANTITY CHANGE
+    // =============================
+    $("#myTable").on('input', '.qty', function() {
+        rowindex = $(this).closest('tr').index();
+        checkQuantity($(this).val(), true);
+    });
+
+    $("#myTable").on("change", ".batch-no", function () {
+        rowindex = $(this).closest('tr').index();
+        var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-id').val();
+        var warehouse_id = $('#from-warehouse-id').val();
+        
+        $.get(BATCH_CHECK_URL + '/' + product_id + '/' + $(this).val() + '/' + warehouse_id, function(data) {
+            if(data['message'] != 'ok') {
+                alert(data['message']);
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.batch-no').val('');
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val('');
+            } else {
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val(data['product_batch_id']);
+                code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
+                pos = product_code.indexOf(code);
+                product_qty[pos] = data['qty'];
+            }
+        }).fail(function(xhr) {
+            showError('Batch check failed', 'Status: ' + xhr.status + '\n' + xhr.responseText.substring(0, 300));
+        });
+    });
+
+    // =============================
+    // DELETE PRODUCT
+    // =============================
+    $("table.order-list tbody").on("click", ".ibtnDel", function(event) {
+        rowindex = $(this).closest('tr').index();
+        product_cost.splice(rowindex, 1);
+        tax_rate.splice(rowindex, 1);
+        tax_name.splice(rowindex, 1);
+        tax_method.splice(rowindex, 1);
+        unit_name.splice(rowindex, 1);
+        unit_operator.splice(rowindex, 1);
+        unit_operation_value.splice(rowindex, 1);
+        $(this).closest("tr").remove();
+        calculateTotal();
+    });
+
+    // =============================
+    // EDIT PRODUCT
+    // =============================
+    $("table.order-list").on("click", ".edit-product", function() {
+        rowindex = $(this).closest('tr').index();
+        edit();
+    });
+
+    $('button[name="update_btn"]').on("click", function() {
+        if(is_imei[rowindex]) {
+            var imeiNumbers = $("#editModal input[name=imei_numbers]").val();
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(imeiNumbers);
+        }
+
+        var edit_qty = $('input[name="edit_qty"]').val();
+        var edit_unit_cost = $('input[name="edit_unit_cost"]').val();
+
+        var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(","));
+        var row_unit_operation_value = unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(","));
+
+        if (row_unit_operator == '*') {
+            product_cost[rowindex] = $('input[name="edit_unit_cost"]').val() / row_unit_operation_value;
+        } else {
+            product_cost[rowindex] = $('input[name="edit_unit_cost"]').val() * row_unit_operation_value;
+        }
+
+        var position = $('select[name="edit_unit"]').val();
+        var temp_operator = temp_unit_operator[position];
+        var temp_operation_value = temp_unit_operation_value[position];
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.purchase-unit').val(temp_unit_name[position]);
+        temp_unit_name.splice(position, 1);
+        temp_unit_operator.splice(position, 1);
+        temp_unit_operation_value.splice(position, 1);
+
+        temp_unit_name.unshift($('select[name="edit_unit"] option:selected').text());
+        temp_unit_operator.unshift(temp_operator);
+        temp_unit_operation_value.unshift(temp_operation_value);
+
+        unit_name[rowindex] = temp_unit_name.toString() + ',';
+        unit_operator[rowindex] = temp_unit_operator.toString() + ',';
+        unit_operation_value[rowindex] = temp_unit_operation_value.toString() + ',';
+        checkQuantity(edit_qty, false);
+    });
+
+    function edit() {
+        $(".imei-section").remove();
+        if(is_imei[rowindex]) {
+            var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
+            htmlText = '<div class="col-md-12 form-group imei-section"><label>IMEI or Serial Numbers</label><input type="text" name="imei_numbers" value="'+imeiNumbers+'" class="form-control imei_number" placeholder="Type imei or serial numbers and separate them by comma. Example:1001,2001" step="any"></div>';
+            $("#editModal .modal-element").append(htmlText);
+        }
+
+        var row_product_name = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(1)').text();
+        var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)').text();
+        $('#modal_header').text(row_product_name + '(' + row_product_code + ')');
+
+        var qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val();
+        $('input[name="edit_qty"]').val(qty);
+
+        unitConversion();
+        $('input[name="edit_unit_cost"]').val(row_product_cost.toFixed({{$general_setting->decimal}}));
+
+        temp_unit_name = (unit_name[rowindex]).split(',');
+        temp_unit_name.pop();
+        temp_unit_operator = (unit_operator[rowindex]).split(',');
+        temp_unit_operator.pop();
+        temp_unit_operation_value = (unit_operation_value[rowindex]).split(',');
+        temp_unit_operation_value.pop();
+        $('select[name="edit_unit"]').empty();
+        $.each(temp_unit_name, function(key, value) {
+            $('select[name="edit_unit"]').append('<option value="' + key + '">' + value + '</option>');
+        });
+        $('.selectpicker').selectpicker('refresh');
+    }
+
+    function checkQuantity(purchase_qty, flag) {
+        var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)').text();
+        var pos = product_code.indexOf(row_product_code);
+        var operator = unit_operator[rowindex].split(',');
+        var operation_value = unit_operation_value[rowindex].split(',');
+        
+        var total_qty = 0; // FIX: Declare the variable to prevent ReferenceError
+        if(operator[0] == '*') {
+            total_qty = purchase_qty * (operation_value[0] || 1);
+        } else if(operator[0] == '/') {
+            total_qty = operation_value[0] > 0 ? (purchase_qty / operation_value[0]) : 0; // FIX: Prevent JS division by zero
+        }
+
+        if (total_qty > parseFloat(product_qty[pos])) {
+            alert('Quantity exceeds stock quantity!');
+            if (flag) {
+                purchase_qty = purchase_qty.substring(0, purchase_qty.length - 1);
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(purchase_qty);
+            }
+            else {
+                edit();
+                return;
+            }
         }
         else {
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val(data['product_batch_id']);
-            code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
-            pos = product_code.indexOf(code);
-            product_qty[pos] = data['qty'];
+            $('#editModal').modal('hide');
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(purchase_qty);
         }
-    });
-});
-//Delete product
-$("table.order-list tbody").on("click", ".ibtnDel", function(event) {
-    rowindex = $(this).closest('tr').index();
-    product_cost.splice(rowindex, 1);
-    tax_rate.splice(rowindex, 1);
-    tax_name.splice(rowindex, 1);
-    tax_method.splice(rowindex, 1);
-    unit_name.splice(rowindex, 1);
-    unit_operator.splice(rowindex, 1);
-    unit_operation_value.splice(rowindex, 1);
-    $(this).closest("tr").remove();
-    calculateTotal();
-});
-
-//Edit product
-$("table.order-list").on("click", ".edit-product", function() {
-    rowindex = $(this).closest('tr').index();
-    edit();
-});
-
-//Update product
-$('button[name="update_btn"]').on("click", function() {
-    if(is_imei[rowindex]) {
-        var imeiNumbers = $("#editModal input[name=imei_numbers]").val();
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(imeiNumbers);
+        calculateRowProductData(purchase_qty);
     }
 
-    var edit_qty = $('input[name="edit_qty"]').val();
-    var edit_unit_cost = $('input[name="edit_unit_cost"]').val();
+    function calculateRowProductData(quantity) {
+        unitConversion();
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-rate').val(tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
 
-    var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(","));
-    var row_unit_operation_value = unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(","));
+        if (tax_method[rowindex] == 1) {
+            var net_unit_cost = row_product_cost;
+            var tax = net_unit_cost * quantity * (tax_rate[rowindex] / 100);
+            var sub_total = (net_unit_cost * quantity) + tax;
 
-    if (row_unit_operator == '*') {
-        product_cost[rowindex] = $('input[name="edit_unit_cost"]').val() / row_unit_operation_value;
-    } else {
-        product_cost[rowindex] = $('input[name="edit_unit_cost"]').val() * row_unit_operation_value;
-    }
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').text(net_unit_cost.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').val(net_unit_cost.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax').text(tax.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text(sub_total.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val(sub_total.toFixed({{$general_setting->decimal}}));
+        } else {
+            var sub_total_unit = row_product_cost;
+            var net_unit_cost = (100 / (100 + tax_rate[rowindex])) * sub_total_unit;
+            var tax = (sub_total_unit - net_unit_cost) * quantity;
+            var sub_total = sub_total_unit * quantity;
 
-    var position = $('select[name="edit_unit"]').val();
-    var temp_operator = temp_unit_operator[position];
-    var temp_operation_value = temp_unit_operation_value[position];
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.purchase-unit').val(temp_unit_name[position]);
-    temp_unit_name.splice(position, 1);
-    temp_unit_operator.splice(position, 1);
-    temp_unit_operation_value.splice(position, 1);
-
-    temp_unit_name.unshift($('select[name="edit_unit"] option:selected').text());
-    temp_unit_operator.unshift(temp_operator);
-    temp_unit_operation_value.unshift(temp_operation_value);
-
-    unit_name[rowindex] = temp_unit_name.toString() + ',';
-    unit_operator[rowindex] = temp_unit_operator.toString() + ',';
-    unit_operation_value[rowindex] = temp_unit_operation_value.toString() + ',';
-    checkQuantity(edit_qty, false);
-});
-
-function productSearch(data){
-            var code_match = data.match(/Code:\s*([^|]+)/);
-    console.log(code_match);
-    var product_info = data.split(" ");
-     var product_code = code_match ? code_match[1].trim() : data.split(" ")[0];
-     console.log(product_code);
-    if (product_code.length < 1) {
-        alert('Please insert product code!');
-        return;
-    }
-    var pre_qty = 0;
-    $(".product-code").each(function(i) {
-        if ($(this).val() == product_code) {
-            rowindex = i;
-            pre_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').text(net_unit_cost.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').val(net_unit_cost.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax').text(tax.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text(sub_total.toFixed({{$general_setting->decimal}}));
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val(sub_total.toFixed({{$general_setting->decimal}}));
         }
-    });
-    var ajaxData = product_code + '?' + (parseFloat(pre_qty) + 1);
-    console.log(ajaxData);
-    $.ajax({
-        type: 'GET',
-        url: 'lims_product_search',
-        data: {
-            data: ajaxData
-        },
-        success: function(data) {
-            var flag = 1;
-            $(".product-code").each(function(i) {
-                if ($(this).val() == data[1]) {
-                    rowindex = i;
-                    var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) + 1;
-                    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                    checkQuantity(String(qty), true);
-                    flag = 0;
-                }
-            });
-            $("input[name='product_code_name']").val('');
-            if(flag){
-                var newRow = $("<tr>");
-                var cols = '';
-                temp_unit_name = (data[6]).split(',');
-                cols += '<td>' + data[0] + '<button type="button" class="edit-product btn btn-link" data-toggle="modal" data-target="#editModal"> <i class="dripicons-document-edit"></i></button></td>';
-                cols += '<td>' + data[1] + '</td>';
-                if(data[11])
-                    cols += '<td><input type="text" class="form-control batch-no" required/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
-                else
-                    cols += '<td><input type="text" class="form-control batch-no" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
-                cols += '<td><input type="number" class="form-control qty" name="qty[]" value="1" step="any" required/></td>';
-                cols += '<td class="net_unit_cost"></td>';
-                cols += '<td class="tax"></td>';
-                cols += '<td class="sub-total"></td>';
-                cols += '<td><button type="button" class="ibtnDel btn btn-md btn-danger">{{trans("file.delete")}}</button></td>';
-                cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
-                cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[9] + '"/>';
-                cols += '<input type="hidden" class="purchase-unit" name="purchase_unit[]" value="' + temp_unit_name[0] + '"/>';
-                cols += '<input type="hidden" class="net_unit_cost" name="net_unit_cost[]" />';
-                cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + data[3] + '"/>';
-                cols += '<input type="hidden" class="tax-value" name="tax[]" />';
-                cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" />';
-                cols += '<input type="hidden" class="imei-number" name="imei_number[]" />';
 
-                newRow.append(cols);
-                $("table.order-list tbody").prepend(newRow);
-                rowindex = newRow.index();
-                product_cost.splice(rowindex, 0, parseFloat(data[2]));
-                tax_rate.splice(rowindex, 0, parseFloat(data[3]));
-                tax_name.splice(rowindex, 0, data[4]);
-                tax_method.splice(rowindex, 0, data[5]);
-                unit_name.splice(rowindex, 0, data[6]);
-                unit_operator.splice(rowindex, 0, data[7]);
-                unit_operation_value.splice(rowindex, 0, data[8]);
-                is_imei.splice(rowindex, 0, data[12]);
-                checkQuantity(1, true);
-                if(data[12]) {
-                    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
-                }
+        calculateTotal();
+    }
+
+    function unitConversion() {
+        var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(","));
+        var row_unit_operation_value = unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(","));
+
+        if (row_unit_operator == '*') {
+            row_product_cost = product_cost[rowindex] * row_unit_operation_value;
+        } else {
+            row_product_cost = product_cost[rowindex] / row_unit_operation_value;
+        }
+    }
+
+    function calculateTotal() {
+        var total_qty = 0;
+        $(".qty").each(function() {
+            if ($(this).val() == '') {
+                total_qty += 0;
+            } else {
+                total_qty += parseFloat($(this).val());
+            }
+        });
+        $("#total-qty").text(total_qty);
+        $('input[name="total_qty"]').val(total_qty);
+
+        var total_tax = 0;
+        $(".tax").each(function() {
+            total_tax += parseFloat($(this).text());
+        });
+        $("#total-tax").text(total_tax.toFixed({{$general_setting->decimal}}));
+        $('input[name="total_tax"]').val(total_tax.toFixed({{$general_setting->decimal}}));
+
+        var total = 0;
+        $(".sub-total").each(function() {
+            total += parseFloat($(this).text());
+        });
+        $("#total").text(total.toFixed({{$general_setting->decimal}}));
+        $('input[name="total_cost"]').val(total.toFixed({{$general_setting->decimal}}));
+
+        calculateGrandTotal();
+    }
+
+    function calculateGrandTotal() {
+        var item = $('table.order-list tbody tr:last').index();
+        var total_qty = parseFloat($('#total-qty').text());
+        var subtotal = parseFloat($('#total').text());
+        var shipping_cost = parseFloat($('input[name="shipping_cost"]').val());
+
+        if (!shipping_cost)
+            shipping_cost = {{number_format(0, $general_setting->decimal, '.', '')}};
+
+        item = ++item + '(' + total_qty + ')';
+        var grand_total = (subtotal + shipping_cost);
+
+        $('#item').text(item);
+        $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
+        $('#subtotal').text(subtotal.toFixed({{$general_setting->decimal}}));
+        $('#shipping_cost').text(shipping_cost.toFixed({{$general_setting->decimal}}));
+        $('#grand_total').text(grand_total.toFixed({{$general_setting->decimal}}));
+        $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
+    }
+
+    $('input[name="shipping_cost"]').on("input", function() {
+        calculateGrandTotal();
+    });
+
+    $(window).keydown(function(e){
+        if (e.which == 13) {
+            var $targ = $(e.target);
+            if (!$targ.is("textarea") && !$targ.is(":button,:submit")) {
+                var focusNext = false;
+                $(this).find(":input:visible:not([disabled],[readonly]), a").each(function(){
+                    if (this === e.target) {
+                        focusNext = true;
+                    }
+                    else if (focusNext){
+                        $(this).focus();
+                        return false;
+                    }
+                });
+                return false;
             }
         }
     });
-}
 
-function edit() {
-    $(".imei-section").remove();
-    if(is_imei[rowindex]) {
-        var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
-
-        htmlText = '<div class="col-md-12 form-group imei-section"><label>IMEI or Serial Numbers</label><input type="text" name="imei_numbers" value="'+imeiNumbers+'" class="form-control imei_number" placeholder="Type imei or serial numbers and separate them by comma. Example:1001,2001" step="any"></div>';
-        $("#editModal .modal-element").append(htmlText);
-    }
-
-    var row_product_name = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(1)').text();
-    var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)').text();
-    $('#modal_header').text(row_product_name + '(' + row_product_code + ')');
-
-    var qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val();
-    $('input[name="edit_qty"]').val(qty);
-
-    unitConversion();
-    $('input[name="edit_unit_cost"]').val(row_product_cost.toFixed({{$general_setting->decimal}}));
-
-    temp_unit_name = (unit_name[rowindex]).split(',');
-    temp_unit_name.pop();
-    temp_unit_operator = (unit_operator[rowindex]).split(',');
-    temp_unit_operator.pop();
-    temp_unit_operation_value = (unit_operation_value[rowindex]).split(',');
-    temp_unit_operation_value.pop();
-    $('select[name="edit_unit"]').empty();
-    $.each(temp_unit_name, function(key, value) {
-        $('select[name="edit_unit"]').append('<option value="' + key + '">' + value + '</option>');
-    });
-    $('.selectpicker').selectpicker('refresh');
-}
-
-function checkQuantity(purchase_qty, flag) {
-    var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)').text();
-    var pos = product_code.indexOf(row_product_code);
-    var operator = unit_operator[rowindex].split(',');
-    var operation_value = unit_operation_value[rowindex].split(',');
-    if(operator[0] == '*')
-        total_qty = purchase_qty * operation_value[0];
-    else if(operator[0] == '/')
-        total_qty = purchase_qty / operation_value[0];
-
-    if (total_qty > parseFloat(product_qty[pos])) {
-        alert('Quantity exceeds stock quantity!');
-        if (flag) {
-            purchase_qty = purchase_qty.substring(0, purchase_qty.length - 1);
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(purchase_qty);
+    $('#transfer-form').on('submit',function(e){
+        var rownumber = $('table.order-list tbody tr:last').index();
+        if (rownumber < 0) {
+            alert("Please insert product to order table!")
+            e.preventDefault();
+        }
+        else if($('select[name="from_warehouse_id"]').val() == $('select[name="to_warehouse_id"]').val()){
+            alert('Both Warehouse can not be same!');
+            e.preventDefault();
         }
         else {
-            edit();
-            return;
-        }
-    }
-    else {
-        $('#editModal').modal('hide');
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(purchase_qty);
-    }
-    calculateRowProductData(purchase_qty);
-}
-
-function calculateRowProductData(quantity) {
-    unitConversion();
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-rate').val(tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
-
-    if (tax_method[rowindex] == 1) {
-        var net_unit_cost = row_product_cost;
-        var tax = net_unit_cost * quantity * (tax_rate[rowindex] / 100);
-        var sub_total = (net_unit_cost * quantity) + tax;
-
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').text(net_unit_cost.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').val(net_unit_cost.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax').text(tax.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text(sub_total.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val(sub_total.toFixed({{$general_setting->decimal}}));
-    } else {
-
-        var sub_total_unit = row_product_cost;
-        var net_unit_cost = (100 / (100 + tax_rate[rowindex])) * sub_total_unit;
-        var tax = (sub_total_unit - net_unit_cost) * quantity;
-        var sub_total = sub_total_unit * quantity;
-
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').text(net_unit_cost.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_cost').val(net_unit_cost.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax').text(tax.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text(sub_total.toFixed({{$general_setting->decimal}}));
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val(sub_total.toFixed({{$general_setting->decimal}}));
-    }
-
-    calculateTotal();
-}
-
-function unitConversion() {
-    var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(","));
-    var row_unit_operation_value = unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(","));
-
-    if (row_unit_operator == '*') {
-        row_product_cost = product_cost[rowindex] * row_unit_operation_value;
-    } else {
-        row_product_cost = product_cost[rowindex] / row_unit_operation_value;
-    }
-}
-
-function calculateTotal() {
-    //Sum of quantity
-    var total_qty = 0;
-    $(".qty").each(function() {
-
-        if ($(this).val() == '') {
-            total_qty += 0;
-        } else {
-            total_qty += parseFloat($(this).val());
+            $("#submit-button").prop('disabled', true);
         }
     });
-    $("#total-qty").text(total_qty);
-    $('input[name="total_qty"]').val(total_qty);
-
-    //Sum of tax
-    var total_tax = 0;
-    $(".tax").each(function() {
-        total_tax += parseFloat($(this).text());
-    });
-    $("#total-tax").text(total_tax.toFixed({{$general_setting->decimal}}));
-    $('input[name="total_tax"]').val(total_tax.toFixed({{$general_setting->decimal}}));
-
-    //Sum of subtotal
-    var total = 0;
-    $(".sub-total").each(function() {
-        total += parseFloat($(this).text());
-    });
-    $("#total").text(total.toFixed({{$general_setting->decimal}}));
-    $('input[name="total_cost"]').val(total.toFixed({{$general_setting->decimal}}));
-
-    calculateGrandTotal();
-}
-
-function calculateGrandTotal() {
-
-    var item = $('table.order-list tbody tr:last').index();
-
-    var total_qty = parseFloat($('#total-qty').text());
-    var subtotal = parseFloat($('#total').text());
-    var shipping_cost = parseFloat($('input[name="shipping_cost"]').val());
-
-    if (!shipping_cost)
-        shipping_cost = {{number_format(0, $general_setting->decimal, '.', '')}};
-
-    item = ++item + '(' + total_qty + ')';
-
-    var grand_total = (subtotal + shipping_cost);
-
-    $('#item').text(item);
-    $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
-    $('#subtotal').text(subtotal.toFixed({{$general_setting->decimal}}));
-    $('#shipping_cost').text(shipping_cost.toFixed({{$general_setting->decimal}}));
-    $('#grand_total').text(grand_total.toFixed({{$general_setting->decimal}}));
-    $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
-}
-
-$('input[name="shipping_cost"]').on("input", function() {
-    calculateGrandTotal();
-});
-
-$(window).keydown(function(e){
-    if (e.which == 13) {
-        var $targ = $(e.target);
-        if (!$targ.is("textarea") && !$targ.is(":button,:submit")) {
-            var focusNext = false;
-            $(this).find(":input:visible:not([disabled],[readonly]), a").each(function(){
-                if (this === e.target) {
-                    focusNext = true;
-                }
-                else if (focusNext){
-                    $(this).focus();
-                    return false;
-                }
-            });
-            return false;
-        }
-    }
-});
-
-$('#transfer-form').on('submit',function(e){
-    var rownumber = $('table.order-list tbody tr:last').index();
-    if (rownumber < 0) {
-        alert("Please insert product to order table!")
-        e.preventDefault();
-    }
-    else if($('select[name="from_warehouse_id"]').val() == $('select[name="to_warehouse_id"]').val()){
-        alert('Both Warehouse can not be same!');
-        e.preventDefault();
-    }
-    else {
-        $("#submit-button").prop('disabled', true);
-    }
-});
 </script>
 @endpush

@@ -233,6 +233,7 @@ class ReturnPurchaseController extends Controller
     {
         
         if(Auth::user()->hasPermissionTo('purchase-return-add')) {
+            
             $lims_purchase_data = Purchase::select('id')->where('reference_no', $request->input('reference_no'))->first();
             if(!$lims_purchase_data)
                 return redirect()->back()->with('not_permitted', 'This reference no does not exist!');
@@ -387,10 +388,25 @@ class ReturnPurchaseController extends Controller
         return $product;
     }
 
+
     public function store(Request $request)
     {
         $data = $request->except('document');
-        //return dd($data);
+        
+        // Calculate totals to ensure non-nullable fields are filled
+        $data['item'] = count($data['product_id']);
+        $data['total_qty'] = array_sum($data['qty']);
+        $data['total_discount'] = array_sum($data['discount']);
+        $data['total_tax'] = array_sum($data['tax']);
+        $data['total_cost'] = array_sum($data['subtotal']);
+        
+        // Some schemas use total_price instead of total_cost, setting both to be safe
+        $data['total_price'] = $data['total_cost']; 
+        
+        $order_tax_rate = isset($data['order_tax_rate']) ? (float)$data['order_tax_rate'] : 0;
+        $data['order_tax'] = $data['total_cost'] * ($order_tax_rate / 100);
+        $data['grand_total'] = $data['total_cost'] + $data['order_tax'];
+
         $data['reference_no'] = 'prr-' . date("Ymd") . '-'. date("his");
         $data['user_id'] = Auth::id();
         $lims_purchase_data = Purchase::select('warehouse_id', 'supplier_id', 'currency_id', 'exchange_rate')->find($data['purchase_id']);
@@ -399,6 +415,7 @@ class ReturnPurchaseController extends Controller
         $data['warehouse_id'] = $lims_purchase_data->warehouse_id;
         $data['currency_id'] = $lims_purchase_data->currency_id;
         $data['exchange_rate'] = $lims_purchase_data->exchange_rate;
+        
         $document = $request->document;
         if ($document) {
             $v = Validator::make(
@@ -439,7 +456,7 @@ class ReturnPurchaseController extends Controller
             $mail_data['grand_total'] = $lims_return_data->grand_total;
         }
 
-        $product_id = $data['is_return'];
+        $product_id = $data['is_return'] ?? $data['product_id'];
         $imei_number = $data['imei_number'];
         $product_batch_id = $data['product_batch_id'];
         $product_code = $data['product_code'];
@@ -554,9 +571,24 @@ class ReturnPurchaseController extends Controller
 
             $mail_data['qty'][$key] = $qty[$key];
             $mail_data['total'][$key] = $total[$key];
-            PurchaseProductReturn::insert(
-                ['return_id' => $lims_return_data->id, 'product_id' => $pro_id, 'product_batch_id' => $product_batch_id[$key], 'variant_id' => $variant_id, 'imei_number' => $imei_number[$key], 'qty' => $qty[$key], 'purchase_unit_id' => $purchase_unit_id, 'net_unit_cost' => $net_unit_cost[$key], 'discount' => $discount[$key], 'tax_rate' => $tax_rate[$key], 'tax' => $tax[$key], 'total' => $total[$key], 'created_at' => \Carbon\Carbon::now(),  'updated_at' => \Carbon\Carbon::now()]
-            );
+            
+            // Using ?? 0 to ensure no null values are passed to non-nullable DB columns
+            PurchaseProductReturn::insert([
+                'return_id' => $lims_return_data->id, 
+                'product_id' => $pro_id, 
+                'product_batch_id' => $product_batch_id[$key] ?? null, 
+                'variant_id' => $variant_id, 
+                'imei_number' => $imei_number[$key] ?? null, 
+                'qty' => $qty[$key] ?? 0, 
+                'purchase_unit_id' => $purchase_unit_id ?? 0, 
+                'net_unit_cost' => $net_unit_cost[$key] ?? 0, 
+                'discount' => $discount[$key] ?? 0, 
+                'tax_rate' => $tax_rate[$key] ?? 0, 
+                'tax' => $tax[$key] ?? 0, 
+                'total' => $total[$key] ?? 0, 
+                'created_at' => \Carbon\Carbon::now(),  
+                'updated_at' => \Carbon\Carbon::now()
+            ]);
         }
         $message = 'Return created successfully';
         if($mail_data['email']){

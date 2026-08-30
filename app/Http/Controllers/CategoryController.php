@@ -484,7 +484,7 @@ public function storeDepartment(Request $request)
         // Save updated data
         $department->save();
 
-        return redirect('category/department')->with('message', 'Department updated successfully');
+        return redirect()->back()->with('message', 'Department updated successfully');
     }
 
         //department data

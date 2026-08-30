@@ -5737,4 +5737,137 @@ public function stockCoverageData(Request $request)
 }
 
 
+    public function activityLog(Request $request)
+    {
+        // if(Auth::user()->hasPermissionTo('activity-log-report')) {
+            $start_date = $request->input('start_date') ?? date('Y-m-d', strtotime('-1 month'));
+            $end_date = $request->input('end_date') ?? date('Y-m-d');
+            $log_name = $request->input('log_name');
+            $user_id = $request->input('user_id');
+            
+            $lims_user_list = User::where('is_active', true)->get();
+            
+            return view('backend.report.activity_log_report', compact('start_date', 'end_date', 'log_name', 'user_id', 'lims_user_list'));
+        // }
+        // else
+        //     return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+    }
+
+    public function activityLogData(Request $request)
+    {
+        $columns = array(
+            1 => 'created_at',
+            2 => 'log_name',
+            3 => 'description',
+        );
+
+        $start_date = $request->input('start_date');
+        $end_date = $request->input('end_date');
+        $log_name = $request->input('log_name');
+        $user_id = $request->input('user_id');
+
+        $query = DB::table('activity_logs');
+
+        if($start_date && $end_date) {
+            $query->whereDate('created_at', '>=', $start_date)
+                  ->whereDate('created_at', '<=', $end_date);
+        }
+
+        if($log_name) {
+            $query->where('log_name', $log_name);
+        }
+
+        if($user_id) {
+            $query->where('causer_id', $user_id)->where('causer_type', 'App\Models\User');
+        }
+
+        $totalData = $query->count();
+        $totalFiltered = $totalData;
+
+        $limit = $request->input('length') != -1 ? $request->input('length') : $totalData;
+        $start = $request->input('start');
+        $order = $columns[$request->input('order.0.column')] ?? 'created_at';
+        $dir = $request->input('order.0.dir') ?? 'desc';
+
+        if(empty($request->input('search.value'))) {
+            $logs = (clone $query)->offset($start)
+                          ->limit($limit)
+                          ->orderBy($order, $dir)
+                          ->get();
+        } else {
+            $search = $request->input('search.value');
+            $query->where(function($q) use ($search) {
+                $q->where('description', 'LIKE', "%{$search}%")
+                  ->orWhere('log_name', 'LIKE', "%{$search}%");
+            });
+            
+            $logs = (clone $query)->offset($start)
+                          ->limit($limit)
+                          ->orderBy($order, $dir)
+                          ->get();
+            
+            $totalFiltered = (clone $query)->count();
+        }
+
+        $data = array();
+        if(!empty($logs))
+        {
+            foreach ($logs as $key => $log)
+            {
+                $nestedData['id'] = $log->id;
+                $nestedData['key'] = $key;
+                $nestedData['date'] = date(config('date_format') . ' H:i:s', strtotime($log->created_at));
+                $nestedData['log_name'] = $log->log_name ?? 'default';
+                $nestedData['description'] = ucfirst($log->description);
+                
+                // Format Subject
+                $subject = 'N/A';
+                if ($log->subject_type && $log->subject_id) {
+                    $subject = class_basename($log->subject_type) . ' #' . $log->subject_id;
+                }
+                $nestedData['subject'] = $subject;
+
+                // Format Causer
+                $causer = 'System';
+                if ($log->causer_type && $log->causer_id) {
+                    $causerData = app($log->causer_type)->find($log->causer_id);
+                    if ($causerData) {
+                        $causer = $causerData->name ?? $causerData->email ?? class_basename($log->causer_type) . ' #' . $log->causer_id;
+                    }
+                }
+                $nestedData['causer'] = $causer;
+
+                // Properties button
+                $properties = '';
+                if ($log->properties) {
+                    $properties = '<button class="btn btn-sm btn-info view-properties" data-id="'.$log->id.'"><i class="fa fa-eye"></i> View</button>';
+                }
+                $nestedData['properties'] = $properties;
+
+                $data[] = $nestedData;
+            }
+        }
+
+        $json_data = array(
+            "draw"            => intval($request->input('draw')),
+            "recordsTotal"    => intval($totalData),
+            "recordsFiltered" => intval($totalFiltered),
+            "data"            => $data
+        );
+
+        echo json_encode($json_data);
+    }
+
+    public function activityLogDetails($id)
+    {
+        $log = DB::table('activity_logs')->find($id);
+        $properties = json_decode($log->properties, true);
+        
+        return response()->json([
+            'attributes' => $properties['attributes'] ?? [],
+            'old' => $properties['old'] ?? []
+        ]);
+    }
+
+
 }

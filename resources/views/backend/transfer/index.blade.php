@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main')
+@section('content')
 @if(session()->has('message'))
   <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{!! session()->get('message') !!}</div>
 @endif
@@ -14,55 +15,52 @@
             </div>
             {!! Form::open(['route' => 'transfers.index', 'method' => 'get']) !!}
             <div class="row mb-3">
-                <div class="col-md-3 offset-md-1 mt-3">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.Date')}} &nbsp;</label>
-                        <div class="">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                                <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                                <input type="hidden" name="ending_date" value="{{$ending_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mt-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.From Warehouse')}} &nbsp;</label>
-                        <div class="">
-                            <select id="from_warehouse_id" name="from_warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
-                                <option value="0">{{trans('file.All Warehouse')}}</option>
-                                @foreach($lims_warehouse_list as $warehouse)
-                                    @if($warehouse->id == $from_warehouse_id)
-                                        <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @else
-                                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mt-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
-                    <div class="d-flex">
-                        <label class="">{{trans('file.To Warehouse')}} &nbsp;</label>
-                        <div class="">
-                            <select id="to_warehouse_id" name="to_warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
-                                <option value="0">{{trans('file.All Warehouse')}}</option>
-                                @foreach($lims_warehouse_list as $warehouse)
-                                    @if($warehouse->id == $to_warehouse_id)
-                                        <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @else
-                                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                    @endif
-                                @endforeach
-                            </select>
-                        </div>
+                <div class="col-md-2 offset-md-1 mt-3">
+                    <div class="form-group">
+                        <label>{{trans('file.From')}}</label>
+                        <input type="date" name="starting_date" id="starting_date" class="form-control" value="{{$starting_date}}" required />
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
-                        <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
+                        <label>{{trans('file.To')}}</label>
+                        <input type="date" name="ending_date" id="ending_date" class="form-control" value="{{$ending_date}}" required />
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
+                    <div class="form-group">
+                        <label>{{trans('file.From Warehouse')}}</label>
+                        <select id="from_warehouse_id" name="from_warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
+                            <option value="0">{{trans('file.All Warehouse')}}</option>
+                            @foreach($lims_warehouse_list as $warehouse)
+                                @if($warehouse->id == $from_warehouse_id)
+                                    <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @else
+                                    <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 @if(Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
+                    <div class="form-group">
+                        <label>{{trans('file.To Warehouse')}}</label>
+                        <select id="to_warehouse_id" name="to_warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" >
+                            <option value="0">{{trans('file.All Warehouse')}}</option>
+                            @foreach($lims_warehouse_list as $warehouse)
+                                @if($warehouse->id == $to_warehouse_id)
+                                    <option selected value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @else
+                                    <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                @endif
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-1 mt-3">
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <button class="btn btn-primary btn-block" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
             </div>
@@ -151,17 +149,6 @@
     $("ul#transfer").siblings('a').attr('aria-expanded','true');
     $("ul#transfer").addClass("show");
     $("ul#transfer #transfer-list-menu").addClass("active");
-
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
-    });
 
     var all_permission = <?php echo json_encode($all_permission) ?>;
     var transfer_id = [];

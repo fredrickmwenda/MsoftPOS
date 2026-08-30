@@ -339,7 +339,7 @@
     });
 
     $('#delivery-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'language': {
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',

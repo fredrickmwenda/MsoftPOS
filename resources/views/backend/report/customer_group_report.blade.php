@@ -12,18 +12,6 @@
             </div>
             {!! Form::open(['route' => 'report.customer_group', 'method' => 'POST']) !!}
             <div class="row mb-3">
-                <!-- <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                                <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                                <input type="hidden" name="ending_date" value="{{$ending_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
                 <div class="col-md-3 mt-3 mb-3 ml-2">
                     <div class="form-group">
                         <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
@@ -237,16 +225,6 @@
     $("#customer_group_id").val(customer_group_id);
     $('.selectpicker').selectpicker('refresh');
 
-    // $(".daterangepicker-field").daterangepicker({
-    //   callback: function(startDate, endDate, period){
-    //     var starting_date = startDate.format('YYYY-MM-DD');
-    //     var ending_date = endDate.format('YYYY-MM-DD');
-    //     var title = starting_date + ' To ' + ending_date;
-    //     $(this).val(title);
-    //     $('input[name="starting_date"]').val(starting_date);
-    //     $('input[name="ending_date"]').val(ending_date);
-    //   }
-    // });
     //retreiving sale table data
     $('#sale-table').DataTable({
         "processing": true,

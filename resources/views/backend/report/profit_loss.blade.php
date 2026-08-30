@@ -5,36 +5,9 @@
     <h3 class="text-center">{{trans('file.Summary Report')}}</h3>
     {!! Form::open(['route' => 'report.profitLoss', 'method' => 'post']) !!}
     <div class="container-fluid">
-        <!-- <div class="row"> 
-            <div class="col-md-6 offset-md-3 mt-4">
-                <div class="form-group">
-                    <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                    <div class="d-tc">
-                        <div class="input-group"> 
-                            <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
-                            <input type="hidden" name="start_date" value="{{$start_date}}" />
-                            <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            <div class="input-group-append">
-                                <button class="btn btn-primary" type="submit">{{trans('file.submit')}}</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div> -->
+      
          <div class="row mb-3">
-                <!-- <div class="col-md-4 offset-md-2 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Your Date')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" required />
-                                <input type="hidden" name="start_date" value="{{$start_date}}" />
-                                <input type="hidden" name="end_date" value="{{$end_date}}" />
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
+ 
                 <div class="col-md-3 mt-3 mb-3 ml-2">
                     <div class="form-group">
                         <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
@@ -297,15 +270,6 @@
     $("ul#report").addClass("show");
     $("ul#report #profit-loss-report-menu").addClass("active");
 
-    // $(".daterangepicker-field").daterangepicker({
-    //   callback: function(startDate, endDate, period){
-    //     var start_date = startDate.format('YYYY-MM-DD');
-    //     var end_date = endDate.format('YYYY-MM-DD');
-    //     var title = start_date + ' To ' + end_date;
-    //     $(this).val(title);
-    //     $('input[name="start_date"]').val(start_date);
-    //     $('input[name="end_date"]').val(end_date);
-    //   }
-    // });
+
 </script>
 @endpush

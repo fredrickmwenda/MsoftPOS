@@ -805,38 +805,7 @@ class QuotationController extends Controller
         return $product_quotation;
     }
 
-    // public function productQuotationData($id)
-    // {
-    //     $lims_product_quotation_data = ProductQuotation::where('quotation_id', $id)->get();
-    //     foreach ($lims_product_quotation_data as $key => $product_quotation_data) {
-    //         $product = Product::find($product_quotation_data->product_id);
-    //         if($product_quotation_data->variant_id) {
-    //             $lims_product_variant_data = ProductVariant::select('item_code')->FindExactProduct($product_quotation_data->product_id, $product_quotation_data->variant_id)->first();
-    //             $product->code = $lims_product_variant_data->item_code;
-    //         }
-    //         if($product_quotation_data->sale_unit_id){
-    //             $unit_data = Unit::find($product_quotation_data->sale_unit_id);
-    //             $unit = $unit_data->unit_code;
-    //         }
-    //         else
-    //             $unit = '';
 
-    //         $product_quotation[0][$key] = $product->name . ' [' . $product->code . ']';
-    //         $product_quotation[1][$key] = $product_quotation_data->qty;
-    //         $product_quotation[2][$key] = $unit;
-    //         $product_quotation[3][$key] = $product_quotation_data->tax;
-    //         $product_quotation[4][$key] = $product_quotation_data->tax_rate;
-    //         $product_quotation[5][$key] = $product_quotation_data->discount;
-    //         $product_quotation[6][$key] = $product_quotation_data->total;
-    //         if($product_quotation_data->product_batch_id) {
-    //             $product_batch_data = ProductBatch::select('batch_no')->find($product_quotation_data->product_batch_id);
-    //             $product_quotation[7][$key] = $product_batch_data->batch_no;
-    //         }
-    //         else
-    //             $product_quotation[7][$key] = 'N/A';
-    //     }
-    //     return $product_quotation;
-    // }
 
     public function edit($id)
     {
@@ -1031,6 +1000,7 @@ class QuotationController extends Controller
         }
         return redirect('quotations')->with('message', $message);
     }
+    
     public function createSale($id)
     {
         $lims_customer_list = Customer::where('is_active', true)->get();

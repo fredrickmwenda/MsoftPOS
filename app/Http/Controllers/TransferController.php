@@ -20,6 +20,11 @@ use Illuminate\Support\Facades\Validator;
 
 class TransferController extends Controller
 {
+    private function isStaff(){
+        return Auth::user()->roles->contains(function ($role) {
+            return $role->id > 2;
+        });
+    }
     public function index(Request $request)
     {
         if(Auth::user()->hasPermissionTo('transfers-index')) {
@@ -286,46 +291,51 @@ class TransferController extends Controller
         return $product_data;
     }
 
+
+
+
     public function limsProductSearch(Request $request)
     {
-            $data = $request->input('data');
-        
+        $data = $request->input('data');
 
-        // Handle "Code: ..." format
-        if (strpos($data, 'Code:') === 0) {
-            // Remove "Code:" and extract up to the first "?" or end of string
-            $parts = explode('?', $data);
-            $codePart = trim(str_replace('Code:', '', $parts[0]));
-            // Rebuild $data to be just the code plus the rest
-            $data = $codePart;
-            if (isset($parts[1])) $data .= '?' . $parts[1];
-            if (isset($parts[2])) $data .= '?' . $parts[2];
+        // JS now sends "PRODUCTCODE?qty" — split it cleanly
+        $parts        = explode('?', $data);
+        $product_code = trim($parts[0] ?? '');
+        $qty          = isset($parts[1]) ? $parts[1] : 1;   // kept for compatibility (unused below)
+
+        if ($product_code === '') {
+            return response()->json(['error' => 'Empty product code'], 400);
         }
-        // Now $data is in the expected format: "PRODUCTCODE?customer_id?qty"
-        // Continue with your existing logic, e.g.:
-        $product_info = explode('?', $data);
-        $product_code = $product_info[0];
-        info($product_code);
-            // Default quantity to 1 if not provided
-        $qty = isset($product_info[1]) ? $product_info[1] : 1;
+
         $product_variant_id = null;
         $lims_product_data = Product::where([
             ['code', $product_code],
-            ['is_active', true]
+            ['is_active', true],
         ])->first();
-        if(!$lims_product_data) {
+
+        if (!$lims_product_data) {
             $lims_product_data = Product::join('product_variants', 'products.id', 'product_variants.product_id')
-                ->select('products.*', 'product_variants.id as product_variant_id', 'product_variants.item_code', 'product_variants.additional_cost')
+                ->select('products.*',
+                        'product_variants.id as product_variant_id',
+                        'product_variants.item_code',
+                        'product_variants.additional_cost')
                 ->where('product_variants.item_code', $product_code)
                 ->first();
-            $product_variant_id = $lims_product_data->product_variant_id;
-            $lims_product_data->code = $lims_product_data->item_code;
-            $lims_product_data->cost += $lims_product_data->additional_cost;
+
+            if ($lims_product_data) {
+                $product_variant_id = $lims_product_data->product_variant_id;
+                $lims_product_data->code = $lims_product_data->item_code;
+                $lims_product_data->cost += $lims_product_data->additional_cost;
+            }
         }
+
+        if (!$lims_product_data) {
+            return response()->json(['error' => 'Product not found'], 404);
+        }
+
         $product[] = $lims_product_data->name;
         $product[] = $lims_product_data->code;
         $product[] = $lims_product_data->cost;
-        // $product[] = $lims_product_data->price;
 
         if ($lims_product_data->tax_id) {
             $lims_tax_data = Tax::find($lims_product_data->tax_id);
@@ -340,18 +350,17 @@ class TransferController extends Controller
         $units = Unit::where("base_unit", $lims_product_data->unit_id)
                     ->orWhere('id', $lims_product_data->unit_id)
                     ->get();
-        $unit_name = array();
-        $unit_operator = array();
-        $unit_operation_value = array();
+
+        $unit_name = $unit_operator = $unit_operation_value = [];
         foreach ($units as $unit) {
             if ($lims_product_data->purchase_unit_id == $unit->id) {
                 array_unshift($unit_name, $unit->unit_name);
                 array_unshift($unit_operator, $unit->operator);
                 array_unshift($unit_operation_value, $unit->operation_value);
             } else {
-                $unit_name[]  = $unit->unit_name;
-                $unit_operator[] = $unit->operator;
-                $unit_operation_value[] = $unit->operation_value;
+                $unit_name[]             = $unit->unit_name;
+                $unit_operator[]         = $unit->operator;
+                $unit_operation_value[]  = $unit->operation_value;
             }
         }
 
@@ -362,7 +371,9 @@ class TransferController extends Controller
         $product[] = $product_variant_id;
         $product[] = $lims_product_data->is_batch;
         $product[] = $lims_product_data->is_imei;
-        return $product;
+
+        // return $product;
+        return response()->json($product);
     }
 
     public function store(Request $request)
@@ -431,12 +442,11 @@ class TransferController extends Controller
                     ['warehouse_id', $data['from_warehouse_id'] ],
                     ])->first();
             }
-
             if($data['status'] != 2) {
                 if ($lims_purchase_unit_data->operator == '*')
                     $quantity = $qty[$i] * $lims_purchase_unit_data->operation_value;
                 else
-                    $quantity = $qty[$i] / $lims_purchase_unit_data->operation_value;
+                    $quantity = $lims_purchase_unit_data->operation_value > 0 ? ($qty[$i] / $lims_purchase_unit_data->operation_value) : $qty[$i];
                 //deduct imei number if available
                 if($imei_number[$i]) {
                     $imei_numbers = explode(",", $imei_number[$i]);
@@ -735,10 +745,11 @@ class TransferController extends Controller
             $old_product_id[] = $product_transfer_data->product_id;
             $old_product_variant_id[] = null;
             $lims_transfer_unit_data = Unit::find($product_transfer_data->purchase_unit_id);
+            //unit conversion
             if ($lims_transfer_unit_data->operator == '*') {
-                $quantity = $product_transfer_data->qty * $lims_transfer_unit_data->operation_value;
+                $quantity = $qty[$key] * $lims_transfer_unit_data->operation_value;
             } else {
-                $quantity = $product_transfer_data->qty / $lims_transfer_unit_data->operation_value;
+                $quantity = $lims_transfer_unit_data->operation_value > 0 ? ($qty[$key] / $lims_transfer_unit_data->operation_value) : $qty[$key];
             }
 
             if($lims_transfer_data->status == 1){
@@ -966,7 +977,7 @@ class TransferController extends Controller
                 if ($lims_transfer_unit_data->operator == '*') {
                     $quantity = $product_transfer_data->qty * $lims_transfer_unit_data->operation_value;
                 } else {
-                    $quantity = $product_transfer_data / $lims_transfer_unit_data->operation_value;
+                    $quantity = $lims_transfer_unit_data->operation_value > 0 ? ($product_transfer_data->qty / $lims_transfer_unit_data->operation_value) : $product_transfer_data->qty;
                 }
 
                 if($lims_transfer_data->status == 1) {
@@ -1014,7 +1025,7 @@ class TransferController extends Controller
             if ($lims_transfer_unit_data->operator == '*') {
                 $quantity = $product_transfer_data->qty * $lims_transfer_unit_data->operation_value;
             } else {
-                $quantity = $product_transfer_data / $lims_transfer_unit_data->operation_value;
+                $quantity = $lims_transfer_unit_data->operation_value > 0 ? ($product_transfer_data->qty / $lims_transfer_unit_data->operation_value) : $product_transfer_data->qty;
             }
 
             if($lims_transfer_data->status == 1) {
@@ -1096,3 +1107,7 @@ class TransferController extends Controller
         return redirect('transfers')->with('not_permitted', 'Transfer deleted successfully');
     }
 }
+
+
+
+ 

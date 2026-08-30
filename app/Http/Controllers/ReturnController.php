@@ -449,6 +449,18 @@ class ReturnController extends Controller
     public function store(Request $request)
     {
         $data = $request->except('document');
+        
+        // Calculate totals to ensure non-nullable fields are filled
+        $data['item'] = count($data['product_id']);
+        $data['total_qty'] = array_sum($data['qty']);
+        $data['total_discount'] = array_sum($data['discount']);
+        $data['total_tax'] = array_sum($data['tax']);
+        $data['total_price'] = array_sum($data['subtotal']);
+        
+        $order_tax_rate = isset($data['order_tax_rate']) ? (float)$data['order_tax_rate'] : 0;
+        $data['order_tax'] = $data['total_price'] * ($order_tax_rate / 100);
+        $data['grand_total'] = $data['total_price'] + $data['order_tax'];
+
         $data['reference_no'] = 'rr-' . date("Ymd") . '-'. date("his");
         $data['user_id'] = Auth::id();
         $lims_sale_data = Sale::select('id', 'warehouse_id', 'customer_id', 'biller_id', 'currency_id', 'exchange_rate', 'sale_status')->find($data['sale_id']);
@@ -458,6 +470,7 @@ class ReturnController extends Controller
         $data['biller_id'] = $lims_sale_data->biller_id;
         $data['currency_id'] = $lims_sale_data->currency_id;
         $data['exchange_rate'] = $lims_sale_data->exchange_rate;
+        
         $cash_register_data = CashRegister::where([
             ['user_id', $data['user_id']],
             ['warehouse_id', $data['warehouse_id']],
@@ -465,8 +478,10 @@ class ReturnController extends Controller
         ])->first();
         if($cash_register_data)
             $data['cash_register_id'] = $cash_register_data->id;
+            
         $lims_account_data = Account::where('is_default', true)->first();
         $data['account_id'] = $lims_account_data->id;
+        
         $document = $request->document;
         if ($document) {
             $v = Validator::make(
@@ -504,7 +519,7 @@ class ReturnController extends Controller
         $mail_data['order_tax_rate'] = $lims_return_data->order_tax_rate;
         $mail_data['grand_total'] = $lims_return_data->grand_total;
 
-        $product_id = $data['is_return'];
+        $product_id = $data['is_return'] ?? $data['product_id'];
         $imei_number = $data['imei_number'];
         $product_batch_id = $data['product_batch_id'];
         $product_code = $data['product_code'];
@@ -621,15 +636,34 @@ class ReturnController extends Controller
 
             $mail_data['qty'][$key] = $qty[$key];
             $mail_data['total'][$key] = $total[$key];
-            ProductReturn::insert(
-                ['return_id' => $lims_return_data->id, 'product_id' => $pro_id, 'product_batch_id' => $product_batch_id[$key], 'variant_id' => $variant_id, 'imei_number' => $imei_number[$key], 'qty' => $qty[$key], 'sale_unit_id' => $sale_unit_id, 'net_unit_price' => $net_unit_price[$key], 'discount' => $discount[$key], 'tax_rate' => $tax_rate[$key], 'tax' => $tax[$key], 'total' => $total[$key], 'created_at' => \Carbon\Carbon::now(),  'updated_at' => \Carbon\Carbon::now()]
-            );
+            
+            // Using ?? 0 or ?? null to ensure no null values are passed to non-nullable DB columns
+            ProductReturn::insert([
+                'return_id' => $lims_return_data->id, 
+                'product_id' => $pro_id, 
+                'product_batch_id' => $product_batch_id[$key] ?? null, 
+                'variant_id' => $variant_id, 
+                'imei_number' => $imei_number[$key] ?? null, 
+                'qty' => $qty[$key] ?? 0, 
+                'sale_unit_id' => $sale_unit_id ?? 0, 
+                'net_unit_price' => $net_unit_price[$key] ?? 0, 
+                'discount' => $discount[$key] ?? 0, 
+                'tax_rate' => $tax_rate[$key] ?? 0, 
+                'tax' => $tax[$key] ?? 0, 
+                'total' => $total[$key] ?? 0, 
+                'created_at' => \Carbon\Carbon::now(),  
+                'updated_at' => \Carbon\Carbon::now()
+            ]);
+            
             $product_sale_data = Product_Sale::where([
                                     ['product_id', $pro_id],
                                     ['sale_id', $data['sale_id']]
                                 ])->select('id', 'return_qty')->first();
-            $product_sale_data->return_qty += $qty[$key];
-            $product_sale_data->save();
+                                
+            if($product_sale_data) {
+                $product_sale_data->return_qty += $qty[$key];
+                $product_sale_data->save();
+            }
         }
         $message = 'Return created successfully';
         if($data['change_sale_status'])

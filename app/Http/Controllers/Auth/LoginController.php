@@ -71,23 +71,24 @@ class LoginController extends Controller
 
     public function login(Request $request)
     {
-
-        $input = $request->all();
-
         $this->validate($request, [
             'name' => 'required',
             'password' => 'required',
         ]);
 
         $fieldType = filter_var($request->name, FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+        $credentials = [$fieldType => $request->name, 'password' => $request->password];
 
-        if(auth()->attempt(array($fieldType => $input['name'], 'password' => $input['password'])))
-        {
+        // Attempt login with an additional condition
+        if (auth()->attempt($credentials) && auth()->user()->is_active) {
             setcookie('login_now', 1, time() + (86400 * 1), "/");
             return redirect('/dashboard');
-        }
-        else {
-            return redirect()->route('login')->with('error','Username And Password Are Wrong.');
+        } else {
+            // Logout if somehow authenticated but inactive (for safety)
+            if (auth()->check()) {
+                auth()->logout();
+            }
+            return redirect()->route('login')->with('error', 'Invalid credentials or account inactive.');
         }
     }
 }

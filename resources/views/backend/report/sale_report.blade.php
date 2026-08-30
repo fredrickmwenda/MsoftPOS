@@ -71,18 +71,7 @@
             <input type="hidden" name="percentage_filter" value="{{ isset($percentage_filter) ? $percentage_filter : '' }}" />
             <div class="card-body">
                 <div class="row">
-                    <!-- Date Range Filter -->
-                    <!-- <div class="col-md-4 mb-3">
-                        <div class="form-group">
-                            <label class="control-label"><strong>{{trans('file.Choose Your Date')}}</strong></label>
-                            <div class="input-group">
-                                <input type="text" class="daterangepicker-field form-control" value="{{$start_date}} To {{$end_date}}" />
-                                <input type="hidden" name="start_date" value="{{$start_date}}" />
-                                <input type="hidden" name="end_date" value="{{$end_date}}" />
 
-                            </div>
-                        </div>
-                    </div> -->
                 <div class="col-md-3 mt-3 mb-3 ml-2">
                     <div class="form-group">
                         <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
@@ -274,7 +263,7 @@
     $('.selectpicker').selectpicker('refresh');
 
     $('#report-table').DataTable( {
-        "order": [],
+        "order": [[0, 'desc']],
         'language': {
             'lengthMenu': '_MENU_ {{trans("file.records per page")}}',
              "info":      '<small>{{trans("file.Showing")}} _START_ - _END_ (_TOTAL_)</small>',
@@ -424,19 +413,11 @@ $(document).ready(function() {
     if (!end.isValid()) end = moment();
 
     function updateDateFields(start, end) {
-       // $('.daterangepicker-field').val(start.format('YYYY-MM-DD') + ' To ' + end.format('YYYY-MM-DD'));
         $('input[name="start_date"]').val(start.format('YYYY-MM-DD'));
         $('input[name="end_date"]').val(end.format('YYYY-MM-DD'));
     }
 
-    // $('.daterangepicker-field').daterangepicker({
-    //     startDate: start,
-    //     endDate: end,
-    //     locale: {
-    //         format: 'YYYY-MM-DD',
-    //         separator: ' To ',
-    //     }
-    // }, updateDateFields);
+    
 
     updateDateFields(start, end);
 });
