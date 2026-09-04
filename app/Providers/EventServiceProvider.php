@@ -120,7 +120,6 @@ class EventServiceProvider extends ServiceProvider
         Payment::observe(PaymentObserver::class);
 
         Product_Sale::observe(ProductSaleObserver::class);
-        Product_Supplier::observe(ProductSupplierObserver::class);
         Product_Warehouse::observe(ProductWarehouseObserver::class);
         ProductAdjustment::observe(ProductAdjustmentObserver::class);
         ProductBatch::observe(ProductBatchObserver::class);

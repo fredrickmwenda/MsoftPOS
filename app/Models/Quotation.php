@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Quotation extends Model
 {
-    protected $fillable =[
+    protected $fillable = [
         "reference_no", 
         "user_id", 
         "biller_id", 
@@ -32,31 +32,31 @@ class Quotation extends Model
 
     public function biller()
     {
-        return $this->belongsTo('App\Models\Biller');
+        return $this->belongsTo(Biller::class);
     }
 
     public function customer()
     {
-        return $this->belongsTo('App\Models\Customer');
+        return $this->belongsTo(Customer::class);
     }
 
     public function supplier()
     {
-        return $this->belongsTo('App\Models\Supplier');
+        return $this->belongsTo(Supplier::class);
     }
 
     public function user()
     {
-        return $this->belongsTo('App\Models\User');
+        return $this->belongsTo(User::class);
     }
 
     public function warehouse()
     {
-        return $this->belongsTo('App\Models\Warehouse');
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function productQuotations()
     {
-        return $this->hasMany('App\Models\ProductQuotation');
+        return $this->hasMany(ProductQuotation::class);
     }
 }

@@ -13,7 +13,7 @@ class Warehouse extends Model
 
     public function product()
     {
-    	return $this->hasMany('App\Models\Product');
+    	return $this->hasMany(Product::class);
 
     }
 
@@ -21,5 +21,13 @@ class Warehouse extends Model
     public function stockCounts()
     {
         return $this->hasMany( StockCount::class);
+    }
+
+    public function adjustments(){
+        return $this->hasMany(Adjustment::class);
+    }
+ 
+    public function users(){
+        return $this->hasMany(User::class);
     }
 }

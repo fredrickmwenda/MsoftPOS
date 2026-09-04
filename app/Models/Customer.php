@@ -6,24 +6,25 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
-    protected $fillable =[
-        "customer_group_id","region","community","location","status", "user_id", "name", "company_name",
-        "email", "phone_number", "tax_no", "address", "city",
-        "state", "postal_code", "country", "points", "deposit", "expense", "is_active", 'whatsapp_number'
+    protected $fillable = [
+        "customer_group_id", "region", "community", "location", "status", "user_id", 
+        "name", "company_name", "email", "phone_number", "tax_no", "address", 
+        "city", "state", "postal_code", "country", "points", "deposit", "expense", 
+        "is_active", 'whatsapp_number'
     ];
 
     public function customerGroup()
     {
-        return $this->belongsTo('App\Models\CustomerGroup');
+        return $this->belongsTo(CustomerGroup::class);
     }
 
     public function user()
     {
-    	return $this->belongsTo('App\Models\User');
+        return $this->belongsTo(User::class);
     }
 
     public function discountPlans()
     {
-        return $this->belongsToMany('App\Models\DiscountPlan', 'discount_plan_customers');
+        return $this->belongsToMany(DiscountPlan::class, 'discount_plan_customers');
     }
 }

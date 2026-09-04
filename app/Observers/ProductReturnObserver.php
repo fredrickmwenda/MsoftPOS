@@ -2,30 +2,33 @@
 
 namespace App\Observers;
 
-use App\Models\ActivityLog;
 use App\Models\ProductReturn;
+use App\Models\ActivityLog;
 use Illuminate\Support\Facades\Auth;
 
 class ProductReturnObserver
 {
     /**
-     * Helper method to create a standardized, readable log entry.
+     * Build a structured context array for the product return (line item).
+     * This pulls in related data like Return Reference, Product, Variant, Batch, and Unit.
      */
-    private function logActivity(string $action, ProductReturn $model, array $properties = []): void
+    protected function buildContext(ProductReturn $model): array
     {
-        // You can replace $model->id with a more friendly identifier if your model has one
-        // For example: $model->return_number or $model->reference_code
-        $identifier = $model->id ?? 'Unknown';
+        // Load relationships safely to prevent N+1 issues or null errors
+        $model->loadMissing(['saleReturn', 'product', 'variant', 'productBatch', 'saleUnit']);
 
-        ActivityLog::create([
-            'log_name'    => 'Product Return',
-            'description' => "Product Return #{$identifier} was {$action}.",
-            'subject_type'=> ProductReturn::class,
-            'subject_id'  => $model->id,
-            'causer_type' => Auth::check() ? get_class(Auth::user()) : null,
-            'causer_id'   => Auth::id(),
-            'properties'  => $properties,
-        ]);
+        return [
+            'return_reference' => $model->saleReturn ? $model->saleReturn->reference_no : 'N/A',
+            'product_name'     => $model->product ? $model->product->name : 'Unknown Product',
+            'product_code'     => $model->product ? $model->product->code : 'N/A',
+            'variant'          => $model->variant ? $model->variant->name : 'None',
+            'batch_no'         => $model->productBatch ? $model->productBatch->batch_no : 'None',
+            'unit'             => $model->saleUnit ? $model->saleUnit->unit_name : 'N/A',
+            'imei_number'      => $model->imei_number ?: 'None',
+            'qty'              => $model->qty,
+            'net_unit_price'   => $model->net_unit_price,
+            'total'            => $model->total,
+        ];
     }
 
     /**
@@ -33,8 +36,17 @@ class ProductReturnObserver
      */
     public function created(ProductReturn $model): void
     {
-        $this->logActivity('created', $model, [
-            'attributes' => $model->getAttributes()
+        ActivityLog::create([
+            'log_name'     => 'product_return',
+            'description'  => 'created',
+            'subject_type' => ProductReturn::class,
+            'subject_id'   => $model->id,
+            'causer_type'  => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'    => Auth::id(),
+            'properties'   => [
+                'context'    => $this->buildContext($model),
+                'attributes' => $model->getAttributes(),
+            ],
         ]);
     }
 
@@ -43,15 +55,18 @@ class ProductReturnObserver
      */
     public function updated(ProductReturn $model): void
     {
-        // Get only the fields that actually changed
-        $changes = $model->getChanges();
-        
-        // Get the original values of those specific changed fields
-        $original = collect($model->getOriginal())->only(array_keys($changes))->toArray();
-
-        $this->logActivity('updated', $model, [
-            'old' => $original,
-            'attributes' => $changes
+        ActivityLog::create([
+            'log_name'     => 'product_return',
+            'description'  => 'updated',
+            'subject_type' => ProductReturn::class,
+            'subject_id'   => $model->id,
+            'causer_type'  => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'    => Auth::id(),
+            'properties'   => [
+                'context'    => $this->buildContext($model),
+                'old'        => $model->getOriginal(),
+                'attributes' => $model->getChanges(),
+            ],
         ]);
     }
 
@@ -60,8 +75,17 @@ class ProductReturnObserver
      */
     public function deleted(ProductReturn $model): void
     {
-        $this->logActivity('deleted', $model, [
-            'attributes' => $model->getAttributes()
+        ActivityLog::create([
+            'log_name'     => 'product_return',
+            'description'  => 'deleted',
+            'subject_type' => ProductReturn::class,
+            'subject_id'   => $model->id,
+            'causer_type'  => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'    => Auth::id(),
+            'properties'   => [
+                'context'    => $this->buildContext($model),
+                'attributes' => $model->getAttributes(),
+            ],
         ]);
     }
 
@@ -70,8 +94,17 @@ class ProductReturnObserver
      */
     public function restored(ProductReturn $model): void
     {
-        $this->logActivity('restored', $model, [
-            'attributes' => $model->getAttributes()
+        ActivityLog::create([
+            'log_name'     => 'product_return',
+            'description'  => 'restored',
+            'subject_type' => ProductReturn::class,
+            'subject_id'   => $model->id,
+            'causer_type'  => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'    => Auth::id(),
+            'properties'   => [
+                'context'    => $this->buildContext($model),
+                'attributes' => $model->getAttributes(),
+            ],
         ]);
     }
 
@@ -80,8 +113,17 @@ class ProductReturnObserver
      */
     public function forceDeleted(ProductReturn $model): void
     {
-        $this->logActivity('permanently deleted', $model, [
-            'attributes' => $model->getAttributes()
+        ActivityLog::create([
+            'log_name'     => 'product_return',
+            'description'  => 'force deleted',
+            'subject_type' => ProductReturn::class,
+            'subject_id'   => $model->id,
+            'causer_type'  => Auth::check() ? get_class(Auth::user()) : null,
+            'causer_id'    => Auth::id(),
+            'properties'   => [
+                'context'    => $this->buildContext($model),
+                'attributes' => $model->getAttributes(),
+            ],
         ]);
     }
 }

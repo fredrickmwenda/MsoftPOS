@@ -53,9 +53,8 @@ class HomeController extends Controller
 
     public function documentation()
     {
-        $general_setting =  Cache::remember('general_setting', 60*60*24*365, function () {
-            return DB::table('general_settings')->latest()->first();
-        });
+        $general_setting =  DB::table('general_settings')->latest()->first();
+     
         return view('backend.documentation', compact('general_setting'));
     }
 

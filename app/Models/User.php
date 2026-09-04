@@ -18,6 +18,21 @@ class User extends Authenticatable
         'password', 'remember_token',
     ];
 
+
+    /**
+     * Get the biller that this user belongs to.
+     */
+    public function biller()
+    {
+        return $this->belongsTo(Biller::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+
     public function roles()
     {
         return $this->belongsToMany(

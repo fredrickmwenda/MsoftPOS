@@ -16,36 +16,37 @@ class Product_Sale extends Model
 
 
     public function calculateTotals($price, $qty, $taxRate = 0, $discount = 0)
-{
-    $tax = round(($price * $qty) * ($taxRate / 100), 2);
-    $total = round(($price * $qty) + $tax - $discount, 2);
+    {
+        $tax = round(($price * $qty) * ($taxRate / 100), 2);
+        $total = round(($price * $qty) + $tax - $discount, 2);
 
-    return [
-        'tax' => $tax,
-        'total' => $total,
-    ];
-}
+        return [
+            'tax' => $tax,
+            'total' => $total,
+        ];
+    }
+    
     public function sale()
     {
-        return $this->belongsTo('App\Models\Sale');
+        return $this->belongsTo(Sale::class);
     }
 
     public function product()
     {
-        return $this->belongsTo('App\Models\Product');
+        return $this->belongsTo(Product::class);
     }
 
     public function variant()
     {
-        return $this->belongsTo('App\Models\Variant');
+        return $this->belongsTo(Variant::class);
     }
 
-    public function product_batch()
+    public function productBatch()
     {
-        return $this->belongsTo('App\Models\Product_Batch');
+        return $this->belongsTo(ProductBatch::class);
     }
 
-    public function unit()
+    public function saleUnit()
     {
         return $this->belongsTo('App\Models\Unit', 'sale_unit_id');
     }

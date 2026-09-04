@@ -31,13 +31,18 @@ class Product_Warehouse extends Model
 
     public function product()
     {
-    	return $this->belongsTo('App\Models\Product');
+    	return $this->belongsTo(Product::class);
     }
 
 
     public function warehouse()
     {
-    	return $this->belongsTo('App\Models\Warehouse');
+    	return $this->belongsTo(Warehouse::class);
+    }
+
+    public function variant()
+    {
+        return $this->belongsTo(Variant::class);
     }
 
 

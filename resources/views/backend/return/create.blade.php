@@ -14,7 +14,7 @@
                         <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
                         {!! Form::open(['route' => 'return-sale.store', 'method' => 'post', 'files' => true, 'class' => 'sale-return-form']) !!}
                         <div class="row">
-                            <div class="col-md-12">
+                            <div class="col-md-12"> 
                                 <div class="row">
                                     <div class="col-md-12">
                                         <input type="hidden" name="sale_id" value="{{$lims_sale_data->id}}">
@@ -46,11 +46,17 @@
                                                         }
                                                         else
                                                             $product_variant_id = null;
+
+                                                        $product_price = 0; 
                                                         if($product_data->tax_method == 1){
                                                             $product_price = $product_sale->net_unit_price + ($product_sale->discount / $product_sale->qty);
                                                         }
                                                         elseif ($product_data->tax_method == 2) {
                                                             $product_price =($product_sale->total / $product_sale->qty) + ($product_sale->discount / $product_sale->qty);
+                                                        }
+                                                        else {
+                                                            // Fallback: use net_unit_cost if tax_method is not 1 or 2
+                                                            $product_price = $product_sale->net_unit_cost + ($product_sale->discount / $product_sale->qty);
                                                         }
 
                                                         $tax = DB::table('taxes')->where('rate',$product_sale->tax_rate)->first();

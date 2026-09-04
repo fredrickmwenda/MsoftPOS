@@ -10,7 +10,7 @@ class MoneyTransfer extends Model
 
     public function fromAccount()
     {
-    	return $this->belongsTo('App\Models\Account');
+    	return $this->belongsTo(Account::class);
     }
 
     public function toAccount()

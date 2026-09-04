@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\User; // Import the User model
 
 class Biller extends Model
 {
@@ -14,6 +15,14 @@ class Biller extends Model
 
     public function sale()
     {
-    	return $this->hasMany('App\Models\Sale');
+        return $this->hasMany(Sale::class);
+    }
+
+    /**
+     * Get the users assigned to this biller.
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class);
     }
 }

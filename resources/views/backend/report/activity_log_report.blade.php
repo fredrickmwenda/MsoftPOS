@@ -73,26 +73,31 @@
         </table>
     </div>
 </section>
-
 <!-- Modal for viewing properties -->
 <div class="modal fade" id="propertiesModal" tabindex="-1" role="dialog" aria-labelledby="propertiesModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Log Properties</h5>
+                <h5 class="modal-title">Log Details</h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-12">
+                        <h6>Context Summary</h6>
+                        <pre id="context-data" style="background:#e9ecef; padding:15px; max-height:200px; overflow:auto; border-radius:5px; border: 1px solid #ced4da; white-space: pre-wrap; word-wrap: break-word;"></pre>
+                    </div>
+                </div>
                 <div class="row">
                     <div class="col-md-6">
                         <h6>Old Attributes</h6>
-                        <pre id="old-attributes" style="background:#f4f4f4; padding:10px; max-height:400px; overflow:auto; border-radius:5px;"></pre>
+                        <pre id="old-attributes" style="background:#fff5f5; padding:15px; max-height:400px; overflow:auto; border-radius:5px; border: 1px solid #ffe3e3; white-space: pre-wrap; word-wrap: break-word;"></pre>
                     </div>
                     <div class="col-md-6">
                         <h6>New Attributes</h6>
-                        <pre id="new-attributes" style="background:#f4f4f4; padding:10px; max-height:400px; overflow:auto; border-radius:5px;"></pre>
+                        <pre id="new-attributes" style="background:#f0fff4; padding:15px; max-height:400px; overflow:auto; border-radius:5px; border: 1px solid #c3e6cb; white-space: pre-wrap; word-wrap: break-word;"></pre>
                     </div>
                 </div>
             </div>
@@ -208,6 +213,7 @@
     $(document).on('click', '.view-properties', function() {
         var logId = $(this).data('id');
         $.get('{{ route("report.activity-log-details", ":id") }}'.replace(':id', logId), function(res) {
+            $('#context-data').text(JSON.stringify(res.context, null, 2));
             $('#old-attributes').text(JSON.stringify(res.old, null, 2));
             $('#new-attributes').text(JSON.stringify(res.attributes, null, 2));
             $('#propertiesModal').modal('show');

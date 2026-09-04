@@ -1807,6 +1807,59 @@ var without_stock = <?php echo json_encode($general_setting->without_stock) ?>;
 var currencyChange = false;
 $('#currency').val(currency['id']);
 
+
+function loadWarehouseProducts() {
+    var warehouse_id = $('select[name="warehouse_id"]').val();
+    if (!warehouse_id) {
+        lims_product_array = [];
+        return;
+    }
+
+    $.ajax({
+        type: 'GET',
+        url: '{{ route("warehouse.products.sale") }}',
+        data: { warehouse_id: warehouse_id },
+        async: false,
+        success: function(data) {
+            lims_product_array = [];
+            product_code = data[0];
+            product_name = data[1];
+            product_qty = data[2];
+            product_type = data[3];
+            product_id = data[4];
+            product_list = data[5];
+            qty_list = data[6];
+            product_warehouse_price = data[7];
+            batch_no = data[8];
+            product_batch_id = data[9];
+            expired_date = data[10];
+            is_embeded = data[11];
+            product_shelf = data[12];
+
+            $.each(product_code, function(index) {
+                if(is_embeded[index])
+                    lims_product_array.push(
+                        'Product Name: ' + product_name[index] +
+                        ' | Price: ' + product_warehouse_price[index] +
+                        ' | Qty: ' + product_qty[index] +
+                        ' | Shelf: ' + product_shelf[index] +
+                        ' | Embedded: ' + is_embeded[index]
+                    );
+                else
+                    lims_product_array.push(
+                        'Product Name: ' + product_name[index] +
+                        ' | Price: ' + product_warehouse_price[index] +
+                        ' | Qty: ' + product_qty[index] +
+                        ' | Shelf: ' + product_shelf[index]
+                    );
+            });
+        },
+        error: function() {
+            lims_product_array = [];
+        }
+    });
+}
+
 $('#currency').change(function(){
     var rate = $(this).find(':selected').data('rate');
     var currency_id = $(this).val();
@@ -2040,39 +2093,41 @@ $('select[name="customer_id"]').on('change', function() {
 });
 
 
-var id = $('select[name="warehouse_id"]').val();
-$.get('../getproduct/' + id, function(data) {
-    lims_product_array = [];
-    product_code = data[0];
-    product_name = data[1];
-    product_qty = data[2];
-    product_type = data[3];
-    product_id = data[4];
-    product_list = data[5];
-    qty_list = data[6];
-    product_warehouse_price = data[7];
-    batch_no = data[8];
-    product_batch_id = data[9];
-    is_embeded = data[11];
-    product_shelf = data[12];
-        $.each(product_code, function(index) {
-            if(is_embeded[index])
-              lims_product_array.push(
-                    'Product Name: ' + product_name[index] +
-                    ' | Price: ' + product_warehouse_price[index] +
-                    ' | Qty: ' + product_qty[index] +
-                    ' | Shelf: ' + product_shelf[index] +
-                    ' | Embedded: ' + is_embeded[index]
-                );
-            else
-            lims_product_array.push(
-                'Product Name: ' + product_name[index] +
-                ' | Price: ' + product_warehouse_price[index] +
-                ' | Qty: ' + product_qty[index] +
-                ' | Shelf: ' + product_shelf[index]
-            );
-        });
-});
+// var id = $('select[name="warehouse_id"]').val();
+// $.get('../getproduct/' + id, function(data) {
+//     lims_product_array = [];
+//     product_code = data[0];
+//     product_name = data[1];
+//     product_qty = data[2];
+//     product_type = data[3];
+//     product_id = data[4];
+//     product_list = data[5];
+//     qty_list = data[6];
+//     product_warehouse_price = data[7];
+//     batch_no = data[8];
+//     product_batch_id = data[9];
+//     is_embeded = data[11];
+//     product_shelf = data[12];
+//         $.each(product_code, function(index) {
+//             if(is_embeded[index])
+//               lims_product_array.push(
+//                     'Product Name: ' + product_name[index] +
+//                     ' | Price: ' + product_warehouse_price[index] +
+//                     ' | Qty: ' + product_qty[index] +
+//                     ' | Shelf: ' + product_shelf[index] +
+//                     ' | Embedded: ' + is_embeded[index]
+//                 );
+//             else
+//             lims_product_array.push(
+//                 'Product Name: ' + product_name[index] +
+//                 ' | Price: ' + product_warehouse_price[index] +
+//                 ' | Qty: ' + product_qty[index] +
+//                 ' | Shelf: ' + product_shelf[index]
+//             );
+//         });
+// });
+loadWarehouseProducts();
+
 $("#submit-btn").on("click", function() {
     if(validatePaymentMethod()) {
         $('.payment-form').submit();
@@ -2176,6 +2231,7 @@ function validatePaymentMethod() {
     
     return true;
 }
+
 isCashRegisterAvailable(id);
 
 function  isCashRegisterAvailable(warehouse_id) {
@@ -2369,42 +2425,48 @@ $('select[name="biller_id"]').on('change', function() {
     saveValue(this);
 });
 
+// $('select[name="warehouse_id"]').on('change', function() {
+//     saveValue(this);
+//     var id = $(this).val();
+//     $.get('../getproduct/' + id, function(data) {
+//         lims_product_array = [];
+//         product_code = data[0];
+//         product_name = data[1];
+//         product_qty = data[2];
+//         product_type = data[3];
+//         product_id = data[4];
+//         product_list = data[5];
+//         qty_list = data[6];
+//         product_warehouse_price = data[7];
+//         batch_no = data[8];
+//         product_batch_id = data[9];
+//         is_embeded = data[11];
+//         product_shelf = data[12];
+//         $.each(product_code, function(index) {
+//             if(is_embeded[index])
+//               lims_product_array.push(
+//                     'Product Name: ' + product_name[index] +
+//                     ' | Price: ' + product_warehouse_price[index] +
+//                     ' | Qty: ' + product_qty[index] +
+//                     ' | Shelf: ' + product_shelf[index] +
+//                     ' | Embedded: ' + is_embeded[index]
+//                 );
+//             else
+//               lims_product_array.push(
+//                     'Product Name: ' + product_name[index] +
+//                     ' | Price: ' + product_warehouse_price[index] +
+//                     ' | Qty: ' + product_qty[index] +
+//                     ' | Shelf: ' + product_shelf[index] 
+//                 );
+//         });
+//     });
+//     isCashRegisterAvailable(warehouse_id)
+// });
+
 $('select[name="warehouse_id"]').on('change', function() {
     saveValue(this);
-    var id = $(this).val();
-    $.get('../getproduct/' + id, function(data) {
-        lims_product_array = [];
-        product_code = data[0];
-        product_name = data[1];
-        product_qty = data[2];
-        product_type = data[3];
-        product_id = data[4];
-        product_list = data[5];
-        qty_list = data[6];
-        product_warehouse_price = data[7];
-        batch_no = data[8];
-        product_batch_id = data[9];
-        is_embeded = data[11];
-        product_shelf = data[12];
-        $.each(product_code, function(index) {
-            if(is_embeded[index])
-              lims_product_array.push(
-                    'Product Name: ' + product_name[index] +
-                    ' | Price: ' + product_warehouse_price[index] +
-                    ' | Qty: ' + product_qty[index] +
-                    ' | Shelf: ' + product_shelf[index] +
-                    ' | Embedded: ' + is_embeded[index]
-                );
-            else
-              lims_product_array.push(
-                    'Product Name: ' + product_name[index] +
-                    ' | Price: ' + product_warehouse_price[index] +
-                    ' | Qty: ' + product_qty[index] +
-                    ' | Shelf: ' + product_shelf[index] 
-                );
-        });
-    });
-    isCashRegisterAvailable(warehouse_id)
+    loadWarehouseProducts();
+    isCashRegisterAvailable($(this).val());
 });
 
 // Replace the lims_productcodeSearch autocomplete section with this:

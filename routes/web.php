@@ -346,10 +346,12 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('delete-ad/{id}', 'deleteAd');
         Route::get('edit-ad/{id}', 'editAd');
         Route::post('update-ad', 'updateAd')->name('ad.update');
+
     });
     
     Route::post('sales/save-default-filter', [SaleController::class, 'saveDefaultFilter'])->name('sales.save-default-filter');
-
+// routes/web.php  (or wherever your sale routes are)
+Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProductsForSale'])->name('warehouse.products.sale');
     Route::resource('sales', SaleController::class);
 
     Route::controller(HirePurchaseController::class)->group(function () {
@@ -417,6 +419,8 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
             Route::post('deletebyselection', 'deleteBySelection');
             //show
             Route::get('{id}/show', 'show')->name('purchases.show');
+
+            Route::get('get-warehouse-products',  'getWarehouseProducts')->name('warehouse.products');
         });
         Route::post('importpurchase', 'importPurchase')->name('purchase.import');
     });

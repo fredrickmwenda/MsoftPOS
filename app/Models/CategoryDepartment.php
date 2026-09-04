@@ -9,6 +9,7 @@ class CategoryDepartment extends Model
 {
     use HasFactory;
     public $table = "category_departments";
+    
     protected $fillable =[
         "name", 'image', "is_active"
     ];

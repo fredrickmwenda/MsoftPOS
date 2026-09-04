@@ -687,10 +687,11 @@ class PurchaseController extends Controller
 
     public function limsProductSearch(Request $request)
     {
+        $todayDate = date('Y-m-d');
         $data = $request->input('data');
         $warehouse_id = $request->input('warehouse_id');
 
-        // Handle "Code: ..." format
+        // Handle "Code: ..." format from autocomplete
         if (strpos($data, 'Code:') === 0) {
             $parts = explode('?', $data);
             $codePart = trim(str_replace('Code:', '', $parts[0]));
@@ -700,122 +701,212 @@ class PurchaseController extends Controller
         }
 
         $product_info = explode('?', $data);
-        $product_code = $product_info[0];
-        $qty = isset($product_info[1]) ? $product_info[1] : 1;
+        $product_code = isset($product_info[0]) ? trim($product_info[0]) : null;
+        $customer_id = isset($product_info[1]) ? $product_info[1] : null;
+        $qty = isset($product_info[2]) ? $product_info[2] : 1;
 
-        // 🔹 Get product IDs available in the selected warehouse via product_warehouse table
-        $warehouse_product_ids = [];
-        if ($warehouse_id) {
-            $warehouse_product_ids = \DB::table('product_warehouse')
-                ->where('warehouse_id', $warehouse_id)
-                ->pluck('product_id')
-                ->toArray();
+        if (!$product_code) {
+            return response()->json(['error' => 'Product code is required'], 400);
+        }
+        if (!$warehouse_id) {
+            return response()->json(['error' => 'Warehouse not selected. Please select a warehouse first.'], 400);
         }
 
+        $product_variant_id = null;
+        
+        // Get all discounts for this customer
+        $all_discount = DB::table('discount_plan_customers')
+                        ->join('discount_plans', 'discount_plans.id', '=', 'discount_plan_customers.discount_plan_id')
+                        ->join('discount_plan_discounts', 'discount_plans.id', '=', 'discount_plan_discounts.discount_plan_id')
+                        ->join('discounts', 'discounts.id', '=', 'discount_plan_discounts.discount_id')
+                        ->where([
+                            ['discount_plans.is_active', true],
+                            ['discounts.is_active', true],
+                            ['discount_plan_customers.customer_id', $customer_id]
+                        ])
+                        ->select('discounts.*')
+                        ->get();
+
+        $lims_product_data = null;
+
+        // 1. Try to find product by exact code match first
         $lims_product_data = Product::where([
-                ['code', $product_code],
-                ['is_active', true]
-            ])
-            ->whereNull('is_variant');
+            ['code', $product_code],
+            ['is_active', true]
+        ])->first();
 
-        // 🔹 Filter by warehouse products if warehouse is selected
-        if (!empty($warehouse_product_ids)) {
-            $lims_product_data = $lims_product_data->whereIn('id', $warehouse_product_ids);
+        // 2. If not found, try to find by product name
+        if (!$lims_product_data) {
+            $lims_product_data = Product::where([
+                ['name', 'LIKE', '%' . $product_code . '%'],
+                ['is_active', true]
+            ])->first();
         }
 
-        $lims_product_data = $lims_product_data->first();
-
-        $product = [];
-
+        // 3. If still not found, try to find by variant item code
         if (!$lims_product_data) {
-            // Try variant products — also filtered by warehouse
-            $variantQuery = Product::join('product_variants', 'products.id', 'product_variants.product_id')
+            $lims_product_data = Product::join('product_variants', 'products.id', '=', 'product_variants.product_id')
                 ->where([
                     ['product_variants.item_code', $product_code],
                     ['products.is_active', true]
                 ])
-                ->whereNotNull('is_variant')
-                ->select('products.*', 'product_variants.item_code', 'product_variants.additional_cost');
-
-            if (!empty($warehouse_product_ids)) {
-                $variantQuery = $variantQuery->whereIn('products.id', $warehouse_product_ids);
+                ->select('products.*', 'product_variants.id as product_variant_id', 'product_variants.item_code', 'product_variants.additional_price')
+                ->first();
+            
+            if ($lims_product_data) {
+                $product_variant_id = $lims_product_data->product_variant_id;
+                $lims_product_data->price += $lims_product_data->additional_price;
             }
-
-            $lims_product_data = $variantQuery->first();
         }
 
-        if ($lims_product_data && isset($lims_product_data->additional_cost)) {
-            $lims_product_data->cost += $lims_product_data->additional_cost;
+        // Product not found - return error
+        if (!$lims_product_data) {
+            return response()->json(['error' => 'Product not found.'], 404);
         }
 
-        if(!$lims_product_data) {
-            return response()->json(['error' => 'Product not found in the selected warehouse'], 404);
+        // 🔹 STRICT WAREHOUSE CHECK FOR STANDARD PRODUCTS
+        // Digital, Combo, and Service products do not have warehouse records, so they are allowed.
+        if ($lims_product_data->type == 'standard') {
+            $in_warehouse = \DB::table('product_warehouse')
+                ->where('warehouse_id', $warehouse_id)
+                ->where('product_id', $lims_product_data->id)
+                ->exists();
+
+            if (!$in_warehouse) {
+                return response()->json(['error' => 'Product not found in the selected warehouse.'], 404);
+            }
         }
 
+        // Build product response array
+        $product = [];
         $product[] = $lims_product_data->name;
-        if($lims_product_data->is_variant)
+        
+        if (isset($lims_product_data->product_variant_id) && $lims_product_data->product_variant_id) {
             $product[] = $lims_product_data->item_code;
-        else
+        } else {
             $product[] = $lims_product_data->code;
-        $product[] = $lims_product_data->cost;
-        $product[] = $lims_product_data->price;
+        }
 
-        // Handle multiple taxes
-        $tax_ids = [];
-        $tax_names = [];
-        $total_tax_rate = 0;
+        // Apply discounts logic
+        $no_discount = 1;
+        foreach ($all_discount as $key => $discount) {
+            $product_list = explode(",", $discount->product_list);
+            $days = explode(",", $discount->days);
 
-        if ($lims_product_data->product_taxes->isNotEmpty()) {
-            foreach ($lims_product_data->product_taxes as $product_tax) {
-                $tax_ids[] = $product_tax->tax_id;
-                $tax = Tax::find($product_tax->tax_id);
-                if ($tax) {
-                    $tax_names[] = $tax->name;
-                    $total_tax_rate += $tax->rate;
+            if (($discount->applicable_for == 'All' || in_array($lims_product_data->id, $product_list)) && 
+                ($todayDate >= $discount->valid_from && $todayDate <= $discount->valid_till && 
+                in_array(date('D'), $days) && $qty >= $discount->minimum_qty && $qty <= $discount->maximum_qty)) {
+                
+                if ($discount->type == 'flat') {
+                    $product[] = $lims_product_data->price - $discount->value;
+                } elseif ($discount->type == 'percentage') {
+                    $product[] = $lims_product_data->price - ($lims_product_data->price * ($discount->value / 100));
                 }
+                $no_discount = 0;
+                break;
             }
         }
 
-        $product[] = implode(',', $tax_ids);
-        $product[] = implode(',', $tax_names);
+        if ($lims_product_data->promotion && $todayDate <= $lims_product_data->last_date && $no_discount) {
+            $product[] = $lims_product_data->promotion_price;
+        } elseif ($no_discount) {
+            $product[] = $lims_product_data->price;
+        }
+
+        // Tax information
+        if ($lims_product_data->tax_id) {
+            $lims_tax_data = Tax::find($lims_product_data->tax_id);
+            $product[] = $lims_tax_data->rate;
+            $product[] = $lims_tax_data->name;
+        } else {
+            $product[] = 0;
+            $product[] = 'No Tax';
+        }
+        
         $product[] = $lims_product_data->tax_method;
 
-        $units = Unit::where("base_unit", $lims_product_data->unit_id)
+        // Unit information
+        if ($lims_product_data->type == 'standard') {
+            $units = Unit::where("base_unit", $lims_product_data->unit_id)
                     ->orWhere('id', $lims_product_data->unit_id)
                     ->get();
-        $unit_name = array();
-        $unit_operator = array();
-        $unit_operation_value = array();
-        foreach ($units as $unit) {
-            if ($lims_product_data->purchase_unit_id == $unit->id) {
-                array_unshift($unit_name, $unit->unit_name);
-                array_unshift($unit_operator, $unit->operator);
-                array_unshift($unit_operation_value, $unit->operation_value);
-            } else {
-                $unit_name[]  = $unit->unit_name;
-                $unit_operator[] = $unit->operator;
-                $unit_operation_value[] = $unit->operation_value;
+            $unit_name = array();
+            $unit_operator = array();
+            $unit_operation_value = array();
+            foreach ($units as $unit) {
+                if ($lims_product_data->sale_unit_id == $unit->id) {
+                    array_unshift($unit_name, $unit->unit_name);
+                    array_unshift($unit_operator, $unit->operator);
+                    array_unshift($unit_operation_value, $unit->operation_value);
+                } else {
+                    $unit_name[] = $unit->unit_name;
+                    $unit_operator[] = $unit->operator;
+                    $unit_operation_value[] = $unit->operation_value;
+                }
             }
+            $product[] = implode(",", $unit_name) . ',';
+            $product[] = implode(",", $unit_operator) . ',';
+            $product[] = implode(",", $unit_operation_value) . ',';
+        } else {
+            $product[] = 'n/a,';
+            $product[] = 'n/a,';
+            $product[] = 'n/a,';
         }
 
-        $product[] = implode(",", $unit_name) . ',';
-        $product[] = implode(",", $unit_operator) . ',';
-        $product[] = implode(",", $unit_operation_value) . ',';
         $product[] = $lims_product_data->id;
+        $product[] = $product_variant_id;
+        $product[] = $lims_product_data->promotion;
         $product[] = $lims_product_data->is_batch;
         $product[] = $lims_product_data->is_imei;
+        $product[] = $lims_product_data->is_variant;
+        $product[] = $qty;
+        $product[] = $lims_product_data->wholesale_price;
 
         return $product;
     }
-    /**
-     * 🔹 Fetch product list filtered by warehouse via product_warehouse table
-     * Used for the autocomplete source on the purchase create form
-     */
 
 
-    /**
-     * 🔹 Quick store a supplier via AJAX from the purchase create modal
-     */
+    public function getWarehouseProducts(Request $request)
+    {
+    $warehouse_id = $request->input('warehouse_id');
+
+    if (!$warehouse_id) {
+        return response()->json([]);
+    }
+
+    // Get product IDs that exist in this warehouse
+    $warehouse_product_ids = \DB::table('product_warehouse')
+        ->where('warehouse_id', $warehouse_id)
+        ->pluck('product_id');
+
+    $product_codes = [];
+
+    // Standard products (no variant)
+    $products = Product::whereIn('id', $warehouse_product_ids)
+        ->where('is_active', true)
+        ->whereNull('is_variant')
+        ->select('name', 'code')
+        ->get();
+
+    foreach ($products as $product) {
+        $product_codes[] = $product->name . ' [Code: ' . $product->code . ']';
+    }
+
+    // Variant products
+    $variants = Product::join('product_variants', 'products.id', '=', 'product_variants.product_id')
+        ->whereIn('products.id', $warehouse_product_ids)
+        ->where('products.is_active', true)
+        ->whereNotNull('products.is_variant')
+        ->select('products.name', 'product_variants.item_code as code')
+        ->get();
+
+    foreach ($variants as $variant) {
+        $product_codes[] = $variant->name . ' [Code: ' . $variant->code . ']';
+    }
+
+    return response()->json($product_codes);
+    }
+
 
 
     public function productPurchaseData($id)

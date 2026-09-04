@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+@section('content')
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
@@ -17,12 +18,31 @@
                         <h4 class="mt-4">{{$product_data->name.' ['.$product_data->code.']'}}</h4>
                     </div>
                 </div>
-                <div class="col-md-3">
+
+                <div class="col-md-3 mt-3 mb-3 ml-2">
                     <div class="form-group">
-                        <label><strong>{{trans('file.Date')}}</strong></label>
-                        <input type="text" class="daterangepicker-field form-control" value="{{$starting_date}} To {{$ending_date}}" required />
-                        <input type="hidden" name="starting_date" value="{{$starting_date}}" />
-                        <input type="hidden" name="ending_date" value="{{$ending_date}}" />
+                        <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="starting_date"
+                                value="{{ !empty($starting_date) ? $starting_date : '' }}"
+                            />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mt-3 mb-3">
+                    <div class="form-group">
+                        <label class="control-label"><strong>End Date</strong> &nbsp;</label>
+                        <div class="">
+                            <input 
+                                type="date" 
+                                class="form-control" 
+                                name="end_date"
+                                value="{{ !empty($ending_date) ? $ending_date : '' }}"
+                            />
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-3 @if(!Auth::user()->roles->contains(fn($r) => $r->id <= 2)){{'d-none'}}@endif">
@@ -63,21 +83,6 @@
         <!-- sale table -->
         <div role="tabpanel" class="tab-pane fade show active" id="product-sale">
             <div class="table-responsive mb-4">
-                <!-- <table id="sale-table" class="table table-hover" style="width: 100%">
-                    <thead>
-                        <tr>
-                            <th class="not-exported-sale"></th>
-                            <th>{{trans('file.Date')}}</th>
-                            <th>{{trans('file.reference')}}</th>
-                            <th>{{trans('file.Warehouse')}}</th>
-                            <th>{{trans('file.customer')}}</th>
-                            <th>{{trans('file.qty')}}</th>
-                            <th>{{trans('file.Unit Price')}}</th>
-                            <th>{{trans('file.Subtotal')}}</th>
-                        </tr>
-                    </thead>
-
-                </table> -->
                 <table id="sale-table" class="table table-hover" style="width: 100%">
                     <thead>
                         <tr>
@@ -105,38 +110,11 @@
                         </tr>
                     </tfoot>
                 </table>
-
-
             </div>
         </div>
         <!-- purchase table -->
         <div role="tabpanel" class="tab-pane fade" id="product-purchase">
             <div class="table-responsive mb-4">
-                <!-- <table id="purchase-table" class="table table-hover" style="width: 100%">
-                    <thead>
-                        <tr>
-                            <th class="not-exported-purchase"></th>
-                            <th>{{trans('file.Date')}}</th>
-                            <th>{{trans('file.reference')}}</th>
-                            <th>{{trans('file.Warehouse')}}</th>
-                            <th>{{trans('file.Supplier')}}</th>
-                            <th>{{trans('file.qty')}}</th>
-                            <th>{{trans('file.Unit Price')}}</th>
-                            <th>{{trans('file.Subtotal')}}</th>
-                        </tr>
-                    </thead>
-
-                    <tfoot class="tfoot active">
-                        <th></th>
-                        <th>{{trans('file.Total')}}</th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                    </tfoot>
-                </table> -->
                 <table id="purchase-table" class="table table-hover" style="width: 100%">
                     <thead>
                         <tr>
@@ -215,10 +193,15 @@
     $("ul#product").siblings('a').attr('aria-expanded','true');
     $("ul#product").addClass("show");
 
-    var starting_date = <?php echo json_encode($starting_date); ?>;
-    var ending_date = <?php echo json_encode($ending_date); ?>;
-    var warehouse_id = <?php echo json_encode($warehouse_id); ?>;
+    // ✅ Added null-coalescing fallbacks to prevent passing NULL to AJAX
+    var starting_date = <?php echo json_encode($starting_date ?? date('Y-m-d', strtotime('-1 year'))); ?>;
+    var ending_date = <?php echo json_encode($ending_date ?? date('Y-m-d')); ?>;
+    var warehouse_id = <?php echo json_encode($warehouse_id ?? 0); ?>;
     var product_id = <?php echo json_encode($product_id); ?>;
+
+    // ✅ JS safeguard: Ensure they are never empty/null before sending
+    if (!starting_date) starting_date = '<?php echo date('Y-m-d', strtotime('-1 year')); ?>';
+    if (!ending_date) ending_date = '<?php echo date('Y-m-d'); ?>';
 
     $.ajaxSetup({
         headers: {
@@ -228,18 +211,9 @@
 
     $("#warehouse_id").val(warehouse_id);
 
-    $(".daterangepicker-field").daterangepicker({
-      callback: function(startDate, endDate, period){
-        var starting_date = startDate.format('YYYY-MM-DD');
-        var ending_date = endDate.format('YYYY-MM-DD');
-        var title = starting_date + ' To ' + ending_date;
-        $(this).val(title);
-        $('input[name="starting_date"]').val(starting_date);
-        $('input[name="ending_date"]').val(ending_date);
-      }
-    });
+
  
-$('#sale-table').DataTable({
+ $('#sale-table').DataTable({
     processing: true,
     serverSide: true,
     ajax: {

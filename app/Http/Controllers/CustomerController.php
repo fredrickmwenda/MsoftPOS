@@ -350,30 +350,30 @@ class CustomerController extends Controller
             ],
         ]);
 
-        $this->validate($request, [
-            'region' => [
-                'max:255','required',
-            ],
-        ]);
-          $this->validate($request, [
-            'community' => [
-                'max:255','required',
-            ],
-        ]);
-           $this->validate($request, [
-            'location' => [
-                'max:255','required',
-            ],
-        ]);
+        // $this->validate($request, [
+        //     'region' => [
+        //         'max:255','required',
+        //     ],
+        // ]);
+        //   $this->validate($request, [
+        //     'community' => [
+        //         'max:255','required',
+        //     ],
+        // ]);
+        //    $this->validate($request, [
+        //     'location' => [
+        //         'max:255','required',
+        //     ],
+        // ]);
 
-        $this->validate($request, [
-            'whatsapp_number' => [
-                'max:255',
-                Rule::unique('customers')->ignore($id)->where(function ($query) {
-                    return $query->where('is_active', 1);
-                }),
-            ],
-        ]);
+        // $this->validate($request, [
+        //     'whatsapp_number' => [
+        //         'max:255',
+        //         Rule::unique('customers')->ignore($id)->where(function ($query) {
+        //             return $query->where('is_active', 1);
+        //         }),
+        //     ],
+        // ]);
 
         $input = $request->all();
         $lims_customer_data = Customer::find($id);

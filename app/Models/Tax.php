@@ -10,10 +10,7 @@ class Tax extends Model
         "name", "rate", "is_active", "woocommerce_tax_id"
     ];
 
-    // public function product()
-    // {
-    // 	return $this->hasMany('App\ModelsProduct');
-    // }
+ 
 
     public function products()
     {

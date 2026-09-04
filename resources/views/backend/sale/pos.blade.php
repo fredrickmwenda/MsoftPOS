@@ -1672,6 +1672,59 @@ var currency = <?php echo json_encode($currency) ?>;
 var currencyChange = false;
 $('#currency').val(currency['id']);
 
+function loadWarehouseProducts() {
+    var warehouse_id = $('select[name="warehouse_id"]').val();
+    if (!warehouse_id) {
+        lims_product_array = [];
+        return;
+    }
+
+    $.ajax({
+        type: 'GET',
+        async: false,
+        url: 'sales/getproduct/' + warehouse_id,
+        success: function(data) {
+            lims_product_array = [];
+            product_code = data[0];
+            product_name = data[1];
+            product_qty = data[2];
+            product_type = data[3];
+            product_id = data[4];
+            product_list = data[5];
+            qty_list = data[6];
+            product_warehouse_price = data[7];
+            batch_no = data[8];
+            product_batch_id = data[9];
+            expired_date = data[10];
+            is_embeded = data[11];
+            product_shelf = data[12];
+
+            $.each(product_code, function(index) {
+                if(is_embeded[index])
+                    lims_product_array.push(
+                         'Code: ' + product_code[index] +
+                        ' | Name: ' + product_name[index] +
+                        ' | Price: ' + product_warehouse_price[index] +
+                        ' | Qty: ' + product_qty[index] +
+                        ' | Shelf: ' + product_shelf[index] +
+                        ' | Embedded: ' + is_embeded[index] 
+                    );
+                else
+                    lims_product_array.push(
+                         'Code: ' + product_code[index] +
+                        ' | Name: ' + product_name[index] +
+                        ' | Price: ' + product_warehouse_price[index] +
+                        ' | Qty: ' + product_qty[index] +
+                        ' | Shelf: ' + product_shelf[index] 
+                    );
+            });
+        },
+        error: function() {
+            lims_product_array = [];
+        }
+    });
+}
+
 $('#currency').change(function(){
     var rate = $(this).find(':selected').data('rate');
     var currency_id = $(this).val();
@@ -2105,45 +2158,9 @@ $.get('sales/getcustomergroup/' + id, function(data) {
 });
 
 // Use DOM value or fallback to warehouse_id (selectpicker may not have updated the select yet)
-var id = $("#warehouse_id").val() || $('select[name="warehouse_id"]').val() || warehouse_id;
-if (id) {
-    $.get('sales/getproduct/' + id, function(data) {
-        lims_product_array = [];
-        product_code = data[0];
-        product_name = data[1];
-        product_qty = data[2];
-        product_type = data[3];
-        product_id = data[4];
-        product_list = data[5];
-        qty_list = data[6];
-        product_warehouse_price = data[7];
-        batch_no = data[8];
-        product_batch_id = data[9];
-        is_embeded = data[11];
-        product_shelf = data[12];
-        $.each(product_code, function(index) {
-            if(is_embeded[index])
-                lims_product_array.push(
-                     'Code: ' + product_code[index] +
-                    ' | Name: ' + product_name[index] +
-                    ' | Price: ' + product_warehouse_price[index] +
-                    ' | Qty: ' + product_qty[index] +
-                    ' | Shelf: ' + product_shelf[index] +
-                    ' | Embeded: ' + is_embeded[index] 
-               );
-            else
-                lims_product_array.push(
-                     'Code: ' + product_code[index] +
-                    ' | Name: ' + product_name[index] +
-                    ' | Price: ' + product_warehouse_price[index] +
-                    ' | Qty: ' + product_qty[index] +
-                    ' | Shelf: ' + product_shelf[index] 
-               );
-        });
-    });
-}
-if (id) {
-    isCashRegisterAvailable(id);
+loadWarehouseProducts();
+if (warehouse_id) {
+    isCashRegisterAvailable(warehouse_id);
 }
 
 function  isCashRegisterAvailable(warehouse_id) {
@@ -2417,42 +2434,7 @@ $('select[name="biller_id"]').on('change', function() {
 $('select[name="warehouse_id"]').on('change', function() {
     saveValue(this);
     warehouse_id = $(this).val();
-    $.get('sales/getproduct/' + warehouse_id, function(data) {
-        lims_product_array = [];
-        product_code = data[0];
-        product_name = data[1];
-        product_qty = data[2];
-        product_type = data[3];
-        product_id = data[4];
-        product_list = data[5];
-        qty_list = data[6];
-        product_warehouse_price = data[7];
-        batch_no = data[8];
-        product_batch_id = data[9];
-        is_embeded = data[11];
-        product_shelf = data[12];
-        $.each(product_code, function(index) {
-            if(is_embeded[index])
-                lims_product_array.push(
-                    'Code: ' + product_code[index] +
-                    ' | Name: ' + product_name[index] +
-                    ' | Price: ' + product_warehouse_price[index] +
-                    ' | Qty: ' + product_qty[index] +
-                    ' | Shelf: ' + product_shelf[index] +
-                    ' | Embeded: ' + is_embeded[index] 
-                );
-            else
-                lims_product_array.push(
-                        'Code: ' + product_code[index] +
-                        ' | Name: ' + product_name[index] +
-                        ' | Price: ' + product_warehouse_price[index] +
-                        ' | Qty: ' + product_qty[index] +
-                        ' | Shelf: ' + product_shelf[index] 
-
-                );
-        });
-    });
-
+    loadWarehouseProducts();
     isCashRegisterAvailable(warehouse_id);
 });
 
@@ -2478,7 +2460,8 @@ lims_productcodeSearch.autocomplete({
             productSearch(data);
         } 
         else if(ui.content.length == 0 && $('#lims_productcodeSearch').val().length == 13) {
-          productSearch($('#lims_productcodeSearch').val()+'|'+1);
+            // FIXED: pass raw barcode only; productSearch will append ?customer_id?qty
+            productSearch($('#lims_productcodeSearch').val());
         }
     },
     select: function(event, ui) {
@@ -3204,42 +3187,52 @@ function getTotalSplitAmount() {
 function productSearch(data) {
     var code_match = data.match(/Code:\s*([^|]+)/);
     console.log(code_match);
-    var product_info = data.split(" ");
-     var product_code = code_match ? code_match[1].trim() : data.split(" ")[0];
+    
+    // FIXED: extract code before ? or space so barcode strings don't get corrupted
+    var searchProductCode = code_match ? code_match[1].trim() : data.split('?')[0].split(' ')[0];
      
-    if (product_code.length < 1) {
+    if (searchProductCode.length < 1) {
         alert('Please insert product code!');
         return;
     }
     var pre_qty = 0;
     $(".product-code").each(function(i) {
-        if ($(this).val() == product_code) {
+        if ($(this).val() == searchProductCode) {
             rowindex = i;
             pre_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
         }
     });
-    var ajaxData = product_code + '?' + $('#customer_id').val() + '?' + (parseFloat(pre_qty) + 1);
+    var ajaxData = searchProductCode + '?' + $('#customer_id').val() + '?' + (parseFloat(pre_qty) + 1);
     console.log(ajaxData);
-    //  var ajaxData = 'Code: ' + product_code + '?' + $('#customer_id').val() + '?' + (parseFloat(pre_qty) + 1);
-    // data += '?'+$('#customer_id').val()+'?'+(parseFloat(pre_qty) + 1);
+    
     $.ajax({
         type: 'GET',
         async: false,
         url: 'sales/lims_product_search',
         data: {
-            data: ajaxData
+            data: ajaxData,
+            warehouse_id: $('select[name="warehouse_id"]').val()   // FIXED: send warehouse
         },
-        success: function(data) {
+        success: function(response) {
+            // FIXED: handle error responses from controller
+            if(response.error) {
+                alert(response.error);
+                return;
+            }
+            
             var flag = 1;
             if (pre_qty > 0) {
-                var qty = data[15];
+                var qty = response[15];
                 $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                pos = product_code.indexOf(data[1]);
-                if(!data[11] && product_warehouse_price[pos]) {
+                
+                // FIXED: uses GLOBAL product_code array (was shadowed by local var before)
+                pos = product_code.indexOf(response[1]);
+                
+                if(!response[11] && product_warehouse_price[pos]) {
                     product_price[rowindex] = parseFloat(product_warehouse_price[pos] * currency['exchange_rate']) + parseFloat(product_warehouse_price[pos] * currency['exchange_rate'] * customer_group_rate);
                 }
                 else{
-                    product_price[rowindex] = parseFloat(data[2] * currency['exchange_rate']) + parseFloat(data[2] * currency['exchange_rate'] * customer_group_rate);
+                    product_price[rowindex] = parseFloat(response[2] * currency['exchange_rate']) + parseFloat(response[2] * currency['exchange_rate'] * customer_group_rate);
                 }
                 flag = 0;
                 checkQuantity(String(qty), true);
@@ -3248,15 +3241,24 @@ function productSearch(data) {
             }
             $("input[name='product_code_name']").val('');
             if(flag){
-                addNewProduct(data);
+                addNewProduct(response);
             }
-            else if(data[18] != 'null' && data[18] != '') {
+            else if(response[18] != 'null' && response[18] != '') {
                 var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
                 if(imeiNumbers)
-                    imeiNumbers += ','+data[18];
+                    imeiNumbers += ','+response[18];
                 else
-                    imeiNumbers = data[18];
+                    imeiNumbers = response[18];
                 $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(imeiNumbers);
+            }
+        },
+        error: function(xhr) {
+            // FIXED: show server errors instead of failing silently
+            if(xhr.status === 404) {
+                var resp = xhr.responseJSON;
+                alert(resp && resp.error ? resp.error : 'Product not found in the selected warehouse.');
+            } else {
+                alert('An error occurred while searching for the product.');
             }
         }
     });
@@ -3268,12 +3270,6 @@ function addNewProduct(data){
     temp_unit_name = (data[6]).split(',');
     pos = product_code.indexOf(data[1]);
     cols += '<td class="col-sm-3 product-title"><strong class="edit-product btn btn-link" data-toggle="modal" data-target="#editModal"><span style="margin-left: -19px; white-space: break-spaces;"><strong>' + data[0] + ' <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg></strong><br><span>' + data[1]+ '</span>' + '<p>In Stock: <span class="in-stock"></span></p></td>';
-    // if(data[12]) {
-    //     cols += '<td class="col-sm-2"><input type="text" class="form-control batch-no" value="'+batch_no[pos]+'" required/> <input type="hidden" class="product-batch-id" name="product_batch_id[]" value="'+product_batch_id[pos]+'"/> </td>';
-    // }
-    // else {
-    //     cols += '<td class="col-sm-2"><input type="text" class="form-control batch-no" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
-    // }
     cols += '<td class="col-sm-2"><input type="text" class="form-control batch-no" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
 
     cols += '<td class="col-sm-2 product-price"></td>';
@@ -3317,7 +3313,6 @@ function addNewProduct(data){
     else
         wholesale_price.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
 
-    //cost.splice(rowindex, 0, parseFloat(data[17] * currency['exchange_rate']));
     product_discount.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
     tax_rate.splice(rowindex, 0, parseFloat(data[3]));
     tax_name.splice(rowindex, 0, data[4]);
@@ -3339,7 +3334,6 @@ function addNewProduct(data){
     localStorageTempUnitName.splice(rowindex, 0, data[6]);
     localStorageSaleUnitOperator.splice(rowindex, 0, data[7]);
     localStorageSaleUnitOperationValue.splice(rowindex, 0, data[8]);
-    //put some dummy value
     localStorageNetUnitPrice.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
     localStorageTaxValue.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
     localStorageSubTotalUnit.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
@@ -3361,7 +3355,6 @@ function addNewProduct(data){
         $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
     }
 }
-
 
 function populatePriceOption() {
     $('#editModal select[name=price_option]').empty();

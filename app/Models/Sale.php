@@ -60,11 +60,6 @@ class Sale extends Model
     }
 
 
-
- 
-
-
-
     public function currency()
     {
         return $this->belongsTo('App\Models\Currency');

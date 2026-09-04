@@ -590,26 +590,26 @@
         }
     }
 
-    function loadWarehouseProducts() {
-        var warehouse_id = $('select[name="warehouse_id"]').val();
-        if (!warehouse_id) {
-            lims_product_code = [];
-            return;
-        }
-
-        $.ajax({
-            type: 'GET',
-            url: '{{ url("lims_product_search_warehouse") }}',
-            data: { warehouse_id: warehouse_id },
-            async: false,
-            success: function(data) {
-                lims_product_code = data;
-            },
-            error: function() {
-                lims_product_code = [];
-            }
-        });
+function loadWarehouseProducts() {
+    var warehouse_id = $('select[name="warehouse_id"]').val();
+    if (!warehouse_id) {
+        lims_product_code = [];
+        return;
     }
+
+    $.ajax({
+        type: 'GET',
+        url: '{{ route("warehouse.products") }}', // <-- Use the new route
+        data: { warehouse_id: warehouse_id },
+        async: false,
+        success: function(data) {
+            lims_product_code = data;
+        },
+        error: function() {
+            lims_product_code = [];
+        }
+    });
+}
 
     // Run on document ready
     $(document).ready(function() {

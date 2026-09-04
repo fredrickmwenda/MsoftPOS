@@ -41,17 +41,17 @@ class Product extends Model
 
     public function category()
     {
-    	return $this->belongsTo('App\Models\Category');
+    	return $this->belongsTo(Category::class);
     }
 
     public function brand()
     {
-    	return $this->belongsTo('App\Models\Brand');
+    	return $this->belongsTo(Brand::class);
     }
 
     public function unit()
     {
-        return $this->belongsTo('App\Models\Unit');
+        return $this->belongsTo(Unit::class);
     }
 
     public function variant()
@@ -78,7 +78,7 @@ class Product extends Model
 
     public function product_warehouse()
     {
-        return $this->hasMany('App\Models\Product_Warehouse');
+        return $this->hasMany(Product_Warehouse::class);
     }
 
     public function product_taxes()
@@ -91,5 +91,5 @@ class Product extends Model
         return $this->hasMany(ProductBatch::class);
     }
 
-
+ 
 }

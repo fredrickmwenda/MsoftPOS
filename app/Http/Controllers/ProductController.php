@@ -655,30 +655,31 @@ class ProductController extends Controller
     }
 
  
-    public function history(Request $request)
-    {
-        if(Auth::user()->hasPermissionTo('product_history')) {
-            if($request->input('warehouse_id'))
-                $warehouse_id = $request->input('warehouse_id');
-            else
-                $warehouse_id = 0;
-
-            if($request->input('starting_date')) {
-                $starting_date = $request->input('starting_date');
-                $ending_date = $request->input('ending_date');
-            }
-            else {
-                $starting_date = date("Y-m-d", strtotime(date('Y-m-d', strtotime('-1 year', strtotime(date('Y-m-d') )))));
-                $ending_date = date("Y-m-d");
-            }    
-            $product_id = $request->input('product_id');
-            $product_data = Product::select('name', 'code')->find($product_id);
-            $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-            return view('backend.product.history',compact('starting_date', 'ending_date', 'warehouse_id', 'product_id', 'product_data', 'lims_warehouse_list'));
-        }
+ public function history(Request $request)
+{
+    if(Auth::user()->hasPermissionTo('product_history')) {
+        if($request->input('warehouse_id'))
+            $warehouse_id = $request->input('warehouse_id');
         else
-            return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+            $warehouse_id = 0;
+
+        // ✅ Default each date independently to avoid NULL ending_date
+        $starting_date = $request->filled('starting_date')
+            ? $request->input('starting_date')
+            : date("Y-m-d", strtotime('-1 year'));
+
+        $ending_date = $request->filled('ending_date')
+            ? $request->input('ending_date')
+            : date("Y-m-d");
+
+        $product_id = $request->input('product_id');
+        $product_data = Product::select('name', 'code')->find($product_id);
+        $lims_warehouse_list = Warehouse::where('is_active', true)->get();
+        return view('backend.product.history',compact('starting_date', 'ending_date', 'warehouse_id', 'product_id', 'product_data', 'lims_warehouse_list'));
     }
+    else
+        return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+}
 
     public function saleHistoryData(Request $request)
     {
@@ -690,11 +691,21 @@ class ProductController extends Controller
         $product_id = $request->input('product_id');
         $warehouse_id = $request->input('warehouse_id');
 
+            // ✅ Null-safe dates with sensible defaults
+        $starting_date = $request->filled('starting_date')
+            ? $request->input('starting_date')
+            : date("Y-m-d", strtotime('-1 year'));
+        $ending_date   = $request->filled('ending_date')
+            ? $request->input('ending_date')
+            : date("Y-m-d");
+
         $q = DB::table('sales')
             ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')
             ->where('product_sales.product_id', $product_id)
-            ->whereDate('sales.created_at', '>=' ,$request->input('starting_date'))
-            ->whereDate('sales.created_at', '<=' ,$request->input('ending_date'));
+            ->whereDate('sales.created_at', '>=', $starting_date)
+            ->whereDate('sales.created_at', '<=', $ending_date);
+
+
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
         if($this->isStaff() && config('staff_access') == 'own')
@@ -751,11 +762,6 @@ class ProductController extends Controller
                 $nestedData['reference_no'] = $sale->reference_no;
                 $nestedData['warehouse'] = $sale->warehouse_name;
                 $nestedData['customer'] = $sale->customer_name.' ['.($sale->customer_number).']';
-                // $nestedData['qty'] = number_format($sale->qty, config('decimal'));
-                // if($sale->sale_unit_id) {
-                //     $unit_data = DB::table('units')->select('unit_code')->find($sale->sale_unit_id);
-                //     $nestedData['qty'] .= ' '.$unit_data->unit_code;
-                // }
                 $qty = (int) $sale->qty;
 
                 $nestedData['qty'] = $qty;
@@ -790,11 +796,18 @@ class ProductController extends Controller
         $product_id = $request->input('product_id');
         $warehouse_id = $request->input('warehouse_id');
 
+        $starting_date = $request->filled('starting_date')
+            ? $request->input('starting_date')
+            : date("Y-m-d", strtotime('-1 year'));
+        $ending_date   = $request->filled('ending_date')
+            ? $request->input('ending_date')
+            : date("Y-m-d");
+
         $q = DB::table('purchases')
             ->join('product_purchases', 'purchases.id', '=', 'product_purchases.purchase_id')
             ->where('product_purchases.product_id', $product_id)
-            ->whereDate('purchases.created_at', '>=' ,$request->input('starting_date'))
-            ->whereDate('purchases.created_at', '<=' ,$request->input('ending_date'));
+            ->whereDate('purchases.created_at', '>=', $starting_date)
+            ->whereDate('purchases.created_at', '<=', $ending_date);
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
         if($this->isStaff() && config('staff_access') == 'own')
@@ -894,11 +907,18 @@ class ProductController extends Controller
         $product_id = $request->input('product_id');
         $warehouse_id = $request->input('warehouse_id');
 
+        $starting_date = $request->filled('starting_date')
+            ? $request->input('starting_date')
+            : date("Y-m-d", strtotime('-1 year'));
+        $ending_date   = $request->filled('ending_date')
+            ? $request->input('ending_date')
+            : date("Y-m-d");
+
         $q = DB::table('returns')
             ->join('product_returns', 'returns.id', '=', 'product_returns.return_id')
             ->where('product_returns.product_id', $product_id)
-            ->whereDate('returns.created_at', '>=' ,$request->input('starting_date'))
-            ->whereDate('returns.created_at', '<=' ,$request->input('ending_date'));
+            ->whereDate('returns.created_at', '>=', $starting_date)
+            ->whereDate('returns.created_at', '<=', $ending_date);
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
         if($this->isStaff() && config('staff_access') == 'own')
@@ -986,11 +1006,19 @@ class ProductController extends Controller
         $product_id = $request->input('product_id');
         $warehouse_id = $request->input('warehouse_id');
 
+
+        $starting_date = $request->filled('starting_date')
+            ? $request->input('starting_date')
+            : date("Y-m-d", strtotime('-1 year'));
+        $ending_date   = $request->filled('ending_date')
+            ? $request->input('ending_date')
+            : date("Y-m-d");
+
         $q = DB::table('return_purchases')
             ->join('purchase_product_return', 'return_purchases.id', '=', 'purchase_product_return.return_id')
             ->where('purchase_product_return.product_id', $product_id)
-            ->whereDate('return_purchases.created_at', '>=' ,$request->input('starting_date'))
-            ->whereDate('return_purchases.created_at', '<=' ,$request->input('ending_date'));
+            ->whereDate('return_purchases.created_at', '>=', $starting_date)
+            ->whereDate('return_purchases.created_at', '<=', $ending_date);
         if($warehouse_id)
             $q = $q->where('warehouse_id', $warehouse_id);
         if($this->isStaff() && config('staff_access') == 'own')

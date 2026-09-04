@@ -13,6 +13,6 @@ class DiscountPlan extends Model
 
     public function customers()
     {
-        return $this->belongsToMany('App\Models\Customer', 'discount_plan_customers');
+        return $this->belongsToMany(Customer::class, 'discount_plan_customers');
     }
 }

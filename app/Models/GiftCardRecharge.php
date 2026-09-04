@@ -8,8 +8,17 @@ class GiftCardRecharge extends Model
 {
     protected $table = 'gift_card_recharges';
 
-    protected $fillable =[
-
+    protected $fillable = [
         "gift_card_id", "amount", "user_id"
     ];
+
+    public function giftCard()
+    {
+        return $this->belongsTo(GiftCard::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

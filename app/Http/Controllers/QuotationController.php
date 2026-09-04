@@ -555,6 +555,14 @@ class QuotationController extends Controller
         $product_shelf = [];
         $product_data = [];
 
+        // Initialize arrays to prevent undefined index warnings
+        $product_type = [];
+        $product_id = [];
+        $product_list = [];
+        $qty_list = [];
+        $batch_no = [];
+        $product_batch_id = [];
+
         //retrieve data of product without variant
         $lims_product_warehouse_data = Product::join('product_warehouse', 'products.id', '=', 'product_warehouse.product_id')
         ->where([
@@ -616,35 +624,45 @@ class QuotationController extends Controller
             $batch_no[] = $product_batch_data->batch_no;
             $product_batch_id[] = $product_batch_data->id;
         }
+
         //retrieve data of product with variant
         $lims_product_warehouse_data = Product::join('product_warehouse', 'products.id', '=', 'product_warehouse.product_id')
         ->where([
             ['products.is_active', true],
             ['product_warehouse.warehouse_id', $id],
         ])->whereNotNull('product_warehouse.variant_id')->select('product_warehouse.*')->get();
+
         foreach ($lims_product_warehouse_data as $product_warehouse)
         {
             $product_qty[] = $product_warehouse->qty;
             $lims_product_data = Product::find($product_warehouse->product_id);
             $lims_product_variant_data = ProductVariant::select('item_code')->FindExactProduct($product_warehouse->product_id, $product_warehouse->variant_id)->first();
-            $product_code[] =  $lims_product_variant_data->item_code;
-            $product_name[] = $lims_product_data->name;
-            $product_type[] = $lims_product_data->type;
-            $product_id[] = $lims_product_data->id;
-            $product_price[] = $lims_product_data->price;
-            $product_shelf[] = $lims_product_data->shelf ?? 'NA';
-            $product_list[] = null;
-            $qty_list[] = null;
-            $batch_no[] = null;
-            $product_batch_id[] = null;
+            
+            if($lims_product_variant_data) {
+                $product_code[] =  $lims_product_variant_data->item_code;
+                $product_name[] = $lims_product_data->name;
+                $product_type[] = $lims_product_data->type;
+                $product_id[] = $lims_product_data->id;
+                $product_price[] = $lims_product_data->price;
+                $product_shelf[] = $lims_product_data->shelf ?? 'NA';
+                $product_list[] = null;
+                $qty_list[] = null;
+                $batch_no[] = null;
+                $product_batch_id[] = null;
+            }
         }
+
         //retrieve product data of digital and combo
-        $lims_product_data = Product::whereNotIn('type', ['standard'])->where('is_active', true)->get();
+        // EXCLUDE any product IDs we already collected from product_warehouse
+        $lims_product_data = Product::whereNotIn('type', ['standard'])
+            ->where('is_active', true)
+            ->whereNotIn('id', $product_id) // <--- ADDED THIS LINE
+            ->get();
+
         foreach ($lims_product_data as $product)
         {
             $product_qty[] = $product->qty;
             $product_price[] = $product->price ?? 'NA';
-            $lims_product_data = $product->id;
             $product_code[] =  $product->code;
             $product_name[] = $product->name;
             $product_type[] = $product->type;
@@ -652,7 +670,10 @@ class QuotationController extends Controller
             $product_shelf[] = $product->shelf ?? 'NA';
             $product_list[] = $product->product_list;
             $qty_list[] = $product->qty_list;
+            $batch_no[] = null;
+            $product_batch_id[] = null;
         }
+
         $product_data = [
             $product_code, 
             $product_name,
@@ -666,6 +687,7 @@ class QuotationController extends Controller
             $product_batch_id, 
             $product_shelf
         ];
+        
         return $product_data;
     }
 

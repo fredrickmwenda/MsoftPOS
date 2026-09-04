@@ -10,4 +10,9 @@ class Adjustment extends Model
         "reference_no", "warehouse_id", "document", "total_qty", "item",
          "note"
     ];
+
+
+    public function warehouse(){
+        return $this->belongsTo(Warehouse::class);
+    }
 }

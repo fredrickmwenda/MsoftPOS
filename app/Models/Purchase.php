@@ -13,12 +13,16 @@ class Purchase extends Model
 
     public function supplier()
     {
-    	return $this->belongsTo('App\Models\Supplier');
+    	return $this->belongsTo(Supplier::class);
     }
 
     public function warehouse()
     {
-    	return $this->belongsTo('App\Models\Warehouse');
+    	return $this->belongsTo(Warehouse::class);
+    }
+
+    public function currency(){
+        return $this->belongsTo(Currency::class);
     }
       // 🔹 Relationship to ProductPurchase (items in purchase)
     public function products()

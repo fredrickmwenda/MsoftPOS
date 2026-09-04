@@ -9,4 +9,9 @@ class BlackListCustomer extends Model
     protected $fillable =[
         "customer_id", "total_delivery_missed", "last_delivery_miss_date", "delivery_id"
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
 }
