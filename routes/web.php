@@ -69,6 +69,9 @@ Route::get('migrate', function() {
 	Artisan::call('migrate');
 });
 
+Route::get('/shop', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.index');
+Route::get('/', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.home');
+
 Route::get('clear',function() {
     Artisan::call('optimize:clear');
     // cache()->forget('biller_list');
