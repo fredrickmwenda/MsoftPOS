@@ -66,7 +66,7 @@ class SettingController extends Controller
         'users',
         'currencies',
         'reward_point_settings',
-        'roles_user', 
+        'role_user', 
           // <-- ADD this pivot table
     ];
 
@@ -177,7 +177,7 @@ class SettingController extends Controller
             $general_setting->site_favicon = $logoName;
         }
         $general_setting->save();
-        cache()->forget('general_setting');
+        //cache()->forget('general_setting');
        //this redirect to the route of general setting page and show the success message
         return redirect()->route('setting.general')->with('message', 'General setting updated successfully');
     }
@@ -613,7 +613,7 @@ class SettingController extends Controller
         else
             $pos_setting->is_table = true;
         $pos_setting->save();
-        cache()->forget('pos_setting');
+        //cache()->forget('pos_setting');
         return redirect()->back()->with('message', 'POS setting updated successfully');
     }
 }

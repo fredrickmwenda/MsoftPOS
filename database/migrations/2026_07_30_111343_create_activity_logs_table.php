@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('activity_logs', function (Blueprint $table) {
-            $table->id();
+            $table->increments('id');
             $table->string('log_name')->nullable();          // e.g., 'warehouse', 'default'
             $table->string('description');                  // e.g., 'created', 'updated', 'deleted'
             $table->nullableMorphs('subject');              // the model being acted upon

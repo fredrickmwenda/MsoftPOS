@@ -22,6 +22,7 @@ use App\Models\Coupon;
 use App\Models\PosSetting;
 use App\Models\Roles;
 use App\Models\HirePurchaseInstallment;
+use App\Models\Policy;
 
 // Import all observers
 use App\Observers\ProductObserver;
@@ -74,6 +75,11 @@ class AppServiceProvider extends ServiceProvider
         PosSetting::observe(PosSettingObserver::class);
         Roles::observe(RoleObserver::class);
         HirePurchaseInstallment::observe(HirePurchaseInstallmentObserver::class);
+
+
+        View::composer(['frontend.layout', 'frontend.policies.*'], function ($view) {
+            $view->with('footerPolicies', Policy::active()->ordered()->get());
+        });
     }
 }
 

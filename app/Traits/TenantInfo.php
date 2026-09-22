@@ -53,22 +53,7 @@ trait TenantInfo {
             $paid_by = $request->payment_method;
         else
             $paid_by = '';
-        /*if(!$package->is_free_trial && $general_setting->active_payment_gateway == 'stripe') {
-            Stripe::setApiKey($general_setting->stripe_secret_key);
-            $token = $request->stripeToken;
-            $amount = $request->price;
-            // Create a Customer:
-            $customer = \Stripe\Customer::create([
-                'source' => $token
-            ]);
-            // Charge the Customer instead of the card:
-            $charge = \Stripe\Charge::create([
-                'amount' => $amount * 100,
-                'currency' => $general_setting->currency,
-                'customer' => $customer->id
-            ]);
-            $paid_by = 'Stripe';
-        }*/
+
         //creating tenant
         $tenant = Tenant::create(['id' => $request->tenant]);
         $tenant->domains()->create(['domain' => $request->tenant.'.'.env('CENTRAL_DOMAIN')]);

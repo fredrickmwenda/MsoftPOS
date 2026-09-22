@@ -7,8 +7,8 @@ use App\Models\CustomerGroup;
 use Illuminate\Validation\Rule;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Auth;
-use DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Traits\CacheForget;
 
 class CustomerGroupController extends Controller

@@ -17,7 +17,9 @@ class Sale extends Model
          // Hire Purchase fields
          "is_hire_purchase", "hire_purchase_down_payment", "hire_purchase_terms", 
          "hire_purchase_interest_rate", "hire_purchase_status", "hire_purchase_start_date", 
-         "hire_purchase_end_date"
+         "hire_purchase_end_date",
+        "sale_source",
+
     ];
 
     protected $dates = [
@@ -25,6 +27,11 @@ class Sale extends Model
         'hire_purchase_end_date',
         'created_at',
         'updated_at'
+    ];
+
+    protected $casts = [
+        // ... existing casts ...
+        'sale_source' => 'string',
     ];
 
     public function user()

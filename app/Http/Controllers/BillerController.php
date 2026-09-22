@@ -6,10 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Biller;
 use App\Models\MailSetting;
 use Illuminate\Validation\Rule;
-use Intervention\Image\Facades\Image;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use App\Mail\BillerCreate;
 use Mail;
 

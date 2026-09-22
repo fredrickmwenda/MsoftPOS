@@ -381,6 +381,8 @@ class ProductController extends Controller
         if($data['last_date'])
             $data['last_date'] = date('Y-m-d', strtotime($data['last_date']));
         $data['is_active'] = true;
+        $data['is_ecommerce'] = $request->boolean('is_ecommerce');
+        $data['is_featured'] = $request->boolean('is_ecommerce');
         $images = $request->image;
         $image_names = [];
         if($images) {
@@ -1217,6 +1219,12 @@ class ProductController extends Controller
 
             if(!isset($data['is_imei']))
                 $data['is_imei'] = null;
+
+            if(!isset($data['is_ecommerce']))
+                $data['is_ecommerce'] = false;
+            
+            if(!isset($data['is_featured']))
+                $data['is_featured'] = false;
 
             if(!isset($data['is_sync_disable']) && \Schema::hasColumn('products', 'is_sync_disable'))
                 $data['is_sync_disable'] = null;

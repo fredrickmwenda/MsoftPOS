@@ -9,8 +9,8 @@ use App\Models\Biller;
 use App\Models\Warehouse;
 use App\Models\CustomerGroup;
 use App\Models\Customer;
-use DB;
-use Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Hash;
 use Keygen;
 use Illuminate\Validation\Rule;
@@ -283,7 +283,7 @@ class UserController extends Controller
         $lims_user_data->save();
         if(Auth::id() == $id){
             auth()->logout();
-            return redirect('/login');
+            return redirect()->route('login');
         }
         else
             return redirect('user')->with('message3', 'Data deleted successfullly');

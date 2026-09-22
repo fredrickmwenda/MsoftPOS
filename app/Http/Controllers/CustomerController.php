@@ -14,8 +14,8 @@ use App\Models\Payment;
 use App\Models\CashRegister;
 use App\Models\Account;
 use App\Models\MailSetting;
-use Auth;
-use DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
 use Illuminate\Validation\Rule;
 use App\Models\Role;
@@ -215,6 +215,10 @@ class CustomerController extends Controller
          $customer_data['location']=$customer_data['location'];
          $customer_data['community']=$customer_data['community'];
         // $customer_data['status']=$customer_data['status'];
+        if (empty($customer_data['pay_term_no'])) {
+            $customer_data['pay_term_no'] = null;
+            $customer_data['pay_term_period'] = 'days';
+        }
         if(isset($request->both)) {
             Supplier::create($customer_data);
             $prefixMessage .= ' and Supplier';
@@ -411,6 +415,10 @@ class CustomerController extends Controller
 
 
         $input['name'] = $input['customer_name'];
+        if (empty($input['pay_term_no'])) {
+            $input['pay_term_no'] = null;
+            $input['pay_term_period'] = 'days';
+        }
         $lims_customer_data->update($input);
         //update custom field data
         $custom_field_data = [];

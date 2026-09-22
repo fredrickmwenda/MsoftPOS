@@ -10,12 +10,12 @@
                     <i class="dripicons dripicons-document"></i> Reports Dashboard
                 </h1>
                 <p class="text-muted lead">Access all your business reports in one place</p>
-            </div>
+            </div> 
             <div class="col-md-4 text-end">
                 <div class="card bg-light border-0">
                     <div class="card-body"> 
                         <small class="text-muted">Total Reports</small>
-                        <h3 class="mb-0">30</h3>
+                        <h3 class="mb-0">31</h3>
                     </div>
                 </div>
             </div>
@@ -237,6 +237,14 @@
                         <span class="badge bg-danger">Financial</span>
                     </a>
                     {!! Form::close() !!}
+                </div>
+
+                <div class="report-item" data-category="sales" data-name="Installment Report">
+                    <a href="{{ route('report.installmentReport') }}" class="report-link">
+                        <div class="report-icon"><i class="dripicons dripicons-list"></i></div>
+                        <h6>Installment Report</h6>
+                        <span class="badge bg-danger">Financial</span>
+                    </a>
                 </div>
 
                 <!-- Customer Reports Section -->

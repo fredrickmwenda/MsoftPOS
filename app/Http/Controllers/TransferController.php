@@ -12,10 +12,7 @@ use App\Models\Transfer;
 use App\Models\ProductTransfer;
 use App\Models\ProductVariant;
 use App\Models\ProductBatch;
-use Auth;
-use DB;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class TransferController extends Controller

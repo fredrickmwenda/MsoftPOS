@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+@section('content')
 <div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 @if(empty($report_rows))
 <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{'No Data exist between this date range!'}}</div>
@@ -156,6 +157,19 @@
                         </div>
                     </div>
 
+                    <!-- Sale Source Filter -->
+                    <div class="col-md-4 mb-3">
+                        <div class="form-group">
+                            <label class="control-label"><strong>Sale Source</strong></label>
+                            <select name="sale_source" class="selectpicker form-control">
+                                <option value="all" {{ (isset($sale_source) && $sale_source == 'all') ? 'selected' : '' }}>All Sources</option>
+                                <option value="pos" {{ (isset($sale_source) && $sale_source == 'pos') ? 'selected' : '' }}>POS</option>
+                                <option value="in-store" {{ (isset($sale_source) && $sale_source == 'in-store') ? 'selected' : '' }}>In-Store</option>
+                                <option value="ecommerce" {{ (isset($sale_source) && $sale_source == 'ecommerce') ? 'selected' : '' }}>Ecommerce</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Department Filter -->
                     <div class="col-md-4 mb-3">
                         <div class="form-group">
@@ -205,6 +219,7 @@
                     <th>{{trans('file.Product Name')}}</th>
                     <th>Department</th>
                     <th>Category</th>
+                    <th>Sale Source</th>
                     <th>{{trans('file.Sold Amount')}}</th>
                     <th>{{trans('file.Sold Qty')}}</th>
                     <th>{{trans('file.In Stock')}}</th>
@@ -218,6 +233,7 @@
                     <td>{{ $row['product_name'] }}</td>
                     <td>{{ $row['department_name'] }}</td>
                     <td>{{ $row['category_name'] }}</td>
+                    <td>{{ ucfirst($row['sale_source'] ?? 'N/A') }}</td>
                     <td>{{ number_format((float) $row['sold_amount'], $general_setting->decimal ?? 2, '.', '') }}</td>
                     <td>{{ $row['sold_qty'] }}</td>
                     <td>{{ $row['in_stock'] }}</td>
@@ -226,26 +242,15 @@
                 @endif
             </tbody>
             <tfoot>
-
-        <th></th>
-        <th></th>
-        <th></th>
-        <th><strong>Total</strong></th>
-        <th class="sum"></th>
-        <th class="sum"></th>
-        <th class="sum"></th>
-
-</tfoot>
-
-            <!-- <tfoot>
                 <th></th>
                 <th></th>
                 <th></th>
-                <th>Total</th>
-                <th>{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                <th>0</th>
-                <th>0</th>
-            </tfoot> -->
+                <th></th>
+                <th><strong>Total</strong></th>
+                <th class="sum"></th>
+                <th class="sum"></th>
+                <th class="sum"></th>
+            </tfoot>
         </table>
     </div>
 </section>
@@ -363,9 +368,9 @@
             var api = this.api();
             var decimal = {{ $general_setting->decimal ?? 2 }};
             datatable_sum(api, false);
-            var soldAmount = api.column(4, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
-            var soldQty = api.column(5, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
-            var inStock = api.column(6, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            var soldAmount = api.column(5, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            var soldQty = api.column(6, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+            var inStock = api.column(7, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
             $('#report-total-sold-amount').text(soldAmount.toFixed(decimal));
             $('#report-total-sold-qty').text(soldQty.toFixed(0));
             $('#report-total-in-stock').text(inStock.toFixed(0));
@@ -376,25 +381,25 @@ function datatable_sum(dt_selector, is_calling_first) {
     if (dt_selector.rows('.selected').any() && is_calling_first) {
         var rows = dt_selector.rows('.selected').indexes();
 
-        $(dt_selector.column(4).footer()).html(
-            dt_selector.cells(rows, 4, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0).toFixed({{$general_setting->decimal}})
-        );
         $(dt_selector.column(5).footer()).html(
-            dt_selector.cells(rows, 5, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
+            dt_selector.cells(rows, 5, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0).toFixed({{$general_setting->decimal}})
         );
         $(dt_selector.column(6).footer()).html(
             dt_selector.cells(rows, 6, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
         );
+        $(dt_selector.column(7).footer()).html(
+            dt_selector.cells(rows, 7, { page: 'current' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
+        );
     } else {
         /* Footer shows grand total (all data), not just current page */
-        $(dt_selector.column(4).footer()).html(
-            dt_selector.column(4, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0).toFixed({{$general_setting->decimal}})
-        );
         $(dt_selector.column(5).footer()).html(
-            dt_selector.column(5, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
+            dt_selector.column(5, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0).toFixed({{$general_setting->decimal}})
         );
         $(dt_selector.column(6).footer()).html(
             dt_selector.column(6, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
+        );
+        $(dt_selector.column(7).footer()).html(
+            dt_selector.column(7, { page: 'all' }).data().reduce((a, b) => parseFloat(a) + parseFloat(b), 0)
         );
     }
 }
@@ -403,7 +408,7 @@ function datatable_sum(dt_selector, is_calling_first) {
 
 </script>
 <script>
-$(document).ready(function() {
+ $(document).ready(function() {
     // Get Blade variables or fallback to today's date
     var start = moment("{{ $start_date ?? '' }}");
     var end = moment("{{ $end_date ?? '' }}");

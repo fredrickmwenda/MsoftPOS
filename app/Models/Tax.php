@@ -17,5 +17,10 @@ class Tax extends Model
         return $this->belongsToMany(Product::class, 'product_tax', 'tax_id', 'product_id');
     }
 
+        public function payrollTemplates()
+    {
+        return $this->belongsToMany(PayrollTemplate::class, 'payroll_template_tax');
+    }
+
 
 }

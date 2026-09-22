@@ -13,8 +13,8 @@ use App\Models\ProductBatch;
 use App\Models\Delivery;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use DB;
-use Auth;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Mail\DeliveryDetails;
 use App\Mail\DeliveryChallan;
 use Mail;
@@ -44,9 +44,6 @@ class DeliveryController extends Controller
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
-
-
-
 
     public function create($id){
         $lims_delivery_data = Delivery::where('sale_id', $id)->first();
@@ -287,6 +284,51 @@ class DeliveryController extends Controller
         return redirect('delivery')->with('message', $message);
     }
 
+    public function markDelivered($id)
+    {
+        $delivery = Delivery::findOrFail($id);
+
+        DB::transaction(function () use ($delivery) {
+            $delivery->update([
+                'status' => 3,
+                'delivered_at' => now(),
+            ]);
+
+            // For pay-on-delivery orders, decrement stock NOW (not at order time)
+            $sale = $delivery->sale;
+            if ($sale && (int) $sale->payment_status !== 4) {
+                foreach ($sale->productSales as $productSale) {
+                    $product = Product::find($productSale->product_id);
+                    if ($product) {
+                        $product->decrement('qty', $productSale->qty);
+                    }
+                }
+
+                // Mark the sale as paid + completed
+                $sale->update([
+                    'sale_status' => 1,
+                    'payment_status' => 4,
+                    'paid_amount' => $sale->grand_total,
+                ]);
+
+                Payment::create([
+                    'sale_id' => $sale->id,
+                    'user_id' => auth()->id(),
+                    'payment_reference' => 'cod-' . date('Ymd') . '-' . $sale->id,
+                    'amount' => $sale->grand_total,
+                    'paying_method' => 'Pay on Delivery',
+                    'payment_note' => 'Cash collected at delivery',
+                ]);
+            }
+        });
+
+        return redirect()->route('delivery.index')
+            ->with('message', 'Order marked as delivered and stock updated.');
+    }
+
+
+
+
     public function deleteBySelection(Request $request)
     {
         $delivery_id = $request['deliveryIdArray'];
@@ -308,4 +350,8 @@ class DeliveryController extends Controller
 
         return redirect('delivery')->with('not_permitted', 'Delivery deleted successfully');
     }
+
+
+
+
 }

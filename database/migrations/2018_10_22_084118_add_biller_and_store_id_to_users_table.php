@@ -14,7 +14,7 @@ class AddBillerAndStoreIdToUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->integer('biller_id')->after('role_id')->nullable();
+            $table->integer('biller_id')->after('company_name')->nullable();
             $table->integer('warehouse_id')->after('biller_id')->nullable();
         });
     }

@@ -9,8 +9,7 @@ use App\Services\HirePurchaseService;
 use Illuminate\Http\Request;
 //pagination set 
 use  Illuminate\Database\Eloquent\Collection;
-use Auth;
-use DB;
+
 
 class HirePurchaseController extends Controller
 {
@@ -134,7 +133,7 @@ class HirePurchaseController extends Controller
             $sale->save();
 
             // Invalidate cache
-            cache()->forget('hire_purchase_' . $sale->id);
+
 
             return response()->json([
                 'success' => true,

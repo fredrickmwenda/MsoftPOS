@@ -1,7 +1,40 @@
 @extends('backend.layout.main')
 
 @section('content')
-<div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
+
+@php
+    // -------------------------------------------------------------------
+    // UNIFIED CALCULATIONS: Ensure Operating Profit strictly depends 
+    // on Gross Profit minus Operating Expenses
+    // -------------------------------------------------------------------
+    
+    // 1. Calculate Net Revenue (Total Sales - Sales Returns)
+    $net_revenue = $total_sale;
+    if ($sale_return_amount > 0) {
+        $net_revenue -= $sale_return_amount;
+    }
+
+    // 2. Calculate Net COGS (Purchases - Purchase Returns + Payroll)
+    $net_cogs = $product_cost + $payroll;
+    if ($purchase_return_amount > 0) {
+        $net_cogs = ($product_cost - $purchase_return_amount) + $payroll;
+    }
+
+    // 3. Set the final Gross Profit
+    $calculated_gross_profit = $net_revenue - $net_cogs;
+
+    // 4. Calculate Operating Profit (Gross Profit - Total Operating Expenses)
+    $calculated_operating_profit = $calculated_gross_profit - $total_operating_expenses;
+    
+    $calculated_net_profit = $calculated_operating_profit -$product_tax;
+@endphp
+
+<div class="container-fluid mb-3">
+    <a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm">
+        <i class="fa fa-arrow-left"></i> Back to Reports Dashboard
+    </a>
+</div>
+
 <section>
     <div class="container-fluid">
         <div class="card">
@@ -90,21 +123,16 @@
                         <td width="15%" class="text-end">{{ number_format($total_sale, 2) }}</td>
                     </tr>
                     
-                    {{-- Optional: Show returns if you want to calculate net revenue --}}
                     @if($sale_return_amount > 0)
                     <tr>
                         <td>&nbsp;&nbsp;Less: Sales Returns</td>
                         <td class="text-end">- {{ $currency_code }}</td>
                         <td class="text-end">{{ number_format($sale_return_amount, 2) }}</td>
                     </tr>
-                    @endif
-                    
-                    {{-- Net Revenue row (optional) --}}
-                    @if($sale_return_amount > 0)
                     <tr>
                         <td><strong>Net Sales Revenue</strong></td>
                         <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($total_sale - $sale_return_amount, 2) }}</strong></td>
+                        <td class="text-end"><strong>{{ number_format($net_revenue, 2) }}</strong></td>
                     </tr>
                     @endif
                 </tbody>
@@ -122,7 +150,6 @@
                         <td class="text-end">{{ number_format($product_cost, 2) }}</td>
                     </tr>
                     
-                    {{-- Optional: Purchase returns adjustment --}}
                     @if($purchase_return_amount > 0)
                     <tr>
                         <td>&nbsp;&nbsp;Less: Purchase Returns</td>
@@ -138,48 +165,20 @@
                     </tr>
                     
                     {{-- Total COGS --}}
-                    @if($purchase_return_amount > 0)
-                        @php $net_purchases = $product_cost - $purchase_return_amount; @endphp
-                        <tr class="table-active">
-                            <td><strong>Total Cost of Goods Sold</strong></td>
-                            <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                            <td class="text-end"><strong>{{ number_format($net_purchases + $payroll, 2) }}</strong></td>
-                        </tr>
-                    @else
-                        <tr class="table-active">
-                            <td><strong>Total Cost of Goods Sold</strong></td>
-                            <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                            <td class="text-end"><strong>{{ number_format($product_cost + $payroll, 2) }}</strong></td>
-                        </tr>
-                    @endif
+                    <tr class="table-active">
+                        <td><strong>Total Cost of Goods Sold</strong></td>
+                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
+                        <td class="text-end"><strong>{{ number_format($net_cogs, 2) }}</strong></td>
+                    </tr>
                 </tbody>
 
                 {{-- Gross Profit Section --}}
                 <tbody>
-                    @if($sale_return_amount > 0 && $purchase_return_amount > 0)
-                        @php 
-                            $net_revenue = $total_sale - $sale_return_amount;
-                            $net_cogs = ($product_cost - $purchase_return_amount) + $payroll;
-                        @endphp
-                        <tr class="table-success">
-                            <td><strong>GROSS PROFIT</strong></td>
-                            <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                            <td class="text-end"><strong>{{ number_format($net_revenue - $net_cogs, 2) }}</strong></td>
-                        </tr>
-                    @elseif($sale_return_amount > 0)
-                        @php $net_revenue = $total_sale - $sale_return_amount; @endphp
-                        <tr class="table-success">
-                            <td><strong>GROSS PROFIT</strong></td>
-                            <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                            <td class="text-end"><strong>{{ number_format($net_revenue - ($product_cost + $payroll), 2) }}</strong></td>
-                        </tr>
-                    @else
-                        <tr class="table-success">
-                            <td><strong>GROSS PROFIT</strong></td>
-                            <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                            <td class="text-end"><strong>{{ number_format($gross_profit, 2) }}</strong></td>
-                        </tr>
-                    @endif
+                    <tr class="table-success">
+                        <td><strong>GROSS PROFIT</strong></td>
+                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
+                        <td class="text-end"><strong>{{ number_format($calculated_gross_profit, 2) }}</strong></td>
+                    </tr>
                 </tbody>
 
                 {{-- Operating Expenses Section --}}
@@ -215,7 +214,7 @@
                     <tr class="table-info">
                         <td><strong>OPERATING PROFIT</strong></td>
                         <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($operating_profit, 2) }}</strong></td>
+                        <td class="text-end"><strong>{{ number_format($calculated_operating_profit, 2) }}</strong></td>
                     </tr>
                 </tbody>
 
@@ -235,10 +234,10 @@
 
                 {{-- Net Profit/Loss Section --}}
                 <tbody>
-                    <tr class="{{ $net_profit >= 0 ? 'table-success' : 'table-danger' }}">
+                    <tr class="{{ $calculated_net_profit >= 0 ? 'table-success' : 'table-danger' }}">
                         <td>
                             <strong>
-                                @if($net_profit >= 0)
+                                @if($calculated_net_profit >= 0)
                                     NET PROFIT
                                 @else
                                     NET LOSS
@@ -246,7 +245,7 @@
                             </strong>
                         </td>
                         <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format(abs($net_profit), 2) }}</strong></td>
+                        <td class="text-end"><strong>{{ number_format(abs($calculated_net_profit), 2) }}</strong></td>
                     </tr>
                 </tbody>
 
@@ -270,7 +269,7 @@
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
-$(document).ready(function() {
+ $(document).ready(function() {
     const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     function updateSelectedPeriod() {
         const year = $('#year').val() || new Date().getFullYear();

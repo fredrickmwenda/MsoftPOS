@@ -15,9 +15,8 @@ use App\Models\MoneyTransfer;
 use App\Models\Sale;
 use DB;
 use Illuminate\Validation\Rule;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Auth;
+
+use Illuminate\Support\Facades\Auth;
 
 
 class AccountsController extends Controller

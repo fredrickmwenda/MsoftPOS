@@ -49,10 +49,6 @@ class LanguageController extends Controller
         if(isset($request->is_default)) {
             $data['is_default'] = true;
             Language::where('is_default', true)->first()->update(['is_default' => false]);
-            cache()->forget('hero');
-            cache()->forget('module_descriptions');
-            cache()->forget('faq_descriptions');
-            cache()->forget('tenant_signup_descriptions');
         }
         else
             $data['is_default'] = false;

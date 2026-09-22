@@ -7,10 +7,9 @@ use App\Models\Employee;
 use App\Models\HrmSetting;
 use App\Models\Attendance;
 use Carbon\Carbon;
-use Auth;
-use DB;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 
 class AttendanceController extends Controller
 {

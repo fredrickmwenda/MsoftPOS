@@ -334,7 +334,27 @@
                                         <input type="checkbox" name="is_embeded" value="1">&nbsp;
                                         <label>{{trans('file.Embedded Barcode')}} <i class="dripicons-question" data-toggle="tooltip" title="{{trans('file.Check this if this product will be used in weight scale machine.')}}"></i></label>
                                     </div>
-                                </div> 
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>{{ __('file.Show in E-Commerce') }}</label>
+                                        <div class="form-check">
+                                            <input type="checkbox"
+                                                name="is_ecommerce"
+                                                value="1"
+                                                id="is_ecommerce"
+                                                {{ old('is_ecommerce', false) ? 'checked' : '' }}
+                                                style="width: 20px; height: 20px; cursor: pointer; margin: 0;">
+                                            <label for="is_ecommerce" style="margin: 0; cursor: pointer; font-weight: normal;">
+                                                Display this product on the online store
+                                            </label>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            When checked, this product appears in the customer-facing storefront.
+                                            Uncheck to hide it from online sales.
+                                        </small>
+                                    </div> 
+                                </div>
                                 <div class="col-md-6" id="initial-stock-section">
                                     <div class="table-responsive ml-2">
                                         <table class="table table-hover">
@@ -1559,13 +1579,27 @@ document.addEventListener('DOMContentLoaded', function() {
                                 //console.log(response);
                                 location.href = '../products';
                             },
-                            error:function(response) {
-                              if(response.responseJSON.errors.name) {
-                                  $("#name-error").text(response.responseJSON.errors.name);
-                              }
-                              else if(response.responseJSON.errors.code) {
-                                  $("#code-error").text(response.responseJSON.errors.code);
-                              }
+                            error: function(response) {
+                                console.log("AJAX error:", response.status, response.responseText);
+
+                                // Guard against non-JSON responses (500 errors return HTML)
+                                if (response.responseJSON && response.responseJSON.errors) {
+                                    $.each(response.responseJSON.errors, function(field, messages) {
+                                        // Try to find a matching error span
+                                        var $errorSpan = $('#' + field + '-error');
+                                        if ($errorSpan.length) {
+                                            $errorSpan.text(messages[0]);
+                                        } else {
+                                            console.log('Validation error — ' + field + ':', messages[0]);
+                                        }
+                                    });
+                                } else if (response.responseJSON && response.responseJSON.message) {
+                                    alert(response.responseJSON.message);
+                                } else {
+                                    // 500 error or network error — show something
+                                    alert('An error occurred. Status: ' + response.status + '\nCheck the browser console (F12) for details.');
+                                    console.error('Full response:', response.responseText);
+                                }
                             },
                         });
                     }

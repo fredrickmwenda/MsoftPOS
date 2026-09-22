@@ -371,6 +371,27 @@
                                         <label>{{trans('file.Featured')}}</label>
                                     </div>
                                 </div>
+
+                                <div class="col-md-4">
+                                    <div class="form-group">
+                                        <label>{{ __('file.Show in E-Commerce') }}</label>
+                                        <div class="form-check">
+                                            <input type="checkbox"
+                                                name="is_ecommerce"
+                                                value="1"
+                                                id="is_ecommerce"
+                                                {{ old('is_ecommerce', $product->is_ecommerce ?? false) ? 'checked' : '' }}
+                                                style="width: 20px; height: 20px; cursor: pointer; margin: 0;">
+                                            <label for="is_ecommerce" style="margin: 0; cursor: pointer; font-weight: normal;">
+                                                Display this product on the online store
+                                            </label>
+                                        </div>
+                                        <small class="form-text text-muted">
+                                            When checked, this product appears in the customer-facing storefront.
+                                            Uncheck to hide it from online sales.
+                                        </small>
+                                    </div> 
+                                </div>
 @php
     use App\Models\Product_Warehouse;
 

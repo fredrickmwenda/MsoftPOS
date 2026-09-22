@@ -6,8 +6,8 @@ use Illuminate\Http\Request;
 use App\Models\Warehouse;
 use Illuminate\Validation\Rule;
 use Keygen;
-use Auth;
-use DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Traits\CacheForget;
 
 class WarehouseController extends Controller

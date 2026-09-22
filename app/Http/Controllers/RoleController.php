@@ -4,11 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Roles;
-use App\Models\User;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
-use App\Models\Role;
-//use Spatie\Permission\Models\Permission;
 use App\Models\Permission;      // your own Permission model (not Spatie)
 
 
@@ -1453,8 +1450,8 @@ class RoleController extends Controller
         }
 
         // Optional cache clearing (adjust keys if you use caching)
-        cache()->forget('permissions');
-        cache()->forget('role_has_permissions_list' . $role->id);
+        //cache()->forget('permissions');
+        //cache()->forget('role_has_permissions_list' . $role->id);
 
         return redirect('role')->with('message', 'Permission updated successfully');
     }

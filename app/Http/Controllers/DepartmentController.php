@@ -5,9 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Department;
 use Illuminate\Validation\Rule;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class DepartmentController extends Controller
 {

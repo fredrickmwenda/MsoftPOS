@@ -7,7 +7,7 @@ use App\Models\Account;
 use Illuminate\Http\Request;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class MoneyTransferController extends Controller
 {

@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\CustomField;
-use DB;
+use Illuminate\Support\Facades\DB;
 use App\Models\Role;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class CustomFieldController extends Controller
 {

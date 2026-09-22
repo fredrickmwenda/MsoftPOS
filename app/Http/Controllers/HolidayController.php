@@ -4,10 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Holiday;
-use Auth;
-use User;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
 use Mail;
 use App\Mail\HolidayApprove;
 use App\Models\MailSetting;
@@ -27,7 +24,7 @@ class HolidayController extends Controller
             $lims_holiday_list = Holiday::where('user_id', Auth::id())->orderBy('id', 'desc')->get();
         }
 
-        return view('backend.holiday.index', compact('lims_holiday_list', 'approve_permission'));
+        return view('backend.hrm.holiday.index', compact('lims_holiday_list', 'approve_permission'));
     }
 
     public function create()
@@ -110,7 +107,7 @@ class HolidayController extends Controller
         $prev_month = date('m', strtotime('-1 month', strtotime($year.'-'.$month.'-01')));
         $next_year = date('Y', strtotime('+1 month', strtotime($year.'-'.$month.'-01')));
         $next_month = date('m', strtotime('+1 month', strtotime($year.'-'.$month.'-01')));
-        return view('backend.holiday.my_holiday', compact('start_day', 'year', 'month', 'number_of_day', 'prev_year', 'prev_month', 'next_year', 'next_month', 'holidays'));
+        return view('backend.hrm.holiday.my_holiday', compact('start_day', 'year', 'month', 'number_of_day', 'prev_year', 'prev_month', 'next_year', 'next_month', 'holidays'));
     }
 
     public function update(Request $request, $id)

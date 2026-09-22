@@ -8,12 +8,11 @@ use App\Models\User;
 use App\Models\GiftCard;
 use App\Models\GiftCardRecharge;
 use Keygen;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use App\Mail\UserNotification;
 use Illuminate\Support\Facades\Mail;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
+
 
 class GiftCardController extends Controller
 {

@@ -18,6 +18,7 @@ body.storefront-page {
   background: #f7f5f1;
   color: var(--ark-ink);
   line-height: 1.4;
+  overflow-x: hidden; /* Prevents horizontal scroll from 100vw paddings */
 }
 
 body.storefront-page * { box-sizing: border-box; }
@@ -225,8 +226,10 @@ body.storefront-page .store-hero {
   border-bottom: 1px solid var(--ark-line);
 }
 
+/* HERO COPY LEFT ALIGNMENT FIX */
+/* This aligns the left text exactly with the 1220px header container */
 body.storefront-page .hero-copy {
-  padding: 62px 42px 52px 42px;
+  padding: 62px 42px 52px max(16px, calc((100vw - 1220px) / 2));
 }
 
 body.storefront-page .hero-badge,
@@ -571,7 +574,6 @@ body.storefront-page .product-tag {
   letter-spacing: 0.12em;
 }
 
-body.storefront-page .wishlist-button,
 body.storefront-page .quick-add {
   position: absolute;
   right: 14px;
@@ -581,13 +583,28 @@ body.storefront-page .quick-add {
 }
 
 body.storefront-page .wishlist-button {
+  position: absolute;
   top: 14px;
+  right: 14px;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.9);
   color: var(--ark-green);
   font-size: 22px;
+  border: none;
+  cursor: pointer;
+  z-index: 10; /* Ensures it is above the image */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 14px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s;
+}
+
+body.storefront-page .wishlist-button:hover {
+  transform: scale(1.1);
+  background: #fff;
 }
 
 body.storefront-page .quick-add {
@@ -640,15 +657,30 @@ body.storefront-page .product-body p {
   font-size: 0.95rem;
 }
 
+/* 1. Override the footer to stack vertically */
 body.storefront-page .product-footer {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column; /* Stack price and button */
+  align-items: stretch;   /* Make children take full width */
+  gap: 15px;
+  padding-top: 15px;
+  margin-top: 18px;
+  border-top: 1px solid rgba(13, 90, 57, 0.08);
 }
 
+/* 2. Force price box to align left */
+body.storefront-page .price-box {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: flex-start; /* Aligns price to the left */
+  gap: 10px;
+  width: 100%;
+}
+
+/* Ensure the prices sit side-by-side instead of stacking */
 body.storefront-page .price-box strong {
-  display: block;
+  display: inline-block; 
   color: var(--ark-green);
   font-size: 1.6rem;
   letter-spacing: -0.05em;
@@ -656,21 +688,49 @@ body.storefront-page .price-box strong {
 }
 
 body.storefront-page .price-box small {
-  display: block;
-  margin-top: 4px;
+  display: inline-block;
+  margin-top: 0;
   color: var(--ark-muted);
   text-decoration: line-through;
 }
 
+/* 3. Make the form full width */
+body.storefront-page .cart-form {
+  width: 100%;
+  display: block;
+  margin: 0;
+}
+
+/* 4. Make the button full width with text left / icon right */
 body.storefront-page .add-to-cart {
-  border: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* Text left, Icon right */
+  gap: 10px;
+  padding: 12px 20px;
   background: var(--ark-green);
   color: var(--ark-white);
-  border-radius: 4px;
-  min-height: 42px;
-  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  text-align: left;
+}
+
+body.storefront-page .add-to-cart:hover {
+  background: #0a382b; /* Darker green on hover */
+}
+
+body.storefront-page .add-to-cart:active {
+  transform: scale(0.98);
+}
+
+/* Ensure SVG icon doesn't shrink */
+body.storefront-page .add-to-cart svg {
+  flex-shrink: 0;
 }
 
 body.storefront-page .pagination-wrap {
@@ -722,10 +782,27 @@ body.storefront-page .store-footer {
   padding: 42px 0 18px;
 }
 
+/* Desktop — 4 columns */
 body.storefront-page .footer-grid {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
   gap: 32px;
+}
+
+/* Tablet — drop to 2x2 grid for better readability */
+@media (max-width: 980px) {
+  body.storefront-page .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+}
+
+/* Mobile — single column stack */
+@media (max-width: 680px) {
+  body.storefront-page .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
 }
 
 body.storefront-page .store-footer h4 {
@@ -806,6 +883,7 @@ body.storefront-page .footer-bottom {
     grid-template-columns: 1fr;
   }
 
+  /* Revert padding for mobile view so it doesn't break */
   body.storefront-page .hero-copy {
     padding: 52px 22px 28px;
   }
@@ -883,4 +961,301 @@ body.storefront-page .footer-bottom {
   body.storefront-page .deal-banner h2 {
     font-size: 2.2rem;
   }
+}
+
+/* =========================================
+   FEATURED PRODUCT CARDS — equal height
+   ========================================= */
+
+.showcase-section {
+    padding: 60px 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f8f6 100%);
+}
+
+.section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.section-heading .eyebrow {
+    display: block;
+    color: #0d5a39;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 8px;
+}
+
+.section-heading h2 {
+    font-size: 30px;
+    font-weight: 800;
+    color: #0d5a39;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.section-heading .results-count {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* GRID — stretch is default but make it explicit */
+.featured-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 26px;
+    align-items: stretch;
+}
+
+/* CARD — must be height:100% + flex column */
+.product-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-6px);
+    border-color: #0d5a39;
+    box-shadow: 0 20px 40px -12px rgba(13, 90, 57, 0.25);
+}
+
+/* IMAGE */
+.product-image-wrap {
+    position: relative;
+    height: 240px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.product-image-link {
+    display: block;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-image-wrap img {
+    max-width: 85%;
+    max-height: 85%;
+    object-fit: contain;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.product-card:hover .product-image-wrap img {
+    transform: scale(1.08);
+}
+
+/* Tags */
+.product-tag {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #0d5a39;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 5px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    z-index: 2;
+}
+
+/* Wishlist */
+.wishlist-button {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    color: #6b7280;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: all 0.25s ease;
+}
+
+.wishlist-button:hover {
+    background: #ef4444;
+    color: #fff;
+    transform: scale(1.1);
+}
+
+/* BODY — flex:1 makes it grow, pushing footer to bottom */
+.product-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 20px 16px;
+}
+
+.product-category {
+    font-size: 10px;
+    font-weight: 800;
+    color: #b08c1f;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+}
+
+.product-body h3 {
+    margin: 0 0 10px 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #0d5a39;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+}
+
+.product-body h3 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.product-body h3 a:hover {
+    color: #0a382b;
+}
+
+.product-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.product-meta .stars {
+    color: #f59e0b;
+    letter-spacing: 2px;
+    font-size: 13px;
+}
+
+.stock-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+}
+
+.stock-pill.in {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.stock-pill.out {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* DESCRIPTION — flex:1 absorbs leftover space (THE KEY to aligned footers) */
+.product-desc {
+    flex: 1;
+    margin: 0 0 0 0;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #6b7280;
+}
+
+/* FOOTER — sits at bottom naturally because body has flex:1 */
+.product-footer {
+    padding: 16px 20px 20px;
+    border-top: 1px solid #f3f4f6;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: linear-gradient(180deg, transparent, rgba(247, 244, 235, 0.4));
+}
+
+.price-box {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.price-box strong {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0d5a39;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.price-box small {
+    font-size: 14px;
+    color: #9ca3af;
+    text-decoration: line-through;
+    font-weight: 600;
+}
+
+.cart-form {
+    width: 100%;
+    margin: 0;
+}
+
+.add-to-cart {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 13px 18px;
+    background: linear-gradient(135deg, #0d5a39 0%, #0a382b 100%);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.add-to-cart:hover {
+    background: linear-gradient(135deg, #d5a61c 0%, #b08918 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(13, 90, 57, 0.3);
+}
+
+.add-to-cart:active {
+    transform: scale(0.98);
+}
+
+.add-to-cart svg {
+    flex-shrink: 0;
+}
+
+/* MOBILE */
+@media (max-width: 680px) {
+    .featured-grid {
+        grid-template-columns: 1fr;
+    }
 }

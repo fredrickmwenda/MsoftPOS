@@ -18,15 +18,12 @@ use App\Models\PaymentWithCreditCard;
 use App\Models\PosSetting;
 use App\Models\Currency;
 use App\Models\CustomField;
-use DB;
+use Illuminate\Support\Facades\DB;
 use App\Models\GeneralSetting;
-use Stripe\Stripe;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\ProductVariant;
 use App\Models\ProductBatch;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Validator;
 use App\Traits\TenantInfo;
 
@@ -515,6 +512,22 @@ class PurchaseController extends Controller
         else
             $data['created_at'] = date("Y-m-d H:i:s");
 
+
+                // Due date calculate from payment terms
+        if (!empty($data['pay_term_no']) && !empty($data['pay_term_period'])) {
+            $purchaseDate = isset($data['created_at'])
+                ? \Carbon\Carbon::parse($data['created_at'])
+                : \Carbon\Carbon::now();
+
+            if ($data['pay_term_period'] === 'days') {
+                $data['due_date'] = $purchaseDate->addDays((int)$data['pay_term_no'])->format('Y-m-d');
+            } else {
+                $data['due_date'] = $purchaseDate->addMonths((int)$data['pay_term_no'])->format('Y-m-d');
+            }
+        } elseif (empty($data['due_date'])) {
+            $data['due_date'] = null;
+        }
+
         $lims_purchase_data = Purchase::create($data);
         
         $custom_field_data = [];
@@ -691,7 +704,7 @@ class PurchaseController extends Controller
         $data = $request->input('data');
         $warehouse_id = $request->input('warehouse_id');
 
-        // Handle "Code: ..." format from autocomplete
+        // Tolerate the "Code: XXX?qty" format that may slip through
         if (strpos($data, 'Code:') === 0) {
             $parts = explode('?', $data);
             $codePart = trim(str_replace('Code:', '', $parts[0]));
@@ -700,10 +713,19 @@ class PurchaseController extends Controller
             if (isset($parts[2])) $data .= '?' . $parts[2];
         }
 
-        $product_info = explode('?', $data);
-        $product_code = isset($product_info[0]) ? trim($product_info[0]) : null;
-        $customer_id = isset($product_info[1]) ? $product_info[1] : null;
-        $qty = isset($product_info[2]) ? $product_info[2] : 1;
+        $product_info  = explode('?', $data);
+        $product_code  = isset($product_info[0]) ? trim($product_info[0]) : null;
+        $customer_id   = null;
+        $qty           = 1;
+
+        if (isset($product_info[2])) {
+            // Sale-style payload: code?customer_id?qty
+            $customer_id = $product_info[1];
+            $qty         = $product_info[2];
+        } elseif (isset($product_info[1])) {
+            // Purchase-style payload: code?qty
+            $qty = $product_info[1];
+        }
 
         if (!$product_code) {
             return response()->json(['error' => 'Product code is required'], 400);
@@ -711,6 +733,9 @@ class PurchaseController extends Controller
         if (!$warehouse_id) {
             return response()->json(['error' => 'Warehouse not selected. Please select a warehouse first.'], 400);
         }
+
+        // ... (rest of the method stays the same)
+
 
         $product_variant_id = null;
         
@@ -868,43 +893,43 @@ class PurchaseController extends Controller
 
     public function getWarehouseProducts(Request $request)
     {
-    $warehouse_id = $request->input('warehouse_id');
+        $warehouse_id = $request->input('warehouse_id');
 
-    if (!$warehouse_id) {
-        return response()->json([]);
-    }
+        if (!$warehouse_id) {
+            return response()->json([]);
+        }
 
-    // Get product IDs that exist in this warehouse
-    $warehouse_product_ids = \DB::table('product_warehouse')
-        ->where('warehouse_id', $warehouse_id)
-        ->pluck('product_id');
+        // Get product IDs that exist in this warehouse
+        $warehouse_product_ids = \DB::table('product_warehouse')
+            ->where('warehouse_id', $warehouse_id)
+            ->pluck('product_id');
 
-    $product_codes = [];
+        $product_codes = [];
 
-    // Standard products (no variant)
-    $products = Product::whereIn('id', $warehouse_product_ids)
-        ->where('is_active', true)
-        ->whereNull('is_variant')
-        ->select('name', 'code')
-        ->get();
+        // Standard products (no variant)
+        $products = Product::whereIn('id', $warehouse_product_ids)
+            ->where('is_active', true)
+            ->whereNull('is_variant')
+            ->select('name', 'code')
+            ->get();
 
-    foreach ($products as $product) {
-        $product_codes[] = $product->name . ' [Code: ' . $product->code . ']';
-    }
+        foreach ($products as $product) {
+            $product_codes[] = $product->name . ' [Code: ' . $product->code . ']';
+        }
 
-    // Variant products
-    $variants = Product::join('product_variants', 'products.id', '=', 'product_variants.product_id')
-        ->whereIn('products.id', $warehouse_product_ids)
-        ->where('products.is_active', true)
-        ->whereNotNull('products.is_variant')
-        ->select('products.name', 'product_variants.item_code as code')
-        ->get();
+        // Variant products
+        $variants = Product::join('product_variants', 'products.id', '=', 'product_variants.product_id')
+            ->whereIn('products.id', $warehouse_product_ids)
+            ->where('products.is_active', true)
+            ->whereNotNull('products.is_variant')
+            ->select('products.name', 'product_variants.item_code as code')
+            ->get();
 
-    foreach ($variants as $variant) {
-        $product_codes[] = $variant->name . ' [Code: ' . $variant->code . ']';
-    }
+        foreach ($variants as $variant) {
+            $product_codes[] = $variant->name . ' [Code: ' . $variant->code . ']';
+        }
 
-    return response()->json($product_codes);
+        return response()->json($product_codes);
     }
 
 
@@ -1163,6 +1188,19 @@ class PurchaseController extends Controller
             $lims_product_purchase_data = ProductPurchase::where('purchase_id', $id)->get();
 
             $data['created_at'] = date("Y-m-d", strtotime(str_replace("/", "-", $data['created_at'])));
+
+            if (!empty($data['pay_term_no']) && !empty($data['pay_term_period'])) {
+                $purchaseDate = \Carbon\Carbon::parse($data['created_at']);
+
+                if ($data['pay_term_period'] === 'days') {
+                    $data['due_date'] = $purchaseDate->addDays((int)$data['pay_term_no'])->format('Y-m-d');
+                } else {
+                    $data['due_date'] = $purchaseDate->addMonths((int)$data['pay_term_no'])->format('Y-m-d');
+                }
+            } elseif (empty($data['due_date'])) {
+                $data['due_date'] = null;
+            }
+
             $product_id = $data['product_id'];
             $product_code = $data['product_code'];
             $qty = $data['qty'];
@@ -1313,6 +1351,7 @@ class PurchaseController extends Controller
                 }
 
                 $lims_product_data->qty += $new_recieved_value;
+
                 if($lims_product_warehouse_data){
                     $lims_product_warehouse_data->qty += $new_recieved_value;
                     $lims_product_warehouse_data->save();
@@ -1757,7 +1796,6 @@ class PurchaseController extends Controller
 
         return redirect()->back()->with('message', 'Payment approved successfully.');
     }
-
 
     public function rejectPayment(Request $request, $id)
     {
@@ -2216,5 +2254,73 @@ class PurchaseController extends Controller
         info(['ids' => $ids, 'total_purchase' => $running]);
 
         return ['ids' => $ids, 'total_purchase' => $running];
+    }
+
+
+
+        protected function dispatchPurchaseNotifications($purchase, array $productIds, array $quantities) 
+    {
+        try {
+            $notificationService = app(\App\Services\NotificationService::class);
+
+            // 1. Fetch system admins (role_id <= 2) and Supplier
+            $admins = \App\Models\User::where('role_id', '<=', 2)->get();
+            $supplier = $purchase->supplier ?? \App\Models\Supplier::find($purchase->supplier_id);
+
+            // 2. Format product details string
+            $compiledProducts = [];
+            foreach ($productIds as $index => $id) {
+                $product = \App\Models\Product::find($id);
+                if ($product) {
+                    $compiledProducts[] = $product->name . " (Qty: " . ($quantities[$index] ?? 0) . ")";
+                }
+            }
+
+            // 3. Dispatch Incoming Inventory/Purchase Event
+            $notificationService->dispatch('purchase_created', [
+                'supplier_name'  => $supplier->name ?? 'N/A',
+                'supplier_email' => $supplier->email ?? null,
+                'supplier_phone' => $supplier->phone ?? null,
+                'reference'      => $purchase->reference_no,
+                'amount'         => number_format($purchase->grand_total, 2),
+                'product'        => implode(', ', $compiledProducts),
+                'qty'            => array_sum($quantities),
+                'admin_users'    => $admins,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Notification Dispatcher failed in PurchaseController: " . $e->getMessage());
+        }
+    }
+
+    protected function dispatchPurchasePaymentNotifications($purchase, $paymentAmount)
+    {
+        try {
+            $notificationService = app(\App\Services\NotificationService::class);
+            $admins = \App\Models\User::where('role_id', '<=', 2)->get();
+            $supplier = $purchase->supplier ?? \App\Models\Supplier::find($purchase->supplier_id);
+
+            $purchaseProducts = \App\Models\ProductPurchase::where('purchase_id', $purchase->id)->get();
+            $compiledProducts = [];
+            foreach ($purchaseProducts as $item) {
+                $product = \App\Models\Product::find($item->product_id);
+                if ($product) {
+                    $compiledProducts[] = $product->name . " (Qty: " . $item->qty . ")";
+                }
+            }
+
+            // 🎯 Swapped event string to hit 'payment_received'
+            $notificationService->dispatch('payment_received', [
+                'customer_name'  => $supplier->name ?? 'N/A', // Fallback to supplier name context
+                'customer_wa'    => $supplier->phone ?? null,
+                'customer_phone' => $supplier->phone ?? null,
+                'customer_email' => $supplier->email ?? null,
+                'reference'      => $purchase->reference_no,
+                'amount'         => number_format($paymentAmount, 2),
+                'product'        => implode(', ', $compiledProducts),
+                'admin_users'    => $admins,
+            ]);
+        } catch (\Exception $e) {
+            \Log::error("Purchase payment notification failed: " . $e->getMessage());
+        }
     }
 }

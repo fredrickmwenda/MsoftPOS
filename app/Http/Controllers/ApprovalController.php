@@ -9,8 +9,8 @@ use App\Models\Expense;
 use App\Models\Account;
 use App\Models\Product;
 use App\Models\Role;
-use Auth;
-use DB;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
 class ApprovalController extends Controller

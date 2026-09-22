@@ -30,4 +30,12 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // config/services.php
+    'paystack' => [
+        'secret'        => env('PAYSTACK_SECRET_KEY'),
+        'public'        => env('PAYSTACK_PUBLIC_KEY'),
+        'base_url'      => env('PAYSTACK_BASE_URL', 'https://api.paystack.co'),
+        'callback_url'  => env('PAYSTACK_CALLBACK_URL'), // no default — env is required in prod
+    ],
+
 ];

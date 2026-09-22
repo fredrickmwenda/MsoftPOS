@@ -7,8 +7,7 @@ use App\Models\Discount;
 use App\Models\DiscountPlan;
 use App\Models\Product;
 use App\Models\DiscountPlanDiscount;
-use App\Models\Role;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class DiscountController extends Controller
 {

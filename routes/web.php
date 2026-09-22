@@ -15,6 +15,9 @@ use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AddonInstallController;
 use App\Http\Controllers\AdjustmentController;
+use App\Http\Controllers\AdminPolicyController;
+use App\Http\Controllers\AIAssistantController;
+use App\Http\Controllers\AIConversationController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\BillerController;
 use App\Http\Controllers\BrandController;
@@ -65,34 +68,50 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
+// --- NEW USE STATEMENTS ADDED BELOW ---
+use App\Http\Controllers\Auth\CustomerAuthController;
+use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\Customer\WishlistController;
+use App\Http\Controllers\DamageStockController;
+use App\Http\Controllers\DesignationController;
+use App\Http\Controllers\HR\LeaveController;
+use App\Http\Controllers\LeaveController as ControllersLeaveController;
+use App\Http\Controllers\LeaveTypeController;
+use App\Http\Controllers\OvertimeController;
+use App\Http\Controllers\PaymentGatewayController;
+use App\Http\Controllers\SaleAgentController;
+use App\Http\Controllers\SaleExchangeController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\SmsTemplateController;
+use App\Http\Controllers\StructuredPromptController;
+use App\Http\Controllers\WhatsappController;
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\HRMController;
+use App\Http\Controllers\PolicyController;
+
+// ---------------------------------------
+
 Route::get('migrate', function() {
-	Artisan::call('migrate');
+    Artisan::call('migrate');
 });
 
-Route::get('/shop', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.index');
-Route::get('/', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.home');
+// Your original shop index 
+Route::get('/', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.index');
 
+// The new View All Products page
+Route::get('/all-products', [\App\Http\Controllers\StorefrontController::class, 'viewAllProducts'])->name('all.products');
+
+// Single product details
+Route::get('/product/{id}', [\App\Http\Controllers\StorefrontController::class, 'show'])->name('products.show');
+
+
+
+Route::get('/contact-us', [ContactController::class, 'index'])->name('contact.us');
+Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.us.store');
 Route::get('clear',function() {
     Artisan::call('optimize:clear');
-    // cache()->forget('biller_list');
-    // cache()->forget('brand_list');
-    // cache()->forget('category_list');
-    // cache()->forget('coupon_list');
-    // cache()->forget('customer_list');
-    // cache()->forget('customer_group_list');
-    // cache()->forget('product_list');
-    // cache()->forget('product_list_with_variant');
-    // cache()->forget('warehouse_list');
-    // cache()->forget('table_list');
-    // cache()->forget('tax_list');
-    // cache()->forget('currency');
-    // cache()->forget('general_setting');
-    // cache()->forget('pos_setting');
-    // cache()->forget('user_role');
-    // cache()->forget('permissions');
-    // cache()->forget('role_has_permissions');
-    // cache()->forget('role_has_permissions_list');
-    // dd('cleared');
+    return redirect()->back();  
 });
 //storage link
 Route::get('storage-link', function() {
@@ -102,11 +121,11 @@ Route::get('storage-link', function() {
 });
 
 
-Route::get('pos/customer-display', function() {
-    $general_setting = \App\GeneralSetting::latest()->first();
-    $currency = \App\Currency::where('is_default', true)->first();
-    return view('backend.pos.customer-display', compact('general_setting', 'currency'));
-})->name('pos.customer-display');
+// Route::get('pos/customer-display', function() {
+//     $general_setting = \App\GeneralSetting::latest()->first();
+//     $currency = \App\Currency::where('is_default', true)->first();
+//     return view('backend.pos.customer-display', compact('general_setting', 'currency'));
+// })->name('pos.customer-display');
 
 
 Route::get('stock-count/products',[StockCountController::class, 'getProducts'])->name('stock-count.products');
@@ -135,9 +154,94 @@ Route::controller(ClientAutoUpdateController::class)->group(function () {
     Route::post('version-upgrade', 'versionUpgrade')->name('version-upgrade');
     Route::post('bug-update', 'bugUpdate')->name('bug-update');
 });
-
-Auth::routes();
 Route::get('/documentation', [HomeController::class, 'documentation']);
+//Auth::routes();
+
+// Disable the default /login routes that Auth::routes() registers
+Auth::routes([
+    'login'    => false,   // we register admin login manually below
+    'logout'   => false,   // we register logout manually below
+    'register' => false,   // customers use /customer/register, admin has no public registration
+    'reset'    => true,    // keep password reset routes
+    'verify'   => false,
+]);
+
+Route::get('delete-account', [\App\Http\Controllers\DeleteAccountRequestController::class, 'show'])->name('delete-account');
+Route::post('delete-account', [\App\Http\Controllers\DeleteAccountRequestController::class, 'submit'])->name('delete-account.submit');
+
+// ─── Admin login routes ───────────────────────────────────────────
+Route::get('admin',  [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+Route::post('admin', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post');
+Route::post('admin/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+
+// ─── Make /login behave as "not found" ────────────────────────────
+Route::get('/login',  function () { abort(404); });
+Route::post('/login', function () { abort(404); });
+
+
+// ==========================================
+// CUSTOMER PORTAL ROUTES (ADDED)
+// ==========================================
+// Customer Auth Routes
+Route::get('/customer/login', [CustomerAuthController::class, 'showLoginForm'])->name('customer.login');
+Route::post('/customer/login', [CustomerAuthController::class, 'login'])->name('customer.login.post');
+
+// Replace the old register route with these two:
+Route::get('/customer/register', [CustomerAuthController::class, 'showRegistrationForm'])->name('customer.register');
+Route::post('/customer/register', [CustomerAuthController::class, 'register'])->name('customer.register.post');
+
+Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('customer.logout');
+// Add to wishlist (Triggered by the heart icon)
+Route::post('/wishlist/add/{productId}', [WishlistController::class, 'store'])->name('wishlist.add');
+// Customer Protected Routes
+Route::middleware('auth:customer')->group(function () {
+    
+    // Dashboard Route
+    Route::get('/customer/dashboard', [CustomerDashboardController::class, 'index'])->name('customer.dashboard');
+    
+    // Wishlist Route
+   // Route::get('/customer/wishlist', [CustomerDashboardController::class, 'wishlist'])->name('customer.wishlist');
+
+    Route::get('/customer/wishlist', [WishlistController::class, 'index'])->name('customer.wishlist');
+    Route::get('/wishlist/remove/{id}', [WishlistController::class, 'destroy'])->name('wishlist.remove');
+
+        // ─── Order tracking (customer-facing) ──────────────────────────
+    Route::get('/customer/orders', [CustomerDashboardController::class, 'orders'])
+        ->name('customer.orders');
+
+    Route::get('/customer/orders/{sale}', [CustomerDashboardController::class, 'showOrder'])
+        ->name('customer.orders.show');
+
+    // Order confirmation page right after Paystack redirects back
+    Route::get('/customer/orders/{sale}/confirmation', [CustomerDashboardController::class, 'orderConfirmation'])
+        ->name('customer.orders.confirmation');
+    
+});
+
+
+
+
+
+// Public
+Route::get('/policy',            [PolicyController::class, 'index'])->name('policy.index');
+Route::get('/policy/{policy}',   [PolicyController::class, 'show'])->name('policy.show');
+
+
+// Cart Routes
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/add/{id}', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
+
+// Checkout Route
+Route::post('/checkout', [CartController::class, 'checkout'])->name('checkout.process');
+Route::get('/checkout/paystack/callback', [CartController::class, 'paystackCallback'])->name('checkout.paystack.callback');
+// ==========================================
+
+
+// ─── Public order tracking (no auth — anyone with a reference can track) ──
+Route::get('/track-order', [CartController::class, 'trackOrder'])->name('track.order');
+Route::post('/track-order', [CartController::class, 'trackOrder'])->name('track.order.search');
 
 Route::group(['middleware' => 'auth'], function() {
     Route::controller(HomeController::class)->group(function () {
@@ -145,9 +249,24 @@ Route::group(['middleware' => 'auth'], function() {
     });
 });
 
+// ==========================================
+// PAYMENT GATEWAY — PUBLIC ROUTES
+// (no auth — must be reachable by Paystack's servers)
+// ==========================================
+Route::prefix('payment')->group(function () {
+    // Browser redirect-back after Paystack authorization
+    Route::get ('{gateway}/callback', [PaymentGatewayController::class, 'callback'])->name('payment.callback');
+
+    // Customer polling for transaction status
+    Route::get ('{gateway}/status',   [PaymentGatewayController::class, 'queryStatus'])->name('payment.status');
+});
+
+// Webhook — server-to-server, no session/CSRF. Excluded from CSRF below.
+Route::post('payment/{gateway}/webhook', [PaymentGatewayController::class, 'callback'])->name('payment.webhook');;
+
 Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     Route::controller(HomeController::class)->group(function () {
-        Route::get('/', 'index');
+        Route::get('/index', 'index');
         Route::get('/dashboard', 'dashboard');
         Route::get('/yearly-best-selling-price', 'yearlyBestSellingPrice');
         Route::get('/yearly-best-selling-qty', 'yearlyBestSellingQty');
@@ -161,6 +280,10 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('addon-list', 'addonList');
         Route::get('my-transactions/{year}/{month}', 'myTransaction');
     });
+
+
+    Route::resource('policies', AdminPolicyController::class);
+    Route::post('policies/{policy}/toggle', [AdminPolicyController::class, 'toggleActive'])->name('policies.toggle');
 
 
     // Need to check again
@@ -220,7 +343,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::post('category-department/department-data', 'departmentData')->name('category-department.data');
     });
  
-	Route::resource('category', CategoryController::class);
+    Route::resource('category', CategoryController::class);
 
 
     Route::controller(BrandController::class)->group(function () {
@@ -254,8 +377,27 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     });
     Route::resource('warehouse', WarehouseController::class);
 
-
     Route::resource('tables', TableController::class);
+
+
+
+
+
+    // ==========================================
+    // ACCOUNTING ROUTES (Reconciliation + Reports)
+    // ==========================================
+    Route::controller(\App\Http\Controllers\AccountingReconciliationController::class)->group(function () {
+        Route::get('accounting/reconciliation', 'index')->name('accounting.reconciliation.index');
+        Route::post('accounting/reconciliation/retry/{id}', 'retry')->name('accounting.reconciliation.retry');
+    });
+
+    Route::controller(\App\Http\Controllers\AccountingReportController::class)->group(function () {
+        Route::get('accounting/balance-sheet', 'balanceSheet')->name('accounting.balance-sheet');
+        Route::get('accounting/profit-loss', 'profitAndLoss')->name('accounting.profit-loss');
+        Route::get('accounting/trial-balance', 'trialBalance')->name('accounting.trial-balance');
+        Route::get('accounting/general-ledger', 'generalLedger')->name('accounting.general-ledger');
+        Route::get('accounting/cash-flow', 'cashFlowStatement')->name('accounting.cash-flow');
+    });
 
 
     Route::controller(TaxController::class)->group(function () {
@@ -309,14 +451,14 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
 
 
     Route::controller(SaleController::class)->group(function () {
-         Route::get('shippings', 'shippings2')->name('sales.shippings');
-           Route::post('shipping-update/{shipping_id}', 'shipping_update')->name('shipping.update');
-            Route::post('shipping-post', 'shipping_post')->name('shipping.post');
-            Route::post('location-update/{location_id}', 'location_update')->name('location.update');
-         Route::get('sales/orders', 'salesorder')->name('sales.orders');
-          Route::get('location-delete/{location_id}', 'location_delete')->name('location.delete');
-           Route::get('shipping-delete/{shipping_id}', 'shipping_delete')->name('shipping.delete');
-           Route::post('location-add', 'location_add')->name('location.add');
+        Route::get('shippings', 'shippings2')->name('sales.shippings');
+        Route::post('shipping-update/{shipping_id}', 'shipping_update')->name('shipping.update');
+        Route::post('shipping-post', 'shipping_post')->name('shipping.post');
+        Route::post('location-update/{location_id}', 'location_update')->name('location.update');
+        Route::get('sales/orders', 'salesorder')->name('sales.orders');
+        Route::get('location-delete/{location_id}', 'location_delete')->name('location.delete');
+        Route::get('shipping-delete/{shipping_id}', 'shipping_delete')->name('shipping.delete');
+        Route::post('location-add', 'location_add')->name('location.add');
         Route::post('sales/sale-data', 'saleData');
         Route::post('sales/sendmail', 'sendMail')->name('sale.sendmail');
         Route::get('sales/sale_by_csv', 'saleByCsv');
@@ -325,6 +467,9 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('pos', 'posSale')->name('sale.pos');
         Route::get('sales/lims_sale_search', 'limsSaleSearch')->name('sale.search');
         Route::get('sales/lims_product_search', 'limsProductSearch')->name('product_sale.search');
+        
+        Route::get('sales/offline_products/{warehouse_id}', 'offlineProductsData')->name('product_sale.offline_products');
+
         Route::get('sales/getcustomergroup/{id}', 'getCustomerGroup')->name('sale.getcustomergroup');
         Route::get('sales/getproduct/{id}', 'getProduct')->name('sale.getproduct');
         Route::get('sales/getproduct/{category_id}/{brand_id}', 'getProductByFilter');
@@ -353,9 +498,12 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     });
     
     Route::post('sales/save-default-filter', [SaleController::class, 'saveDefaultFilter'])->name('sales.save-default-filter');
-// routes/web.php  (or wherever your sale routes are)
-Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProductsForSale'])->name('warehouse.products.sale');
+ // routes/web.php  (or wherever your sale routes are)
+    Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProductsForSale'])->name('warehouse.products.sale');
     Route::resource('sales', SaleController::class);
+
+
+    Route::get('/customer-display', [SaleController::class, 'customerDisplay'])->name('sales.customerDisplay');
 
     Route::controller(HirePurchaseController::class)->group(function () {
         Route::prefix('hire-purchase')->group(function () {
@@ -386,6 +534,14 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
         });
     });
 
+    Route::post('delivery/{id}/mark-delivered', [DeliveryController::class, 'markDelivered'])->name('delivery.markDelivered');
+
+    Route::controller(DamageStockController::class)->group(function () {
+        Route::get('damage-stock/getproduct/{id}',       'getProduct')         ->name('damage-stock.getproduct');
+        Route::get('damage-stock/lims_product_search',   'limsProductSearch')  ->name('damage-stock.search');
+        Route::post('damage-stock/deletebyselection',    'deleteBySelection');
+    });
+    Route::resource('damage-stock', DamageStockController::class);
 
     Route::controller(QuotationController::class)->group(function () {
         Route::prefix('quotations')->group(function () {
@@ -430,7 +586,6 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
     //set filter as in Sales
     Route::post('purchases/save-default-filter', [PurchaseController::class, 'saveDefaultFilter'])->name('purchases.save-default-filter');
     Route::resource('purchases', PurchaseController::class);
-
 
 
     Route::controller(TransferController::class)->group(function () {
@@ -488,6 +643,7 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
         Route::prefix('report')->group(function () {
             Route::get('/', 'reportDashboard')->name('report.dashboard');
             Route::get('first-time-customers', 'firstTimeCustomers')->name('report.firstTimeCustomers');
+            Route::get('installment-report', 'hirePurchaseInstallmentReport')->name('report.installmentReport');
             Route::get('product_quantity_alert', 'productQuantityAlert')->name('report.qtyAlert');
             Route::get('daily-sale-objective', 'dailySaleObjective')->name('report.dailySaleObjective');
             Route::post('daily-sale-objective-data', 'dailySaleObjectiveData');
@@ -652,7 +808,7 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
     });
     Route::resource('coupons', CouponController::class);
 
-	//accounting routes
+    //accounting routes
     Route::controller(AccountsController::class)->group(function () {
         Route::get('make-default/{id}', 'makeDefault');
         Route::get('balancesheet', 'balanceSheet')->name('accounts.balancesheet');
@@ -663,23 +819,39 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
 
     Route::resource('money-transfers', MoneyTransferController::class);
 
-	//HRM routes
-	Route::post('departments/deletebyselection', [DepartmentController::class,'deleteBySelection']);
-	Route::resource('departments', DepartmentController::class);
+    //HRM routes
+    Route::post('departments/deletebyselection', [DepartmentController::class,'deleteBySelection']);
+    Route::resource('departments', DepartmentController::class);
+    Route::resource('designations', DesignationController::class);
+    Route::resource('shift', ShiftController::class);
+    Route::resource('overtime', OvertimeController::class);
+    Route::resource('leave-type', LeaveTypeController::class);
+    Route::resource('leave', ControllersLeaveController::class);
+    Route::get('hrm-panel', [HRMController::class, 'index'])->name('hrm-panel');
 
 
-	Route::post('employees/deletebyselection', [EmployeeController::class, 'deleteBySelection']);
-	Route::resource('employees', EmployeeController::class);
+    Route::resource('sale-agents', SaleAgentController::class)->except('show');
+
+    Route::post('employees/deletebyselection', [EmployeeController::class, 'deleteBySelection']);
+    Route::resource('employees', EmployeeController::class);
 
 
-	Route::post('payroll/deletebyselection', [PayrollController::class, 'deleteBySelection']);
-	Route::resource('payroll', PayrollController::class);
+    Route::post('payroll/deletebyselection', [PayrollController::class, 'deleteBySelection']);
+    Route::post('payroll/generateCards', [PayrollController::class, 'generateCards'])->name('payroll.generateCards');
+    Route::get('payroll/get-employees', [PayrollController::class, 'getEmployeesByWarehouse'])->name('payroll.getEmployeesByWarehouse');
+    Route::get('payroll/monthly-data', [PayrollController::class, 'monthlyData'])->name('payroll.monthlyData');
+    Route::post('payroll-templates/store', [PayrollController::class, 'storeTemplate'])->name('payroll.templates.store');
+    Route::resource('payroll', PayrollController::class);
+
+    // AJAX endpoints for creating templates and template items from modal
+    Route::post('payroll-templates/store', [\App\Http\Controllers\PayrollTemplateController::class, 'store']);
+    Route::post('payroll-template-items/store', [\App\Http\Controllers\PayrollTemplateItemController::class, 'store']);
 
 
     Route::post('attendance/delete/{date}/{employee_id}', [AttendanceController::class, 'delete'])->name('attendances.delete');
-	Route::post('attendance/deletebyselection', [AttendanceController::class, 'deleteBySelection']);
+    Route::post('attendance/deletebyselection', [AttendanceController::class, 'deleteBySelection']);
     Route::post('attendance/importDeviceCsv', [AttendanceController::class, 'importDeviceCsv'])->name('attendances.importDeviceCsv');
-	Route::resource('attendance', AttendanceController::class);
+    Route::resource('attendance', AttendanceController::class);
 
 
     Route::controller(StockCountController::class)->group(function () {
@@ -690,14 +862,12 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
     Route::post('stock-count/save',[StockCountController::class, 'saveCount'])->name('stock-count.save');
     Route::resource('stock-count', StockCountController::class);
 
-
     Route::controller(HolidayController::class)->group(function () {
         Route::post('holidays/deletebyselection', 'deleteBySelection');
         Route::get('approve-holiday/{id}', 'approveHoliday')->name('approveHoliday');
         Route::get('holidays/my-holiday/{year}/{month}', 'myHoliday')->name('myHoliday');
     });
     Route::resource('holidays', HolidayController::class);
-
 
     Route::controller(CashRegisterController::class)->group(function () {
         Route::prefix('cash-register')->group(function () {
@@ -710,7 +880,6 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
         });
     });
 
-
     Route::controller(NotificationController::class)->group(function () {
         Route::prefix('notifications')->group(function () {
             Route::get('/', 'index')->name('notifications.index');
@@ -719,13 +888,61 @@ Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProdu
         });
     }); 
 
+    //Sms Template
+    Route::resource('smstemplates', SmsTemplateController::class);
 
-	Route::resource('currency', CurrencyController::class);
+    Route::prefix('whatsapp')->group(function () {
+        Route::get('/settings', [WhatsappController::class, 'settings'])->name('whatsapp.settings');
+        Route::post('/settings', [WhatsappController::class, 'updateSettings'])->name('whatsapp.settings.update');
 
-	Route::resource('custom-fields', CustomFieldController::class);
+        Route::get('/templates', [WhatsappController::class, 'templates'])->name('whatsapp.templates');
+        Route::delete('/template/delete/{name}', [WhatsappController::class, 'deleteTemplate'])->name('whatsapp.template.delete');
 
-	Route::post('woocommerce-install', [AddonInstallController::class,'woocommerceInstall'])->name('woocommerce.install');
+        Route::get('/send', [WhatsappController::class, 'sendPage'])->name('whatsapp.send.page');
+        Route::post('/send', [WhatsappController::class, 'sendMessage'])->name('whatsapp.send');
+    });
 
 
+    $middlewares = array_merge(['common', 'auth', 'active']); 
+ 
+    Route::prefix('ai')->name('ai-assistant.')->middleware($middlewares)->group(function () {
+        Route::get('ai-assistant', [AIAssistantController::class, 'index'])->name('index');
+
+        // Structured prompt endpoint — POST /ai-assistant/prompt
+        // Accepts a single 'prompt' string. All context is derived server-side.
+        Route::post('ai-assistant/prompt', StructuredPromptController::class)->name('prompt');
+
+        // Conversation Endpoints
+        Route::prefix('ai-assistant/api/conversations')->group(function () {
+            Route::get('/', [AIConversationController::class, 'index'])->name('conversations.index');
+            Route::post('/', [AIConversationController::class, 'store'])->name('conversations.store');
+            Route::get('{id}', [AIConversationController::class, 'show'])->name('conversations.show');
+            Route::post('{id}/prompt', [AIConversationController::class, 'appendPrompt'])->name('conversations.prompt');
+            Route::delete('{id}', [AIConversationController::class, 'destroy'])->name('conversations.destroy');
+        });
+    });
+
+    // INSIDE the ['auth', 'common', 'active'] middleware group, keep only:
+    Route::post('payment/{gateway}/push', [PaymentGatewayController::class, 'push'])->name('payment.push');
+
+    Route::controller(SaleExchangeController::class)->prefix('exchange')->group(function () {
+        Route::post('exchange-data', 'exchangeData')->name('exchange.data');
+        Route::get('getcustomergroup/{id}', 'getCustomerGroup')->name('exchange.getcustomergroup');
+        Route::post('sendmail', 'sendMail')->name('exchange.sendmail');
+        Route::get('getproduct/{id}', 'getProduct')->name('exchange.getproduct');
+        Route::get('lims_product_search', 'limsProductSearch')->name('exchange.lims_product_search');
+        // FIXED: Changed from exchangeData to productExchange
+        Route::get('product_exchange/{id}', 'productExchange')->name('exchange.product_exchange');
+        Route::post('deletebyselection', 'deleteBySelection')->name('exchange.deletebyselection');
+    });
+
+    Route::resource('exchange', SaleExchangeController::class);
+    Route::get('/sale-exchange/search', [SaleExchangeController::class, 'searchByReference'])->name('sale.exchange.search');
+
+    Route::resource('currency', CurrencyController::class);
+
+    Route::resource('custom-fields', CustomFieldController::class);
+
+    Route::post('woocommerce-install', [AddonInstallController::class,'woocommerceInstall'])->name('woocommerce.install');
 
 });

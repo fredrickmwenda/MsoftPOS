@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('product_tax', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            $table->foreignId('tax_id')->constrained()->onDelete('cascade');
+            $table->integer('product_id');
+            $table->integer('tax_id');
             $table->timestamps();
         });
     }

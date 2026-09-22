@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Coupon;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Keygen;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Traits\CacheForget;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class CouponController extends Controller
 {

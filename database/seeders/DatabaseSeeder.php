@@ -4,6 +4,8 @@ use App\Models\Permission;
 use Illuminate\Database\Seeder;
 use Database\Seeders\UserSeeder;
 use Database\Seeders\AdminPermissionSeeder;
+use Database\Seeders\PermissionSeeder;
+use Database\Seeders\PolicySeeder;
 use Database\Seeders\UserRoleSeeder;
 
 class DatabaseSeeder extends Seeder
@@ -18,7 +20,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             // CountriesTableSeeder::class,
             //UserSeeder::class,
-            UserRoleSeeder::class,
+            //UserRoleSeeder::class,
+          // PermissionSeeder::class,
+          PolicySeeder::class,
         ]);
     }
 }

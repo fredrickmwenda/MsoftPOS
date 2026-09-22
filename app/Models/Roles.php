@@ -13,7 +13,7 @@ class Roles extends Model
     // App\Models\Role.php (or Roles.php)
     public function users()
     {
-        return $this->belongsToMany(User::class, 'roles_user', 'roles_id', 'user_id');
+        return $this->belongsToMany(User::class, 'role_user', 'role_id', 'user_id');
     }
     
     public function permissions()

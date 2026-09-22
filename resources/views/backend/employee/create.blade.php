@@ -1,4 +1,5 @@
-@extends('backend.layout.main') @section('content')
+@extends('backend.layout.main') 
+@section('content')
 <section class="forms">
     <div class="container-fluid">
         <div class="row">
@@ -33,6 +34,18 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                
+                                <!-- WAREHOUSE FIELD ADDED HERE (Nullable for Employee) -->
+                                <div class="form-group">
+                                    <label>{{trans('file.Warehouse')}}</label>
+                                    <select name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Warehouse (Optional)">
+                                        <option value="">None</option>
+                                        @foreach($lims_warehouse_list as $warehouse)
+                                        <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
                                 <div class="form-group">
                                     <label>{{trans('file.Email')}} *</label>
                                     <input type="email" name="email" placeholder="example@example.com" required class="form-control">
@@ -90,17 +103,12 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="form-group" id="warehouse">
-                                        <label>{{trans('file.Warehouse')}} *</label>
-                                        <select name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Warehouse...">
-                                            @foreach($lims_warehouse_list as $warehouse)
-                                            <option value="{{$warehouse->id}}">{{$warehouse->name}}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+                                    
+                                    <!-- BILLER FIELD KEPT FOR USER -->
                                     <div class="form-group" id="biller">
-                                        <label>{{trans('file.Biller')}} *</label>
-                                        <select name="biller_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Biller...">
+                                        <label>{{trans('file.Biller')}}</label>
+                                        <select name="biller_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Biller (Optional)">
+                                            <option value="">None</option>
                                             @foreach($lims_biller_list as $biller)
                                             <option value="{{$biller->id}}">{{$biller->name}} ({{$biller->company_name}})</option>
                                             @endforeach
@@ -121,7 +129,6 @@
         </div>
     </div>
 </section>
-
 
 @endsection
 
@@ -150,7 +157,7 @@
         });
     @endif
 
-    $('#warehouse').hide();
+    // Warehouse removed from here as it is now always visible in the Employee section
     $('#biller').hide();
 
     $('input[name="user"]').on('change', function() {
@@ -165,22 +172,18 @@
             $('input[name="name"]').prop('required',false);
             $('input[name="password"]').prop('required',false);
             $('select[name="role_id"]').prop('required',false);
-            $('select[name="warehouse_id"]').prop('required',false);
             $('select[name="biller_id"]').prop('required',false);
         }
     });
 
+    // Only toggle Biller based on role now
     $('select[name="role_id"]').on('change', function() {
         if($(this).val() > 2){
-            $('#warehouse').show(400);
             $('#biller').show(400);
-            $('select[name="warehouse_id"]').prop('required',true);
             $('select[name="biller_id"]').prop('required',true);
         }
         else{
-            $('#warehouse').hide(400);
             $('#biller').hide(400);
-            $('select[name="warehouse_id"]').prop('required',false);
             $('select[name="biller_id"]').prop('required',false);
         }
     });

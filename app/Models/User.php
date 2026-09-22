@@ -37,9 +37,9 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(
             Roles::class,      // or the correct model name
-            'roles_user',      // pivot table name
+            'role_user',      // pivot table name
             'user_id',         // foreign key from User
-            'roles_id'         // foreign key from Roles (use 'role_id' if that's the actual column)
+            'role_id'         // foreign key from Roles (use 'role_id' if that's the actual column)
         )->withTimestamps();
     }
     // All permissions aggregated from all roles
@@ -62,6 +62,25 @@ class User extends Authenticatable
             ->whereHas('permissions', function ($q) use ($permission) {
                 $q->where('name', $permission);
             })->exists();
+    }
+
+    // app/Models/User.php
+
+    public function getAllRoleIds()
+    {
+        return $this->roles()->pluck('roles.id')->toArray();
+    }
+
+    public function getAllPermissionNames(): array
+    {
+        return $this->roles()
+            ->with('permissions')
+            ->get()
+            ->pluck('permissions.*.name')
+            ->flatten()
+            ->unique()
+            ->values()
+            ->toArray();
     }
 
     public function isActive()

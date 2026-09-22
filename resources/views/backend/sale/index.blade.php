@@ -70,6 +70,18 @@
                     </div>
                 </div>
 
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label><strong>Sale Source</strong></label>
+                        <select id="sale_source" class="form-control" name="sale_source">
+                            <option value="all" {{ (isset($sale_source) && $sale_source == 'all') ? 'selected' : '' }}>All Sources</option>
+                            <option value="pos" {{ (isset($sale_source) && $sale_source == 'pos') ? 'selected' : '' }}>POS</option>
+                            <option value="in-store" {{ (isset($sale_source) && $sale_source == 'in-store') ? 'selected' : '' }}>In-Store</option>
+                            <option value="ecommerce" {{ (isset($sale_source) && $sale_source == 'ecommerce') ? 'selected' : '' }}>Ecommerce</option>
+                        </select>
+                    </div>
+                </div>
+
                 
                 <!-- Filter By Percentage: show only top X% of sales by value (permission required) -->
                
@@ -120,6 +132,7 @@
                     <th>{{trans('file.Sale Status')}}</th>
                     <th>{{trans('file.Payment Status')}}</th>
                     <th>{{trans('file.Delivery Status')}}</th>
+                    <th>Sale Source</th> <!-- NEW -->
                     <th>{{trans('file.grand total')}}<br><small class="text-muted">(Individual)</small></th>
                     <th>{{trans('file.Returned Amount')}}</th>
                     <th>{{trans('file.Paid')}}</th>
@@ -134,6 +147,7 @@
             <tfoot class="tfoot active">
                 <th></th>
                 <th>{{trans('file.Total')}}</th>
+                <th></th>
                 <th></th>
                 <th></th>
                 <th></th>
@@ -591,7 +605,7 @@
         });
     @endif
 
-    var columns = [{"data": "key"}, {"data": "date"}, {"data": "reference_no"}, {"data": "biller"}, {"data": "customer"}, {"data": "sale_status"}, {"data": "payment_status"}, {"data": "delivery_status"}, {"data": "grand_total"}, {"data": "returned_amount"}, {"data": "paid_amount"}, {"data": "due"}];
+    var columns = [{"data": "key"}, {"data": "date"}, {"data": "reference_no"}, {"data": "biller"}, {"data": "customer"}, {"data": "sale_status"}, {"data": "payment_status"}, {"data": "delivery_status"}, {"data": "sale_source"}, {"data": "grand_total"}, {"data": "returned_amount"}, {"data": "paid_amount"}, {"data": "due"}];
     var field_name = <?php echo json_encode($field_name) ?>;
     for(i = 0; i < field_name.length; i++) {
         columns.push({"data": field_name[i]});
@@ -654,23 +668,7 @@
         }
     });
 
-    // Keep hidden in sync with percentage select so form submit and DataTable always have the value
-    // $('#percentage_filter_select').on('change', function() {
-    //     $('#percentage_filter_value').val($(this).val() || '');
-    // });
 
-    // // Reset filters
-    // $('#reset-filters').on('click', function() {
-    //     $('input[name="starting_date"]').val('');
-    //     $('input[name="ending_date"]').val('');
-    //     $('#percentage_filter_value').val('');
-    //     $('#percentage_filter_select').val('');
-    //     $('#warehouse_id').val(0);
-    //     $('#sale-status').val(0);
-    //     $('#payment-status').val(0);
-    //     $('.selectpicker').selectpicker('refresh');
-    //     $('#filter-form').submit();
-    // });
 
         // Keep hidden in sync with percentage select so form submit and DataTable always have the value
     $('#percentage_filter_select').on('change', function() {
@@ -699,6 +697,7 @@
         $('#warehouse_id').val(0);
         $('#sale-status').val(0);
         $('#payment-status').val(0);
+        $('#sale_source').val('all'); // NEW
         $('.selectpicker').selectpicker('refresh');
 
         $('#sale-table').DataTable().ajax.reload(); 
@@ -1039,8 +1038,8 @@
                 d.starting_date = $('input[name="starting_date"]').val();
                 d.ending_date = $('input[name="ending_date"]').val();
                 d.warehouse_id = $('#warehouse_id').val();
-                d.sale_status = $('#sale-status').val();
-                d.payment_status = $('#payment-status').val();
+                d.sale_status = $('#sale-status').val();              
+                d.sale_source = $('#sale_source').val(); 
                 d.percentage_filter = $('#percentage_filter_value').val() || $('select#percentage_filter_select').val();
             },
             dataSrc: function(json) {
@@ -1072,7 +1071,7 @@
         'columnDefs': [
             {
                 "orderable": false,
-                'targets': [0, 3, 4, 5, 6, 7, -1]
+                'targets': [0, 3, 4, 5, 6, 7, 8, -1]
             },
             {
                 'render': function(data, type, row, meta){

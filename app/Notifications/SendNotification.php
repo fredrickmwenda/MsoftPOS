@@ -4,63 +4,86 @@ namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Http\Request;
 
-class SendNotification extends Notification
+class SendNotification extends Notification implements ShouldQueue
 {
     use Queueable;
-    private $request;
+
+    /**
+     * Notification payload.
+     *
+     * Keys:
+     *  - sender_id     (int|string|null)
+     *  - receiver_id   (int|string|null)
+     *  - reminder_date (string|null)  e.g. "2025-01-15"
+     *  - document_name (mixed)
+     *  - message       (string)
+     *
+     * @var array{sender_id: int|string|null, receiver_id: int|string|null, reminder_date: string|null, document_name: mixed, message: string}
+     */
+    private array $payload;
+
     /**
      * Create a new notification instance.
      *
+     * @param  array{sender_id?: int|string|null, receiver_id?: int|string|null, reminder_date?: string|null, document_name?: mixed, message?: string}  $payload
      * @return void
      */
-    public function __construct(Request $request)
+    public function __construct(array $payload)
     {
-        $this->request = $request;
+        // Merge with defaults so toArray() never hits an undefined key.
+        $this->payload = array_merge([
+            'sender_id'     => null,
+            'receiver_id'   => null,
+            'reminder_date' => null,
+            'document_name' => null,
+            'message'       => '',
+        ], $payload);
     }
 
     /**
      * Get the notification's delivery channels.
      *
      * @param  mixed  $notifiable
-     * @return array
+     * @return array<int, string>
      */
-    public function via($notifiable)
+    public function via($notifiable): array
     {
         return ['database'];
     }
 
     /**
-     * Get the mail representation of the notification.
+     * Get the array representation of the notification
+     * (persisted to the notifications table by the database channel).
      *
      * @param  mixed  $notifiable
-     * @return \Illuminate\Notifications\Messages\MailMessage
+     * @return array<string, mixed>
      */
-    public function toMail($notifiable)
+    public function toArray($notifiable): array
     {
-        return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+        $reminderDate = $this->payload['reminder_date']
+            ? date('Y-m-d', strtotime($this->payload['reminder_date']))
+            : null;
+
+        return [
+            'sender_id'     => $this->payload['sender_id'],
+            'receiver_id'   => $this->payload['receiver_id'],
+            'reminder_date' => $reminderDate,
+            'document_name' => $this->payload['document_name'],
+            'message'       => $this->payload['message'],
+        ];
     }
 
     /**
-     * Get the array representation of the notification.
+     * Get the database representation (Laravel prefers this over toArray
+     * for the 'database' channel when both exist).
      *
      * @param  mixed  $notifiable
-     * @return array
+     * @return array<string, mixed>
      */
-    public function toArray($notifiable)
+    public function toDatabase($notifiable): array
     {
-        return [
-            'sender_id' => $this->request->sender_id,
-            'receiver_id' => $this->request->receiver_id,
-            'reminder_date' => date('Y-m-d', strtotime($this->request->reminder_date)),
-            'document_name' => $this->request->document_name,
-            'message' => $this->request->message
-        ];
+        return $this->toArray($notifiable);
     }
 }

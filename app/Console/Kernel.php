@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
         Commands\AutoPurchase::class,
         Commands\DsoAlert::class,
         Commands\ResetDB::class,
+        Commands\CleanLogs::class,
     ];
 
     /**
@@ -29,8 +30,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('purchase:auto')->everyFiveMinutes();
         $schedule->command('dsoalert:find')->dailyAt('00:00');
         $schedule->command('reset:db')->everyMinute();
+        $schedule->command('payroll:process-recurring')->dailyAt('00:00');
+
         // Testing Purpose
         $schedule->command('quote:daily')->everyMinute();
+        $schedule->command('logs:clean')->daily();
     }
 
     /**

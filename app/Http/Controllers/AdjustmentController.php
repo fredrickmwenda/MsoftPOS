@@ -8,12 +8,11 @@ use App\Models\Product_Warehouse;
 use App\Models\Product;
 use App\Models\Adjustment;
 use App\Models\ProductAdjustment;
-use DB;
+use Illuminate\Support\Facades\DB;
 use App\Models\StockCount;
 use App\Models\ProductVariant;
-use Auth;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
+
 
 class AdjustmentController extends Controller
 {

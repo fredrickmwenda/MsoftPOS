@@ -18,7 +18,9 @@ class VerifyCsrfToken extends Middleware
      *
      * @var array
      */
+    // app/Http/Middleware/VerifyCsrfToken.php (Laravel 10)
     protected $except = [
-        //
+        'payment/*/webhook',
+        'api/payment/*/webhook',
     ];
 }

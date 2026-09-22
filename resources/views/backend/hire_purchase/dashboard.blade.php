@@ -12,8 +12,8 @@
                             <a href="{{ route('hire_purchase.index') }}" class="btn btn-sm btn-primary">
                                 <i class="dripicons-list"></i> All Contracts
                             </a>
-                            <a href="{{ route('hire_purchase.report') }}" class="btn btn-sm btn-info">
-                                <i class="dripicons-document"></i> Reports
+                            <a href="{{ route('report.dashboard') }}" class="btn btn-sm btn-info">
+                                <i class="dripicons-document"></i> Reports Dashboard
                             </a>
                         </div>
                     </div>

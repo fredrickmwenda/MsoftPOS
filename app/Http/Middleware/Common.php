@@ -131,7 +131,7 @@ class Common
      * Permission names used in sidebar/views when permission tables are not used.
      */
     private function allPermissionNamesForFallback(): array
-    {
+    { 
         return [
             'revenue_profit_summary','cash_flow','monthly_summary','yearly_report','category',
             'products-index','products-add','products-edit','products-delete','purchases-index','purchases-add',

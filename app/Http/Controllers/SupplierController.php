@@ -12,10 +12,9 @@ use App\Models\Account;
 use App\Models\Payment;
 use App\Models\MailSetting;
 use Illuminate\Validation\Rule;
-use Auth;
-use DB;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 use App\Mail\SupplierCreate;
 use App\Mail\CustomerCreate;
 use App\Models\Product;
@@ -140,6 +139,13 @@ class SupplierController extends Controller
             $imageName = $imageName . '.' . $ext;
             $image->move('public/images/supplier', $imageName);
             $lims_supplier_data['image'] = $imageName;
+        }
+
+
+        //if there is pay_term_no save it
+        if (empty($lims_supplier_data['pay_term_no'])) {
+            $lims_supplier_data['pay_term_no'] = $request->pay_term_no;
+            $lims_supplier_data['pay_term_period'] = $request->pay_term_period;
         }
         Supplier::create($lims_supplier_data);
         $message = 'Supplier';

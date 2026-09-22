@@ -846,6 +846,8 @@ return [
 	"While synchronizing, refrain from refreshing the page or leaving it." => "Wakati wa kusawazisha, epuka kusasisha ukurasa au kuondoka.",
 	"In the WordPress permalink option, select Post Name as the permalinks option." => "Katika chaguo la anwani ya kudumu ya WordPress, chagua Jina la Chapisho kama chaguo la anwani za kudumu.",
 	"Buy Now" => "Nunua Sasa",
-	"Install" => "Sakinisha"
+	"Install" => "Sakinisha",
+	'assistant_title' => 'Msaidizi wa Akili Bandia',
+	'ai_assistant' => 'Msaidizi wa Akili Bandia',
 ];
 ?>

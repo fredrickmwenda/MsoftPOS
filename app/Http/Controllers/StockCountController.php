@@ -5,10 +5,10 @@ use App\Models\Warehouse;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use DB;
+use Illuminate\Support\Facades\DB;
 use App\Models\StockCount;
 use App\Models\StockCountItem;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class StockCountController extends Controller
 {

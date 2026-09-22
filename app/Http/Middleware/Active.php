@@ -21,11 +21,11 @@ class Active
             return $next($request);
         }
 
-        // If logged in but inactive, log out and redirect to login with error
         if (Auth::check()) {
             Auth::logout();
         }
 
-        return redirect('/login')->with('error', 'Your account is inactive. Please contact support.');
+        return redirect()->route('login')
+            ->with('error', 'Your account is inactive. Please contact support.');
     }
 }

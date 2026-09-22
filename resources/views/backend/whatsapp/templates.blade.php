@@ -1,0 +1,131 @@
+@extends('backend.layout.main')
+@section('content')
+
+
+    <section>
+        @if (!empty($asset_id))
+        <div class="container-fluid">
+            <a href="https://business.facebook.com/latest/whatsapp_manager/message_templates?asset_id={{ $asset_id }}" target="_blank" class="btn btn-info">
+            <i class="dripicons-plus"></i> {{ __('file.manage_template') }}</a>
+        </div>
+        @endif
+
+        <div class="table-responsive">
+            <table id="templates-table" class="table">
+                <thead>
+                    <tr>
+                        <th class="not-exported"></th>
+                        <th>{{ __('file.name') }}</th>
+                        <th>{{ __('file.language') }}</th>
+                        <th>{{ __('file.category') }}</th>
+                        <th>{{ __('file.status') }}</th>
+                        <th class="not-exported">{{ __('file.action') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($templates as $key => $tpl)
+                        <tr data-id="{{ $tpl['name'] }}">
+                            <td>{{ $key }}</td>
+                            <td>{{ $tpl['name'] }}</td>
+                            <td>{{ $tpl['language'] }}</td>
+                            <td>{{ $tpl['category'] ?? '' }}</td>
+                            <td>{{ $tpl['status'] ?? '' }}</td>
+                            <td>
+                                <form action="{{ route('whatsapp.template.delete', $tpl['name']) }}" method="POST" onsubmit="return confirmDelete()">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn btn-sm btn-danger"><i class="dripicons-trash"></i> {{ __('file.delete') }}</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </section>
+@endsection
+
+@push('scripts')
+    <script type="text/javascript">
+        $("ul#whatsapp").siblings('a').attr('aria-expanded', 'true');
+        $("ul#whatsapp").addClass("show");
+        $("ul#whatsapp #whatsapp-templates-menu").addClass("active");
+
+        $('#templates-table').DataTable({
+            "order": [],
+            'language': {
+                'lengthMenu': '_MENU_ {{ __('file.records per page') }}',
+                "info": '<small>{{ __('file.Showing') }} _START_ - _END_ (_TOTAL_)</small>',
+                "search": '{{ __('file.Search') }}',
+                'paginate': {
+                    'previous': '<i class="dripicons-chevron-left"></i>',
+                    'next': '<i class="dripicons-chevron-right"></i>'
+                }
+            },
+            'columnDefs': [{
+                    "orderable": false,
+                    'targets': [0, 5]
+                },
+                {
+                    'render': function(data, type, row, meta) {
+                        if (type === 'display') {
+                            data =
+                                '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>';
+                        }
+
+                        return data;
+                    },
+                    'checkboxes': {
+                        'selectRow': true,
+                        'selectAllRender': '<div class="checkbox"><input type="checkbox" class="dt-checkboxes"><label></label></div>'
+                    },
+                    'targets': [0]
+                }
+            ],
+            'select': {
+                style: 'multi',
+                selector: 'td:first-child'
+            },
+            'lengthMenu': [
+                [10, 25, 50, -1],
+                [10, 25, 50, "All"]
+            ],
+            dom: '<"row"lfB>rtip',
+            buttons: [{
+                    extend: 'pdf',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                },
+                {
+                    extend: 'excel',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                },
+                {
+                    extend: 'csv',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                },
+                {
+                    extend: 'print',
+                    exportOptions: {
+                        columns: ':visible:Not(.not-exported)',
+                        rows: ':visible'
+                    },
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i title="" class="fa fa-eye"></i>',
+                    columns: ':gt(0)'
+                },
+            ],
+        });
+
+    </script>
+@endpush

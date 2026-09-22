@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\DiscountPlan;
 use App\Models\DiscountPlanCustomer;
 use App\Models\Customer;
-use App\Models\Role;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class DiscountPlanController extends Controller
 {

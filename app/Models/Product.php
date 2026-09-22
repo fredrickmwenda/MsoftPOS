@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+
 
 class Product extends Model
 {
@@ -33,10 +35,23 @@ class Product extends Model
         "is_imei",
         "featured",
         "is_featured",
+        'is_ecommerce',   // ← add
+
         "product_list", "variant_list", "qty_list", "price_list",
         "product_details",
         "variant_option", "variant_value", "is_active", "is_sync_disable", "woocommerce_product_id","woocommerce_media_id","tags","meta_title","meta_description"
     ];
+
+     protected $casts = [
+        'is_ecommerce' => 'boolean',   // ← add
+    ];
+
+    // ── Scope: only products visible on the e-commerce store ──
+    public function scopeForStore(Builder $query): Builder
+    {
+        return $query->where('is_ecommerce', true)
+                      ->where('is_active', true);
+    }
 
     //payment status 1=Due, 2=partial, 3=due, 4=waiting approval
 

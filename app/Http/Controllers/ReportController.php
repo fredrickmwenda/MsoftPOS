@@ -26,6 +26,7 @@ use App\Models\Payroll;
 use App\Models\Biller;
 use App\Models\User;
 use App\Models\Customer;
+use App\Models\HirePurchaseInstallment;
 use App\Models\Supplier;
 use App\Models\Variant;
 use App\Models\ProductVariant;
@@ -33,13 +34,9 @@ use App\Models\Unit;
 use App\Models\CustomerGroup;
 use App\Models\CategoryDepartment;
 use App\Models\GeneralSetting;
-// use DB;
 use Illuminate\Support\Facades\DB;
-use Auth;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\DB as FacadesDB;
-use App\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
+
 
 class ReportController extends Controller
 {
@@ -90,6 +87,63 @@ class ReportController extends Controller
     {
         
         return view('backend.report.report_dashboard');
+    }
+
+    public function hirePurchaseInstallmentReport(Request $request)
+    {
+        $customerId = $request->get('customer_id');
+        $status = $request->get('status', 'all');
+        $startDate = $request->get('start_date') ? date('Y-m-d', strtotime($request->get('start_date'))) : now()->startOfMonth()->toDateString();
+        $endDate = $request->get('end_date') ? date('Y-m-d', strtotime($request->get('end_date'))) : now()->toDateString();
+
+        $query = HirePurchaseInstallment::with(['sale.customer'])
+            ->whereBetween('due_date', [$startDate, $endDate]);
+
+        if ($customerId) {
+            $query->whereHas('sale', function ($q) use ($customerId) {
+                $q->where('customer_id', $customerId);
+            });
+        }
+
+        if ($status !== 'all') {
+            if ($status === 'paid') {
+                $query->where('payment_status', 'paid');
+            } elseif ($status === 'overdue') {
+                $query->where('payment_status', '!=', 'paid')
+                    ->where('due_date', '<', now()->toDateString());
+            } elseif ($status === 'pending') {
+                $query->where('payment_status', '!=', 'paid')
+                    ->where('due_date', '>=', now()->toDateString());
+            } elseif ($status === 'partial') {
+                $query->where('payment_status', 'partial');
+            }
+        }
+
+        $installments = $query->orderBy('due_date', 'asc')->get();
+        $customers = Customer::orderBy('name')->get();
+
+        $summary = [
+            'total_installments' => $installments->count(),
+            'paid_installments' => $installments->where('payment_status', 'paid')->count(),
+            'partial_installments' => $installments->where('payment_status', 'partial')->count(),
+            'pending_installments' => $installments->where('payment_status', '!=', 'paid')->where('payment_status', '!=', 'partial')->count(),
+            'overdue_installments' => $installments->filter(function ($installment) {
+                return $installment->payment_status !== 'paid' && $installment->due_date->lt(now());
+            })->count(),
+            'total_amount' => round($installments->sum('amount'), 2),
+            'total_paid_amount' => round($installments->sum('paid_amount'), 2),
+            'total_remaining_amount' => round($installments->sum('remaining_amount'), 2),
+        ];
+
+        return view('backend.report.installment_report', compact(
+            'installments',
+            'customers',
+            'customerId',
+            'status',
+            'startDate',
+            'endDate',
+            'summary'
+        ));
     }
 
     public function productQuantityAlert()
@@ -875,136 +929,131 @@ class ReportController extends Controller
 
     public function profitLoss(Request $request)
     {
-        $start_date = $request['start_date'];
-        $end_date = $request['end_date'];
-        $query1 = array(
+        $start_date = $request['start_date'] . ' 00:00:00';
+        $end_date   = $request['end_date']   . ' 23:59:59';
+
+        $query1 = [
             'SUM(grand_total) AS grand_total',
             'SUM(shipping_cost) AS shipping_cost',
             'SUM(paid_amount) AS paid_amount',
             'SUM(total_tax + order_tax) AS tax',
             'SUM(total_discount + order_discount) AS discount'
-        );
-        $query2 = array(
+        ];
+        $query2 = [
             'SUM(grand_total) AS grand_total',
             'SUM(total_tax + order_tax) AS tax'
-        );
-        config()->set('database.connections.mysql.strict', false);
-        DB::reconnect();
-        $product_sale_data = Product_Sale::select(DB::raw('product_id, product_batch_id, sale_unit_id, sum(qty) as sold_qty, sum(product_sales.return_qty) as return_qty, sum(total) as sold_amount'))
-                            ->whereDate('created_at', '>=' , $start_date)
-                            ->whereDate('created_at', '<=' , $end_date)
-                            ->groupBy('product_id', 'product_batch_id')
-                            ->get();
-        config()->set('database.connections.mysql.strict', true);
-            DB::reconnect();
-        $data = $this->calculateAverageCOGS($product_sale_data);
-        $product_cost = $data[0];
-        $product_tax = $data[1];
+        ];
 
+        // ---- COGS using products.cost (no more averaging) ----
+        [$product_cost, $product_tax] = $this->calculateAverageCOGS($start_date, $end_date);
 
-        
+        $purchase             = Purchase::whereBetween('created_at', [$start_date, $end_date])->selectRaw(implode(',', $query1))->get();
+        $total_purchase       = Purchase::whereBetween('created_at', [$start_date, $end_date])->count();
+        $sale                 = Sale::whereBetween('created_at', [$start_date, $end_date])->selectRaw(implode(',', $query1))->get();
+        $total_sale           = Sale::whereBetween('created_at', [$start_date, $end_date])->count();
+        $return               = Returns::whereBetween('created_at', [$start_date, $end_date])->selectRaw(implode(',', $query2))->get();
+        $total_return         = Returns::whereBetween('created_at', [$start_date, $end_date])->count();
+        $purchase_return      = ReturnPurchase::whereBetween('created_at', [$start_date, $end_date])->selectRaw(implode(',', $query2))->get();
+        $total_purchase_return= ReturnPurchase::whereBetween('created_at', [$start_date, $end_date])->count();
+        $expense              = Expense::whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $total_expense        = Expense::whereBetween('created_at', [$start_date, $end_date])->count();
+        $payroll              = Payroll::whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $total_payroll        = Payroll::whereBetween('created_at', [$start_date, $end_date])->count();
+        $total_item           = DB::table('product_warehouse')
+                                ->join('products', 'product_warehouse.product_id', '=', 'products.id')
+                                ->where([
+                                    ['products.is_active', true],
+                                    ['product_warehouse.qty', '>', 0]
+                                ])->count();
 
-        $purchase = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query1))->get();
-        $total_purchase = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
-        $sale = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query1))->get();
-        $total_sale = Sale::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
-        $return = Returns::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query2))->get();
-        $total_return = Returns::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
-        $purchase_return = ReturnPurchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query2))->get();
-        $total_purchase_return = ReturnPurchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
-        $expense = Expense::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('amount');
-        $total_expense = Expense::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
-        $payroll = Payroll::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('amount');
-        $total_payroll = Payroll::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->count();
-        $total_item = DB::table('product_warehouse')
-                    ->join('products', 'product_warehouse.product_id', '=', 'products.id')
-                    ->where([
-                        ['products.is_active', true],
-                        ['product_warehouse.qty', '>' , 0]
-                    ])->count();
-        $payment_recieved_number = DB::table('payments')->whereNotNull('sale_id')->whereDate('created_at', '>=' , $start_date)
-            ->whereDate('created_at', '<=' , $end_date)->count();
-        $payment_recieved = DB::table('payments')->whereNotNull('sale_id')->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('payments.amount');
-        $credit_card_payment_sale = DB::table('payments')
-                            ->where('paying_method', 'Credit Card')
-                            ->whereNotNull('payments.sale_id')
-                            ->whereDate('payments.created_at', '>=' , $start_date)
-                            ->whereDate('payments.created_at', '<=' , $end_date)->sum('payments.amount');
-        $cheque_payment_sale = DB::table('payments')
-                            ->where('paying_method', 'Cheque')
-                            ->whereNotNull('payments.sale_id')
-                            ->whereDate('payments.created_at', '>=' , $start_date)
-                            ->whereDate('payments.created_at', '<=' , $end_date)->sum('payments.amount');
-        $gift_card_payment_sale = DB::table('payments')
-                            ->where('paying_method', 'Gift Card')
-                            ->whereNotNull('sale_id')
-                            ->whereDate('created_at', '>=' , $start_date)
-                            ->whereDate('created_at', '<=' , $end_date)
-                            ->sum('amount');
-        $paypal_payment_sale = DB::table('payments')
-                            ->where('paying_method', 'Paypal')
-                            ->whereNotNull('sale_id')
-                            ->whereDate('created_at', '>=' , $start_date)
-                            ->whereDate('created_at', '<=' , $end_date)
-                            ->sum('amount');
-        $deposit_payment_sale = DB::table('payments')
-                            ->where('paying_method', 'Deposit')
-                            ->whereNotNull('sale_id')
-                            ->whereDate('created_at', '>=' , $start_date)
-                            ->whereDate('created_at', '<=' , $end_date)
-                            ->sum('amount');
-        $cash_payment_sale =  $payment_recieved - $credit_card_payment_sale - $cheque_payment_sale - $gift_card_payment_sale - $paypal_payment_sale - $deposit_payment_sale;
-        $payment_sent_number = DB::table('payments')->whereNotNull('purchase_id')->whereDate('created_at', '>=' , $start_date)
-            ->whereDate('created_at', '<=' , $end_date)->count();
-        $payment_sent = DB::table('payments')->whereNotNull('purchase_id')->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('payments.amount');
-        $credit_card_payment_purchase = DB::table('payments')
-                            ->where('paying_method', 'Gift Card')
-                            ->whereNotNull('payments.purchase_id')
-                            ->whereDate('payments.created_at', '>=' , $start_date)
-                            ->whereDate('payments.created_at', '<=' , $end_date)->sum('payments.amount');
-        $cheque_payment_purchase = DB::table('payments')
-                            ->where('paying_method', 'Cheque')
-                            ->whereNotNull('payments.purchase_id')
-                            ->whereDate('payments.created_at', '>=' , $start_date)
-                            ->whereDate('payments.created_at', '<=' , $end_date)->sum('payments.amount');
-        $cash_payment_purchase =  $payment_sent - $credit_card_payment_purchase - $cheque_payment_purchase;
-        $lims_warehouse_all = Warehouse::where('is_active',true)->get();
-        $warehouse_name = [];
-        $warehouse_sale = [];
-        $warehouse_purchase = [];
-        $warehouse_return = [];
+        // ---- Payment received (sales) ----
+        $payment_recieved_number = DB::table('payments')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->count();
+        $payment_recieved        = DB::table('payments')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+
+        $credit_card_payment_sale = DB::table('payments')->where('paying_method', 'Credit Card')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $cheque_payment_sale      = DB::table('payments')->where('paying_method', 'Cheque')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $gift_card_payment_sale   = DB::table('payments')->where('paying_method', 'Gift Card')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $paypal_payment_sale      = DB::table('payments')->where('paying_method', 'Paypal')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $deposit_payment_sale     = DB::table('payments')->where('paying_method', 'Deposit')->whereNotNull('sale_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $cash_payment_sale        = $payment_recieved - $credit_card_payment_sale - $cheque_payment_sale
+                                - $gift_card_payment_sale - $paypal_payment_sale - $deposit_payment_sale;
+
+        // ---- Payment sent (purchases) ----
+        $payment_sent_number      = DB::table('payments')->whereNotNull('purchase_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->count();
+        $payment_sent             = DB::table('payments')->whereNotNull('purchase_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $credit_card_payment_purchase = DB::table('payments')->where('paying_method', 'Gift Card')->whereNotNull('purchase_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $cheque_payment_purchase      = DB::table('payments')->where('paying_method', 'Cheque')->whereNotNull('purchase_id')
+            ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
+        $cash_payment_purchase        = $payment_sent - $credit_card_payment_purchase - $cheque_payment_purchase;
+
+        // ---- Warehouse breakdown ----
+        $lims_warehouse_all    = Warehouse::where('is_active', true)->get();
+        $warehouse_name        = [];
+        $warehouse_sale        = [];
+        $warehouse_purchase    = [];
+        $warehouse_return      = [];
         $warehouse_purchase_return = [];
-        $warehouse_expense = [];
+        $warehouse_expense     = [];
         foreach ($lims_warehouse_all as $warehouse) {
-            $warehouse_name[] = $warehouse->name;
-            $warehouse_sale[] = Sale::where('warehouse_id', $warehouse->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query2))->get();
-            $warehouse_purchase[] = Purchase::where('warehouse_id', $warehouse->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query2))->get();
-            $warehouse_return[] = Returns::where('warehouse_id', $warehouse->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query2))->get();
-            $warehouse_purchase_return[] = ReturnPurchase::where('warehouse_id', $warehouse->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->selectRaw(implode(',', $query2))->get();
-            $warehouse_expense[] = Expense::where('warehouse_id', $warehouse->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('amount');
+            $warehouse_name[]            = $warehouse->name;
+            $warehouse_sale[]            = Sale::where('warehouse_id', $warehouse->id)
+                                                ->whereBetween('created_at', [$start_date, $end_date])
+                                                ->selectRaw(implode(',', $query2))->get();
+            $warehouse_purchase[]        = Purchase::where('warehouse_id', $warehouse->id)
+                                                ->whereBetween('created_at', [$start_date, $end_date])
+                                                ->selectRaw(implode(',', $query2))->get();
+            $warehouse_return[]          = Returns::where('warehouse_id', $warehouse->id)
+                                                ->whereBetween('created_at', [$start_date, $end_date])
+                                                ->selectRaw(implode(',', $query2))->get();
+            $warehouse_purchase_return[] = ReturnPurchase::where('warehouse_id', $warehouse->id)
+                                                ->whereBetween('created_at', [$start_date, $end_date])
+                                                ->selectRaw(implode(',', $query2))->get();
+            $warehouse_expense[]         = Expense::where('warehouse_id', $warehouse->id)
+                                                ->whereBetween('created_at', [$start_date, $end_date])->sum('amount');
         }
 
-        return view('backend.report.profit_loss', compact('purchase', 'product_cost', 'product_tax', 'total_purchase', 'sale', 'total_sale', 'return', 'purchase_return', 'total_return', 'total_purchase_return', 'expense', 'payroll', 'total_expense', 'total_payroll', 'payment_recieved', 'payment_recieved_number', 'cash_payment_sale', 'cheque_payment_sale', 'credit_card_payment_sale', 'gift_card_payment_sale', 'paypal_payment_sale', 'deposit_payment_sale', 'payment_sent', 'payment_sent_number', 'cash_payment_purchase', 'cheque_payment_purchase', 'credit_card_payment_purchase', 'warehouse_name', 'warehouse_sale', 'warehouse_purchase', 'warehouse_return', 'warehouse_purchase_return', 'warehouse_expense', 'start_date', 'end_date'));
+        return view('backend.report.profit_loss', compact(
+            'purchase', 'product_cost', 'product_tax', 'total_purchase',
+            'sale', 'total_sale', 'return', 'purchase_return', 'total_return', 'total_purchase_return',
+            'expense', 'payroll', 'total_expense', 'total_payroll',
+            'payment_recieved', 'payment_recieved_number',
+            'cash_payment_sale', 'cheque_payment_sale', 'credit_card_payment_sale',
+            'gift_card_payment_sale', 'paypal_payment_sale', 'deposit_payment_sale',
+            'payment_sent', 'payment_sent_number',
+            'cash_payment_purchase', 'cheque_payment_purchase', 'credit_card_payment_purchase',
+            'warehouse_name', 'warehouse_sale', 'warehouse_purchase',
+            'warehouse_return', 'warehouse_purchase_return', 'warehouse_expense',
+            'start_date', 'end_date'
+        ));
     }
 
-    
     public function profitLossData(Request $request)
     {
         // Selected year or default to current
-        $selected_year = $request->input('year', date('Y'));
+        $selected_year  = $request->input('year', date('Y'));
         $selected_month = $request->input('month', ''); // 01-12 or empty for full year
 
         $year = $selected_year;
         if (!empty($selected_month) && preg_match('/^(0[1-9]|1[0-2])$/', $selected_month)) {
-            $start_date = $year . '-' . $selected_month . '-01';
-            $end_date = date('Y-m-t', strtotime($start_date));
-            $month_name = date('F', strtotime($start_date));
-            $period_label = $month_name . ' ' . $year;
-            $period_subtitle = 'For the Month Ending ' . date('F j, Y', strtotime($end_date));
+            $start_date = $year . '-' . $selected_month . '-01 00:00:00';
+            $end_date   = date('Y-m-t 23:59:59', strtotime($year . '-' . $selected_month . '-01'));
+            $month_name     = date('F', strtotime($start_date));
+            $period_label   = $month_name . ' ' . $year;
+            $period_subtitle= 'For the Month Ending ' . date('F j, Y', strtotime($end_date));
         } else {
-            $start_date = $year . '-01-01';
-            $end_date = $year . '-12-31';
-            $period_label = $year;
+            $start_date = $year . '-01-01 00:00:00';
+            $end_date   = $year . '-12-31 23:59:59';
+            $period_label    = $year;
             $period_subtitle = 'For the Year Ending ' . $year;
         }
 
@@ -1020,90 +1069,54 @@ class ReportController extends Controller
             'SUM(total_tax + order_tax) AS tax',
             'SUM(total_discount + order_discount) AS discount'
         ];
-
         $query2 = [
             'SUM(grand_total) AS grand_total',
             'SUM(total_tax + order_tax) AS tax'
         ];
 
-        // Handle strict mode for aggregated grouping
-        config()->set('database.connections.mysql.strict', false);
-        DB::reconnect();
+        // ---- COGS using products.cost (replaces calculateAverageCOGS averaging) ----
+        [$product_cost, $product_tax] = $this->calculateAverageCOGS($start_date, $end_date);
 
-        // Get product sale data for period (used for revenue and tax extraction)
-        $product_sale_data = Product_Sale::select(DB::raw('product_id, product_batch_id, sale_unit_id, variant_id, 
-            sum(qty) as sold_qty, 
-            sum(product_sales.return_qty) as return_qty, 
-            sum(total) as sold_amount'))
-            ->whereBetween('created_at', [$start_date, $end_date])
-            ->groupBy('product_id', 'product_batch_id', 'variant_id')
-            ->get();
-
-        config()->set('database.connections.mysql.strict', true);
-        DB::reconnect();
-
-        // Tax extraction – keep using the old method (or adjust if needed)
-        $cogsData = $this->calculateAverageCOGS($product_sale_data);
-        $product_tax = $cogsData[1] ?? 0;  // Tax on sold products
-
-        // *** NEW: Total purchases (product cost) directly from product_purchases ***
-        // Joins product_sales with product_purchases on product_id, calculates cost as:
-        // sold_qty * (product_purchases.total_cost / product_purchases.qty)
-        $product_cost = DB::table('product_sales')
-            ->join('product_purchases', 'product_sales.product_id', '=', 'product_purchases.product_id')
-            ->whereBetween('product_sales.created_at', [$start_date, $end_date])
-            ->sum(DB::raw('product_sales.qty * (product_purchases.net_unit_cost / product_purchases.qty)'));
-
-        // Total product revenue from sale data
-        $product_revenue = $product_sale_data->sum('sold_amount');
-
-        // Profit from product sales (informational)
-        $product_profit = $product_revenue - $product_cost;
-
-        // Get total purchases (summary of all purchase transactions, still for reference)
+        // Get purchase summary
         $purchase = Purchase::whereBetween('created_at', [$start_date, $end_date])
-            ->selectRaw(implode(',', $query1))
-            ->first();
+            ->selectRaw(implode(',', $query1))->first();
 
         // Get total sales revenue
         $sale = Sale::whereBetween('created_at', [$start_date, $end_date])
-            ->selectRaw(implode(',', $query1))
-            ->first();
+            ->selectRaw(implode(',', $query1))->first();
         $total_sale = $sale->grand_total ?? 0;
 
-        // Get sale returns
+        // Sale returns
         $return = Returns::whereBetween('created_at', [$start_date, $end_date])
-            ->selectRaw(implode(',', $query2))
-            ->first();
+            ->selectRaw(implode(',', $query2))->first();
         $sale_return_amount = $return->grand_total ?? 0;
 
-        // Get purchase returns
+        // Purchase returns
         $purchase_return = ReturnPurchase::whereBetween('created_at', [$start_date, $end_date])
-            ->selectRaw(implode(',', $query2))
-            ->first();
+            ->selectRaw(implode(',', $query2))->first();
         $purchase_return_amount = $purchase_return->grand_total ?? 0;
 
-        // Get all expenses
-        $expenses = Expense::whereBetween('created_at', [$start_date, $end_date])->get();
+        // All expenses
+        $expenses      = Expense::whereBetween('created_at', [$start_date, $end_date])->get();
         $total_expense = $expenses->sum('amount');
 
-        // Operating expenses (exclude payroll)
+        // Operating expenses (exclude payroll categories)
         $filtered_expenses = $expenses->filter(function($expense) {
-            $exclude_categories = ['payroll', 'salary', 'wages', 'labour'];
-            return !in_array(strtolower($expense->name), $exclude_categories);
+            $exclude = ['payroll', 'salary', 'wages', 'labour'];
+            return !in_array(strtolower($expense->name), $exclude);
         });
         $total_operating_expenses = $filtered_expenses->sum('amount');
 
-        // Payroll (direct labor)
+        // Payroll (direct labour)
         $payroll = Payroll::whereBetween('created_at', [$start_date, $end_date])->sum('amount');
         $total_payroll_count = Payroll::whereBetween('created_at', [$start_date, $end_date])->count();
 
         // Calculate P&L metrics
-        $total_cogs = $product_cost + $payroll;
-        $gross_profit = $total_sale - $total_cogs;
-        $operating_profit = $gross_profit - $total_operating_expenses;
-        $net_profit_before_tax = $operating_profit;
-        $net_profit = $net_profit_before_tax - $product_tax;
+        $total_cogs             = $product_cost + $payroll;
+        $gross_profit           = $total_sale - $total_cogs;
+        $operating_profit       = $gross_profit - $total_operating_expenses;
+        $net_profit_before_tax  = $operating_profit;
+        $net_profit             = $net_profit_before_tax - $product_tax;
 
         return view('backend.report.profitloss', compact(
             'selected_year', 'selected_month', 'period_label', 'period_subtitle',
@@ -1116,120 +1129,145 @@ class ReportController extends Controller
         ));
     }
 
- 
-    public function calculateAverageCOGS($product_sale_data)
+    /**
+     * COGS = (qty - return_qty) × unit_cost
+     *
+     * Unit cost lookup:
+     *   - Standard products  : products.cost
+     *   - Variant products   : products.cost + product_variants.additional_cost
+     *   - Batch products     : product_batches.cost (fallback: products.cost)
+     *   - Combo products     : sum of (component cost × qty_list) per unit
+     *
+     * @param  string  $start_date  Y-m-d H:i:s
+     * @param  string  $end_date    Y-m-d H:i:s
+     * @return array  [total_cost, total_tax]
+     */
+        public function calculateAverageCOGS($start_date, $end_date)
     {
-        $product_cost = 0;
-        $product_tax = 0;
-        foreach ($product_sale_data as $key => $product_sale) {
-            $product_data = Product::select('type', 'product_list', 'variant_list', 'qty_list')->find($product_sale->product_id);
-            if(!$product_data) {
-                continue;
-            }
-            if($product_data->type == 'combo') {
-                $product_list = explode(",", $product_data->product_list);
-                if($product_data->variant_list)
-                    $variant_list = explode(",", $product_data->variant_list);
-                else
-                    $variant_list = [];
-                $qty_list = explode(",", $product_data->qty_list);
+        $total_cost = 0;
+        $total_tax  = 0;
 
-                foreach ($product_list as $index => $product_id) {
-                    if(count($variant_list) && $variant_list[$index]) {
-                        $product_purchase_data = ProductPurchase::where([
-                            ['product_id', $product_id],
-                            ['variant_id', $variant_list[$index] ]
-                        ])
-                        ->select('recieved', 'purchase_unit_id', 'tax', 'total')
-                        ->get();
-                    }
-                    else {
-                        $product_purchase_data = ProductPurchase::where('product_id', $product_id)
-                        ->select('recieved', 'purchase_unit_id', 'tax', 'total')
-                        ->get();
-                    }
-                    $total_received_qty = 0;
-                    $total_purchased_amount = 0;
-                    $total_tax = 0;
-                    $sold_qty = ($product_sale->sold_qty - $product_sale->return_qty) * $qty_list[$index];
-                    foreach ($product_purchase_data as $key => $product_purchase) {
-                        $purchase_unit_data = Unit::select('operator', 'operation_value')->find($product_purchase->purchase_unit_id);
-                        if($purchase_unit_data->operator == '*')
-                            $total_received_qty += $product_purchase->recieved * $purchase_unit_data->operation_value;
-                        else
-                            $total_received_qty += $product_purchase->recieved / $purchase_unit_data->operation_value;
-                        $total_purchased_amount += $product_purchase->total;
-                        $total_tax += $product_purchase->tax;
-                    }
-                    if($total_received_qty) {
-                        $averageCost = $total_purchased_amount / $total_received_qty;
-                        $averageTax = $total_tax / $total_received_qty;
-                    }
-                    else {
-                        $averageCost = 0;
-                        $averageTax = 0;
-                    }
-                    $product_cost += $sold_qty * $averageCost;
-                    $product_tax += $sold_qty * $averageTax;
-                }
-            }
-            else {
-                if($product_sale->product_batch_id) {
-                    $product_purchase_data = ProductPurchase::where([
-                        ['product_id', $product_sale->product_id],
-                        ['product_batch_id', $product_sale->product_batch_id]
-                    ])
-                    ->select('recieved', 'purchase_unit_id', 'tax', 'total')
-                    ->get();
-                }
-                elseif($product_sale->variant_id) {
-                    $product_purchase_data = ProductPurchase::where([
-                        ['product_id', $product_sale->product_id],
-                        ['variant_id', $product_sale->variant_id]
-                    ])
-                    ->select('recieved', 'purchase_unit_id', 'tax', 'total')
-                    ->get();
-                }
-                else {
-                    $product_purchase_data = ProductPurchase::where('product_id', $product_sale->product_id)
-                    ->select('recieved', 'purchase_unit_id', 'tax', 'total')
-                    ->get();
-                }
-                $total_received_qty = 0;
-                $total_purchased_amount = 0;
-                $total_tax = 0;
-                if($product_sale->sale_unit_id) {
-                    $sale_unit_data = Unit::select('operator', 'operation_value')->find($product_sale->sale_unit_id);
-                    if($sale_unit_data->operator == '*')
-                        $sold_qty = ($product_sale->sold_qty - $product_sale->return_qty) * $sale_unit_data->operation_value;
-                    else
-                        $sold_qty = ($product_sale->sold_qty - $product_sale->return_qty) / $sale_unit_data->operation_value;
-                }
-                else {
-                    $sold_qty = ($product_sale->sold_qty - $product_sale->return_qty);
-                }
-                foreach ($product_purchase_data as $key => $product_purchase) {
-                    $purchase_unit_data = Unit::select('operator', 'operation_value')->find($product_purchase->purchase_unit_id);
-                    if($purchase_unit_data->operator == '*')
-                        $total_received_qty += $product_purchase->recieved * $purchase_unit_data->operation_value;
-                    else
-                        $total_received_qty += $product_purchase->recieved / $purchase_unit_data->operation_value;
-                    $total_purchased_amount += $product_purchase->total;
-                    $total_tax += $product_purchase->tax;
-                }
-                if($total_received_qty) {
-                    $averageCost = $total_purchased_amount / $total_received_qty;
-                    $averageTax = $total_tax / $total_received_qty;
-                }
-                else {
-                    $averageCost = 0;
-                    $averageTax = 0;
-                }
-                $product_cost += $sold_qty * $averageCost;
-                $product_tax += $sold_qty * $averageTax;
+        // ----------------------------------------------------------------------
+        // 1) Non-combo products: join product_sales with products, variants
+        // ----------------------------------------------------------------------
+        $rows = DB::table('product_sales as ps')
+            ->leftJoin('products as p', 'p.id', '=', 'ps.product_id')
+            ->leftJoin('product_variants as pv', function ($join) {
+                $join->on('pv.product_id', '=', 'ps.product_id')
+                    ->on('pv.variant_id', '=', 'ps.variant_id')
+                    ->whereNotNull('ps.variant_id');
+            })
+            ->whereBetween('ps.created_at', [$start_date, $end_date])
+            ->where('p.type', '!=', 'combo')
+            ->whereNotNull('p.cost')
+            ->selectRaw('
+                (ps.qty - ps.return_qty) AS sold_qty,
+                p.cost AS base_cost,
+                COALESCE(pv.additional_cost, 0) AS extra_cost,
+                ps.tax_rate
+            ')
+            ->get();
+
+        foreach ($rows as $r) {
+            if ($r->sold_qty <= 0) continue;
+            $unitCost   = $r->base_cost + $r->extra_cost;
+            $total_cost += $r->sold_qty * $unitCost;
+
+            if ($r->tax_rate > 0) {
+                $total_tax += ($r->sold_qty * $unitCost) * ($r->tax_rate / 100);
             }
         }
-        return [$product_cost, $product_tax];
+
+        // ----------------------------------------------------------------------
+        // 2) Combo products: cost = sum(component_cost × qty_list)
+        // ----------------------------------------------------------------------
+        $combos = DB::table('product_sales as ps')
+            ->join('products as p', 'p.id', '=', 'ps.product_id')
+            ->whereBetween('ps.created_at', [$start_date, $end_date])
+            ->where('p.type', 'combo')
+            ->select(
+                'ps.product_id',
+                'ps.qty',
+                'ps.return_qty',
+                'ps.tax_rate',
+                'p.product_list',
+                'p.variant_list',
+                'p.qty_list'
+            )
+            ->get();
+
+        // Cache component base costs (avoid N+1)
+        $componentIds = $combos->pluck('product_list')
+            ->filter()
+            ->map(fn($s) => explode(',', $s))
+            ->flatten()
+            ->map(fn($id) => trim($id))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $componentCosts = !empty($componentIds)
+            ? DB::table('products')->whereIn('id', $componentIds)->pluck('cost', 'id')
+            : collect();
+
+        // Cache variant additional costs
+        $variantKeys = [];
+        foreach ($combos as $c) {
+            if (!$c->product_list || !$c->variant_list) continue;
+            $ids  = array_map('trim', explode(',', $c->product_list));
+            $vars = explode(',', $c->variant_list);
+            foreach ($ids as $i => $pid) {
+                if (!empty($vars[$i]) && trim($vars[$i])) {
+                    $variantKeys[$pid . '|' . trim($vars[$i])] = [
+                        'product_id' => $pid,
+                        'variant_id' => trim($vars[$i]),
+                    ];
+                }
+            }
+        }
+
+        $variantExtras = [];
+        foreach ($variantKeys as $key => $vk) {
+            $extra = DB::table('product_variants')
+                ->where('product_id', $vk['product_id'])
+                ->where('variant_id', $vk['variant_id'])
+                ->value('additional_cost');
+            $variantExtras[$key] = $extra ?? 0;
+        }
+
+        // Process each combo sale line
+        foreach ($combos as $c) {
+            $soldQty = $c->qty - $c->return_qty;
+            if ($soldQty <= 0 || !$c->product_list) continue;
+
+            $ids    = array_map('trim', explode(',', $c->product_list));
+            $qties  = $c->qty_list ? explode(',', $c->qty_list) : [];
+            $vars   = $c->variant_list ? explode(',', $c->variant_list) : [];
+
+            $comboUnitCost = 0;
+            foreach ($ids as $i => $pid) {
+                $pid = (int) $pid;
+                if (!isset($componentCosts[$pid])) continue;
+
+                $perComboQty = isset($qties[$i]) ? (float) trim($qties[$i]) : 1;
+                $baseCost    = $componentCosts[$pid];
+                $extra       = 0;
+                if (!empty($vars[$i]) && trim($vars[$i])) {
+                    $key   = $pid . '|' . trim($vars[$i]);
+                    $extra = $variantExtras[$key] ?? 0;
+                }
+                $comboUnitCost += $perComboQty * ($baseCost + $extra);
+            }
+
+            $total_cost += $soldQty * $comboUnitCost;
+
+            if ($c->tax_rate > 0) {
+                $total_tax += ($soldQty * $comboUnitCost) * ($c->tax_rate / 100);
+            }
+        }
+
+        return [$total_cost, $total_tax];
     }
 
     public function productReport(Request $request)
@@ -2199,12 +2237,12 @@ class ReportController extends Controller
        
         $lims_biller_list = User::where('is_active', true)
             ->whereHas('roles', function ($query) {
-                $query->where('roles_id', 5); // pivot column name
+                $query->where('role_id', 5); // pivot column name
             })
             ->get();
         $lims_user_list = User::where('is_active', true)
                             ->whereHas('roles', function ($query) {
-                                $query->whereIn('roles_id', [2, 4, 6]); // use the correct foreign key column name on the pivot table
+                                $query->whereIn('role_id', [2, 4, 6]); // use the correct foreign key column name on the pivot table
                             })
                             ->get();
         
@@ -2320,7 +2358,7 @@ class ReportController extends Controller
         //                             ->get();
         $lims_biller_list = User::where('is_active', true)
             ->whereHas('roles', function ($query) {
-                $query->whereIn('roles_id', [5]);
+                $query->whereIn('role_id', [5]);
             })
             ->get();
       
@@ -2978,7 +3016,7 @@ class ReportController extends Controller
         // $lims_user_list = User::where('is_active', true)->where('role_id', '!=', 1)->get();
         $lims_user_list = User::where('is_active', true)
                             ->whereDoesntHave('roles', function ($query) {
-                                $query->where('roles_id', 1);   // use the correct pivot column name
+                                $query->where('role_id', 1);   // use the correct pivot column name
                             })
                             ->get();
         return view('backend.report.user_report', compact('lims_sale_data','user_id', 'start_date', 'end_date', 'lims_product_sale_data', 'lims_payment_data', 'lims_user_list', 'lims_purchase_data', 'lims_product_purchase_data', 'lims_quotation_data', 'lims_product_quotation_data', 'lims_transfer_data', 'lims_product_transfer_data', 'lims_expense_data', 'lims_payroll_data') );
@@ -5259,7 +5297,7 @@ class ReportController extends Controller
         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
         $lims_user_list = User::where('is_active', true)
                             ->whereHas('roles', function ($query) {
-                                $query->whereIn('roles_id', [2, 4, 6]); // use the correct foreign key column name on the pivot table
+                                $query->whereIn('role_id', [2, 4, 6]); // use the correct foreign key column name on the pivot table
                             })
                             ->get();
         $start_date = $request->input('start_date', date('Y-m-d')); // was: date('Y-m').'-01'

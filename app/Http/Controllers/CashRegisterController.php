@@ -8,7 +8,7 @@ use App\Models\Sale;
 use App\Models\Payment;
 use App\Models\Returns;
 use App\Models\Expense;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 
 class CashRegisterController extends Controller
 {

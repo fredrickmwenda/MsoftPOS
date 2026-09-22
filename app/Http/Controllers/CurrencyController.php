@@ -7,7 +7,7 @@ use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\Currency;
 use App\Models\GeneralSetting;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Cache;
 
 class CurrencyController extends Controller
@@ -32,7 +32,7 @@ class CurrencyController extends Controller
     {
         $data = $request->all();
         Currency::create($data);
-        cache()->forget('currency');
+        
         return redirect()->back()->with('message', 'Currency created successfully');
     }
 
@@ -53,7 +53,7 @@ class CurrencyController extends Controller
             GeneralSetting::latest()->first()->update(['currency' => $data['currency_id']]);
         }
         Currency::find($data['currency_id'])->update($data);
-        cache()->forget('currency');
+       
         return redirect()->back()->with('message', 'Currency updated successfully');
     }
 
@@ -62,7 +62,6 @@ class CurrencyController extends Controller
         if(!env('USER_VERIFIED'))
             return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
         Currency::find($id)->update(['is_active' => false]);
-        cache()->forget('currency');
         return redirect()->back()->with('message', 'Currency deleted successfully');
     }
 }

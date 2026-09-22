@@ -21,8 +21,8 @@ use App\Models\Product_Warehouse;
 use App\Models\Unit;
 use App\Models\GeneralSetting;
 use Cache;
-use DB;
-use Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Printing;
 use Rawilk\Printing\Contracts\Printer;
 use App\Models\Role;
@@ -118,7 +118,7 @@ class HomeController extends Controller
 
    
 
-        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff())
         {
             $sale_base = Sale::whereDate('created_at', '>=' , $start_date)->where('user_id', Auth::id())->whereDate('created_at', '<=' , $end_date);
             $sale_ids_current = [];
@@ -209,7 +209,7 @@ class HomeController extends Controller
             $start_date = date("Y-m", $start).'-'.'01';
             $end_date = date("Y-m", $start).'-'.date('t', mktime(0, 0, 0, date("m", $start), 1, date("Y", $start)));
              
-            if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
+            if($this->isStaff()) {
                 $recieved_amount = DB::table('payments')->whereNotNull('sale_id')->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('amount');
                 $sent_amount = DB::table('payments')->whereNotNull('purchase_id')->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('amount');
                 $return_amount = Returns::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
@@ -243,7 +243,7 @@ class HomeController extends Controller
             $end_date = date("Y").'-'.date('m', $start).'-'.date('t', mktime(0, 0, 0, date("m", $start), 1, date("Y", $start)));
 
             $sale_base = Sale::whereDate('created_at', '>=', $start_date)->whereDate('created_at', '<=', $end_date);
-            if ($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
+            if ($this->isStaff()) {
                 $sale_base->where('user_id', Auth::id());
             }
             if ($apply_sale_percentage) {
@@ -261,7 +261,7 @@ class HomeController extends Controller
                 $sale_amount = (clone $sale_base)->sum('grand_total');
             }
 
-            if ($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
+            if ($this->isStaff()) {
                 $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->where('user_id', Auth::id())->sum('grand_total');
             } else {
                 $purchase_amount = Purchase::whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('grand_total');
@@ -340,7 +340,7 @@ class HomeController extends Controller
 
     public function recentSale()
     {
-        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff())
         {
             $recent_sale = Sale::join('customers', 'customers.id', '=', 'sales.customer_id')->select('sales.id','sales.reference_no','sales.sale_status','sales.created_at','sales.grand_total','sales.user_id','customers.name')->orderBy('id', 'desc')->where('sales.user_id', Auth::id())->take(5)->get();
             return response()->json($recent_sale);
@@ -354,7 +354,7 @@ class HomeController extends Controller
 
     public function recentPurchase()
     {
-        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff())
         {
             $recent_purchase = Purchase::join('suppliers', 'suppliers.id', '=', 'purchases.supplier_id')->select('purchases.id','purchases.reference_no','purchases.payment_status','purchases.created_at','purchases.grand_total','purchases.user_id','suppliers.name')->orderBy('id', 'desc')->where('purchases.user_id', Auth::id())->take(5)->get();
             return response()->json($recent_purchase);
@@ -368,7 +368,7 @@ class HomeController extends Controller
 
     public function recentQuotation()
     {
-        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff())
         {
             $recent_quotation = Quotation::join('customers', 'customers.id', '=', 'quotations.customer_id')->select('quotations.id','quotations.reference_no','quotations.quotation_status','quotations.created_at','quotations.grand_total','quotations.user_id','customers.name')->orderBy('id', 'desc')->where('quotations.user_id', Auth::id())->take(5)->get();
             return response()->json($recent_quotation);
@@ -382,7 +382,7 @@ class HomeController extends Controller
 
     public function recentPayment()
     {
-        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own')
+        if($this->isStaff())
         {
             $recent_payment = Payment::select('id','payment_reference','amount','paying_method','created_at','user_id')->orderBy('id', 'desc')->where('user_id', Auth::id())->take(5)->get();
             return response()->json($recent_payment);
@@ -396,7 +396,7 @@ class HomeController extends Controller
 
     public function dashboardFilter($start_date, $end_date)
     {
-        if($this->isStaff() && cache()->get('general_setting')->staff_access == 'own') {
+        if($this->isStaff()) {
             config()->set('database.connections.mysql.strict', false);
             DB::reconnect();
             $product_sale_data = Sale::join('product_sales', 'sales.id','=', 'product_sales.sale_id')

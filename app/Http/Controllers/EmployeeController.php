@@ -9,7 +9,7 @@ use App\Models\Biller;
 use App\Models\Employee;
 use App\Models\User;
 use App\Models\Department;
-use Auth;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use App\Traits\TenantInfo;
 use Illuminate\Support\Facades\File;

@@ -81,6 +81,99 @@
     </div>
 </section>
 
+    <!-- Payroll Template Modal -->
+    <div id="createTemplateModal" tabindex="-1" role="dialog" aria-labelledby="templateModalLabel" aria-hidden="true" class="modal fade text-left">
+        <div role="document" class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="templateModalLabel" class="modal-title">{{ __('Create Payroll Template') }}</h5>
+                    <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+                </div>
+                <div class="modal-body">
+                    <form id="payroll-template-form">
+                        <div class="row">
+                            <div class="col-md-6 form-group">
+                                <label>{{ __('Name') }}</label>
+                                <input type="text" name="name" class="form-control" required />
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>{{ __('Work Duration') }}</label>
+                                <input type="number" name="work_duration" class="form-control" step="any" />
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>{{ __('Duration Unit') }}</label>
+                                <select name="duration_unit" class="form-control">
+                                    <option value="day">Day</option>
+                                    <option value="week">Week</option>
+                                    <option value="month">Month</option>
+                                    <option value="year">Year</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 form-group">
+                                <label>{{ __('Amount per duration') }}</label>
+                                <input type="number" name="amount_per_duration" class="form-control" step="any" />
+                            </div>
+                            <div class="col-md-12 form-group">
+                                <label>{{ __('Description') }}</label>
+                                <textarea name="description" class="form-control"></textarea>
+                            </div>
+                        </div>
+
+                        <hr />
+                        <h5>Items</h5>
+                        <div id="template-items-list"></div>
+                        <button type="button" class="btn btn-sm btn-secondary" id="add-template-item">Add Item</button>
+                        <div class="mt-3 text-end">
+                            <button type="submit" class="btn btn-primary">Create Template</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll Item Modal (Create standalone template item) -->
+    <div id="createItemModal" tabindex="-1" role="dialog" aria-labelledby="itemModalLabel" aria-hidden="true" class="modal fade text-left">
+        <div role="document" class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="itemModalLabel" class="modal-title">{{ __('Create Payroll Item') }}</h5>
+                    <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+                </div>
+                <div class="modal-body">
+                    <form id="payroll-item-form">
+                        <div class="form-group">
+                            <label>{{ __('Name') }}</label>
+                            <input type="text" name="name" class="form-control" required />
+                        </div>
+                        <div class="form-group">
+                            <label>{{ __('Type') }}</label>
+                            <input type="text" name="type" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label>{{ __('Amount Type') }}</label>
+                            <select name="amount_type" class="form-control">
+                                <option value="fixed">Fixed</option>
+                                <option value="percent">Percent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ __('Amount') }}</label>
+                            <input type="number" name="amount" class="form-control" step="any" />
+                        </div>
+                        <div class="form-group">
+                            <label>{{ __('Description') }}</label>
+                            <textarea name="description" class="form-control"></textarea>
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">Create Item</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
 <div id="createModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
     <div role="document" class="modal-dialog">
         <div class="modal-content">
@@ -117,6 +210,17 @@
                         </select>
                     </div>
                     <div class="col-md-6 form-group">
+                        <label>Payroll Template</label>
+                        <select class="form-control selectpicker" id="payroll_template_id" name="payroll_template_id" data-live-search="true">
+                            <option value="">-- Select template --</option>
+                            @if(isset($payroll_templates))
+                                @foreach($payroll_templates as $template)
+                                    <option value="{{$template->id}}">{{$template->name ?? 'Template '.$template->id}}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
                         <label>{{trans('file.Amount')}} *</label>
                         <input type="number" step="any" name="amount" class="form-control" required>
                     </div>
@@ -131,6 +235,9 @@
                     <div class="col-md-12 form-group">
                         <label>{{trans('file.Note')}}</label>
                         <textarea name="note" rows="3" class="form-control"></textarea>
+                    </div>
+                    <div class="col-md-12 form-group" id="payroll-items-container">
+                        <!-- Dynamic payroll items will be inserted here as inputs named items[index][field] -->
                     </div>
                 </div>
                 <div class="form-group">
@@ -193,6 +300,9 @@
                     <div class="col-md-12 form-group">
                         <label>{{trans('file.Note')}}</label>
                         <textarea name="note" rows="3" class="form-control"></textarea>
+                    </div>
+                    <div class="col-md-12 form-group" id="payroll-items-container-edit">
+                        <!-- Edit modal: dynamic payroll items will be inserted here -->
                     </div>
                 </div>
                 <div class="form-group">
@@ -374,6 +484,130 @@
             datatable_sum(api, false);
         }
     } );
+
+    // Payroll templates data (for create modal dynamic items)
+    var payrollTemplates = @json($payroll_templates ?? []);
+
+    function renderTemplateItems(containerSelector, templateId) {
+        var container = $(containerSelector);
+        container.empty();
+        if (!templateId) return;
+        var template = payrollTemplates.find(function(t){ return t.id == templateId; });
+        if (!template || !template.items) return;
+        template.items.forEach(function(item, idx){
+            var idxKey = idx;
+            var name = item.name || item.label || '';
+            var type = item.type || '';
+            var amountType = item.amount_type || item.amountType || '';
+            var amount = (item.amount !== undefined && item.amount !== null) ? item.amount : 0;
+            var description = item.description || '';
+
+            var html = '<div class="row payroll-item-row mb-2">'
+                + '<div class="col-md-6">'
+                + '<label>'+name+'</label>'
+                + '<input type="hidden" name="items['+idxKey+'][payroll_template_item_id]" value="'+(item.id)+'" />'
+                + '<input type="hidden" name="items['+idxKey+'][name]" value="'+name+'" />'
+                + '<input type="hidden" name="items['+idxKey+'][type]" value="'+type+'" />'
+                + '<input type="hidden" name="items['+idxKey+'][amount_type]" value="'+amountType+'" />'
+                + '<input class="form-control" name="items['+idxKey+'][amount]" value="'+amount+'" />'
+                + '</div>'
+                + '<div class="col-md-6">'
+                + '<label>Description</label>'
+                + '<input class="form-control" name="items['+idxKey+'][description]" value="'+description+'" />'
+                + '</div>'
+                + '</div>';
+
+            container.append(html);
+        });
+    }
+
+    $('#payroll_template_id').on('changed.bs.select change', function(){
+        renderTemplateItems('#payroll-items-container', $(this).val());
+        $('.selectpicker').selectpicker('refresh');
+    });
+
+    // Template modal - dynamic items handling
+    function templateItemRow(item){
+        var html = '<div class="row template-item-row mb-2">'
+            + '<div class="col-md-4"><input class="form-control" name="item_name[]" value="'+(item.name||'')+'" placeholder="Name" required /></div>'
+            + '<div class="col-md-2"><input class="form-control" name="item_type[]" value="'+(item.type||'')+'" placeholder="Type" /></div>'
+            + '<div class="col-md-2"><select class="form-control" name="item_amount_type[]"><option value="fixed">Fixed</option><option value="percent">Percent</option></select></div>'
+            + '<div class="col-md-2"><input class="form-control" name="item_amount[]" value="'+(item.amount||0)+'" placeholder="Amount" /></div>'
+            + '<div class="col-md-2"><button type="button" class="btn btn-danger remove-template-item">Remove</button></div>'
+            + '<div class="col-12 mt-2"><input class="form-control" name="item_description[]" value="'+(item.description||'')+'" placeholder="Description" /></div>'
+            + '</div>';
+        return html;
+    }
+
+    $('#add-template-item').on('click', function(){
+        $('#template-items-list').append(templateItemRow({}));
+    });
+
+    $(document).on('click', '.remove-template-item', function(){
+        $(this).closest('.template-item-row').remove();
+    });
+
+    // Submit payroll template via AJAX
+    $('#payroll-template-form').on('submit', function(e){
+        e.preventDefault();
+        var data = $(this).serializeArray();
+        // convert items grouped fields into array
+        var items = [];
+        var names = $(this).find('input[name="item_name[]"]').map(function(){return $(this).val();}).get();
+        var types = $(this).find('input[name="item_type[]"]').map(function(){return $(this).val();}).get();
+        var amount_types = $(this).find('select[name="item_amount_type[]"]').map(function(){return $(this).val();}).get();
+        var amounts = $(this).find('input[name="item_amount[]"]').map(function(){return $(this).val();}).get();
+        var descriptions = $(this).find('input[name="item_description[]"]').map(function(){return $(this).val();}).get();
+        for(var i=0;i<names.length;i++){
+            items.push({
+                name: names[i],
+                type: types[i]||null,
+                amount_type: amount_types[i]||null,
+                amount: amounts[i]||0,
+                description: descriptions[i]||null
+            });
+        }
+        var payload = {};
+        $(this).serializeArray().forEach(function(f){ payload[f.name] = f.value; });
+        payload.items = items;
+
+        $.ajax({
+            url: '{{ url("payroll-templates/store") }}',
+            method: 'POST',
+            data: payload,
+            success: function(res){
+                if(res && res.id){
+                    // add new template to select
+                    var opt = $('<option>').val(res.id).text(res.name || ('Template '+res.id));
+                    $('#payroll_template_id').append(opt).selectpicker('refresh');
+                    $('#createTemplateModal').modal('hide');
+                    alert('Payroll template created');
+                }
+            },
+            error: function(xhr){
+                alert('Error creating template');
+            }
+        });
+    });
+
+    // Submit standalone payroll item via AJAX
+    $('#payroll-item-form').on('submit', function(e){
+        e.preventDefault();
+        var payload = $(this).serialize();
+        $.ajax({
+            url: '{{ url("payroll-template-items/store") }}',
+            method: 'POST',
+            data: payload,
+            success: function(res){
+                if(res && res.id){
+                    alert('Payroll item created');
+                    $('#createItemModal').modal('hide');
+                    // Optionally append to global payroll items list if applicable
+                }
+            },
+            error: function(xhr){ alert('Error creating item'); }
+        });
+    });
 
     function datatable_sum(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
