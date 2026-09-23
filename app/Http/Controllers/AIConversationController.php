@@ -9,18 +9,14 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 class AIConversationController extends Controller
 {
-  /**
-
     /**
      * Verify the AI Assistant persistence tables exist on the active connection.
-     *
-     * In SaaS mode this runs after tenancy middleware, so it checks the tenant
-     * database rather than the landlord database.
      */
     private function missingSchemaResponse()
     {
@@ -36,15 +32,14 @@ class AIConversationController extends Controller
                 fn ($table) => ! Schema::hasTable($table)
             ));
         } catch (Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('AI Assistant schema check failed', [
+            Log::error('AI Assistant schema check failed', [
                 'user_id' => Auth::id(),
-                'tenant_id' => $this->getTenantId(),
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ]);
 
             return response()->json([
-                'error' => 'AI Assistant database setup could not be verified. Please run the AI Assistant migrations for this tenant.',
-                'code' => 'ai_assistant_schema_check_failed',
+                'error' => 'AI Assistant database setup could not be verified. Please run the AI Assistant migrations.',
+                'code'  => 'ai_assistant_schema_check_failed',
             ], 503);
         }
 
@@ -52,21 +47,20 @@ class AIConversationController extends Controller
             return null;
         }
 
-        \Illuminate\Support\Facades\Log::warning('AI Assistant tables are missing on active database connection', [
-            'user_id' => Auth::id(),
-            'tenant_id' => $this->getTenantId(),
+        Log::warning('AI Assistant tables are missing on active database connection', [
+            'user_id'        => Auth::id(),
             'missing_tables' => $missingTables,
         ]);
 
         return response()->json([
-            'error' => 'AI Assistant database tables are missing. Please run migrations on this tenant database.',
-            'code' => 'ai_assistant_migrations_missing',
+            'error'          => 'AI Assistant database tables are missing. Please run migrations.',
+            'code'           => 'ai_assistant_migrations_missing',
             'missing_tables' => $missingTables,
         ], 503);
     }
 
     /**
-     * Retrieve a paginated list of conversations for the authenticated user/tenant.
+     * Retrieve a paginated list of conversations for the authenticated user.
      */
     public function index(): JsonResponse
     {
@@ -75,20 +69,16 @@ class AIConversationController extends Controller
         }
 
         try {
-            $conversations = AIConversation::forUserAndTenant(
-                    Auth::id(),
-                    $this->getTenantId()
-                )
+            $conversations = AIConversation::forUser(Auth::id())
                 ->select('id', 'title', 'updated_at')
                 ->orderByDesc('updated_at')
                 ->paginate(20);
 
             return response()->json($conversations);
         } catch (Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('AI Assistant conversation index failed', [
+            Log::error('AI Assistant conversation index failed', [
                 'user_id' => Auth::id(),
-                'tenant_id' => $this->getTenantId(),
-                'error' => $e->getMessage(),
+                'error'   => $e->getMessage(),
             ]);
 
             return response()->json([
@@ -119,7 +109,7 @@ class AIConversationController extends Controller
                 'response'     => $result['response']->toArray(),
             ]);
         } catch (Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('AI Assistant conversation store failed', [
+            Log::error('AI Assistant conversation store failed', [
                 'user_id' => Auth::id(),
                 'error'   => $e->getMessage(),
             ]);
@@ -139,10 +129,7 @@ class AIConversationController extends Controller
             return $schemaError;
         }
 
-        $conversation = AIConversation::forUserAndTenant(
-            Auth::id(),
-            $this->getTenantId()
-        )->findOrFail($id);
+        $conversation = AIConversation::forUser(Auth::id())->findOrFail($id);
 
         // Load messages with deterministic ordering, paginated.
         // We order by latest first to bound the page, then the frontend should reverse them for display.
@@ -173,12 +160,7 @@ class AIConversationController extends Controller
             $user = Auth::user();
             $prompt = $request->validated('prompt');
 
-            $query = AIConversation::forUserAndTenant(
-                $user->id,
-                $this->getTenantId()
-            );
-
-            $conversation = $query->findOrFail($id);
+            $conversation = AIConversation::forUser($user->id)->findOrFail($id);
 
             $result = $executionService->executeAndPersist($prompt, $user, $conversation);
 
@@ -189,7 +171,7 @@ class AIConversationController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json(['error' => 'Model not found: ' . $e->getMessage()], 404);
         } catch (Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('AI Assistant conversation append failed', [
+            Log::error('AI Assistant conversation append failed', [
                 'user_id'         => Auth::id(),
                 'conversation_id' => $id,
                 'error'           => $e->getMessage(),
@@ -211,10 +193,7 @@ class AIConversationController extends Controller
             return $schemaError;
         }
 
-        $conversation = AIConversation::forUserAndTenant(
-            Auth::id(),
-            $this->getTenantId()
-        )->findOrFail($id);
+        $conversation = AIConversation::forUser(Auth::id())->findOrFail($id);
 
         DB::transaction(function () use ($conversation) {
             $conversation->messages()->delete();

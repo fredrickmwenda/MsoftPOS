@@ -21,7 +21,6 @@ class AIProviderSetting extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'tenant_id',
         'provider',
         'api_key',
         'base_url',

@@ -973,6 +973,13 @@ return [
 	'Generate Payroll' => 'Generate Payroll',
 	'Submit Payrolls' => 'Submit Payrolls',
 	'Add Payroll Template' => 'Add Payroll Template',
+	'Add Shift' => 'Add Shift',
+	'Start Time' => 'Start Time',
+	'End Time' => 'End Time',
+	'Grace In (min)' => 'Grace In (min)',
+	'Grace Out (min)' => 'Grace Out (min)',
+	'Type shift name' => 'Type Shift Name',
+	
 
 
 

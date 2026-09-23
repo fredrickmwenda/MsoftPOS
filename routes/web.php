@@ -903,24 +903,53 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     });
 
 
-    $middlewares = array_merge(['common', 'auth', 'active']); 
- 
-    Route::prefix('ai')->name('ai-assistant.')->middleware($middlewares)->group(function () {
-        Route::get('ai-assistant', [AIAssistantController::class, 'index'])->name('index');
+ $middlewares = array_merge(['common', 'auth', 'active']);
 
-        // Structured prompt endpoint — POST /ai-assistant/prompt
-        // Accepts a single 'prompt' string. All context is derived server-side.
-        Route::post('ai-assistant/prompt', StructuredPromptController::class)->name('prompt');
+Route::prefix('ai')->name('ai-assistant.')->middleware($middlewares)->group(function () {
 
-        // Conversation Endpoints
-        Route::prefix('ai-assistant/api/conversations')->group(function () {
-            Route::get('/', [AIConversationController::class, 'index'])->name('conversations.index');
-            Route::post('/', [AIConversationController::class, 'store'])->name('conversations.store');
-            Route::get('{id}', [AIConversationController::class, 'show'])->name('conversations.show');
-            Route::post('{id}/prompt', [AIConversationController::class, 'appendPrompt'])->name('conversations.prompt');
-            Route::delete('{id}', [AIConversationController::class, 'destroy'])->name('conversations.destroy');
-        });
+    // ── AI Conversation (chat) page ───────────────────────────────
+    Route::get('ai-assistant', [AIAssistantController::class, 'index'])
+        ->name('index');
+
+    // ── AI Provider Settings (admin-only CRUD) ───────────────────
+    Route::get('providers', [AIAssistantController::class, 'providers'])
+        ->name('providers.index');
+
+    Route::post('providers', [AIAssistantController::class, 'providerStore'])
+        ->name('providers.store');
+
+    Route::put('providers/{id}', [AIAssistantController::class, 'providerUpdate'])
+        ->name('providers.update');
+
+    Route::delete('providers/{id}', [AIAssistantController::class, 'providerDestroy'])
+        ->name('providers.destroy');
+
+    Route::post('providers/{id}/toggle', [AIAssistantController::class, 'providerToggle'])
+        ->name('providers.toggle');
+
+    // ── Structured prompt endpoint (invokable) ───────────────────
+    Route::post('ai-assistant/prompt', StructuredPromptController::class)
+        ->name('prompt');
+
+    // ── Conversation persistence endpoints (AJAX API) ─────────────
+    Route::prefix('ai-assistant/api/conversations')->group(function () {
+
+        Route::get('/', [AIConversationController::class, 'index'])
+            ->name('conversations.index');
+
+        Route::post('/', [AIConversationController::class, 'store'])
+            ->name('conversations.store');
+
+        Route::get('{id}', [AIConversationController::class, 'show'])
+            ->name('conversations.show');
+
+        Route::post('{id}/prompt', [AIConversationController::class, 'appendPrompt'])
+            ->name('conversations.prompt');
+
+        Route::delete('{id}', [AIConversationController::class, 'destroy'])
+            ->name('conversations.destroy');
     });
+});
 
     // INSIDE the ['auth', 'common', 'active'] middleware group, keep only:
     Route::post('payment/{gateway}/push', [PaymentGatewayController::class, 'push'])->name('payment.push');

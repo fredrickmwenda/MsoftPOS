@@ -586,9 +586,9 @@
     <!-- ══════════════════════════════════════════════════════════════════
          15. TABLES  (NEW — for restaurant/hotel POS)
          ══════════════════════════════════════════════════════════════════ -->
-    @if($is_admin)
+    <!-- @if($is_admin)
     <li><a href="{{route('tables.index')}}"> <i class="dripicons dripicons-view-apps"></i><span>Tables</span></a></li>
-    @endif
+    @endif -->
 
     <!-- ══════════════════════════════════════════════════════════════════
          16. REPORTS  (Expanded with sub-items)
@@ -625,12 +625,37 @@
     </li>
     @endif
 
+
     <!-- ══════════════════════════════════════════════════════════════════
-         17. AI ASSISTANT  (NEW)
-         ══════════════════════════════════════════════════════════════════ -->
-    <?php $ai_assistant_active = $role_has_permissions_list->where('name', 'ai-assistant-index')->first(); ?>
-    @if($ai_assistant_active)
-    <li><a href="{{route('ai-assistant.index')}}"> <i class="dripicons dripicons-forecast"></i><span>AI Assistant</span></a></li>
+        17. AI ASSISTANT  (Collapsible: AI Conversation + AI Provider Settings)
+        ══════════════════════════════════════════════════════════════════ -->
+    <?php
+        // AI Conversation (chat) — gated by ai-assistant-index permission
+        $ai_conversation_active = $role_has_permissions_list->where('name', 'ai-assistant-index')->first();
+
+        // AI Provider Settings (admin config) — gated by super-admin permission
+        $ai_provider_settings_active = $role_has_permissions_list->where('name', 'super-admin')->first();
+        $is_admin = Auth::user()->roles->contains(fn($r) => $r->id <= 2);
+    ?>
+    @if($ai_conversation_active || $ai_provider_settings_active || $is_admin)
+    <li>
+        <a href="#ai-assistant" aria-expanded="false" data-toggle="collapse">
+            <i class="dripicons dripicons-forecast"></i><span>AI Assistant</span>
+        </a>
+        <ul id="ai-assistant" class="collapse list-unstyled">
+            @if($ai_conversation_active)
+            <li id="ai-conversation-menu">
+                <a href="{{ route('ai-assistant.index') }}">AI Conversation</a>
+            </li>
+            @endif
+
+            @if($ai_provider_settings_active || $is_admin)
+            <li id="ai-provider-settings-menu">
+                <a href="{{ route('ai-assistant.providers.index') }}">AI Provider Settings</a>
+            </li>
+            @endif
+        </ul>
+    </li>
     @endif
 
     <!-- ══════════════════════════════════════════════════════════════════

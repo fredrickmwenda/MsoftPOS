@@ -72,6 +72,11 @@
 .ai-spinner { width: 16px; height: 16px; border: 2px solid #ced4da; border-top-color: #7c5cc4; border-radius: 50%; animation: ai-spin 1s linear infinite; }
 @keyframes ai-spin { to { transform: rotate(360deg); } }
 
+/* Provider badge in the header */
+.ai-provider-badge { font-size: 0.75em; color: #6c757d; font-weight: normal; }
+.ai-provider-badge .ai-provider-config-link { margin-left: 8px; font-size: 0.85em; color: #7c5cc4; text-decoration: none; }
+.ai-provider-badge .ai-provider-config-link:hover { text-decoration: underline; }
+
 @media (max-width: 768px) {
     .ai-layout { height: calc(100vh - 80px); }
     .ai-sidebar { position: absolute; left: -280px; height: 100%; transition: left 0.3s ease; box-shadow: 2px 0 8px rgba(0,0,0,0.1); }
@@ -96,7 +101,7 @@
         <div class="card">
             <div class="card-body p-0">
                 <div class="ai-layout">
-                    
+
                     <!-- Overlay for mobile -->
                     <div class="ai-overlay" id="aiOverlay" aria-hidden="true"></div>
 
@@ -120,9 +125,17 @@
                             <button class="ai-drawer-btn" id="aiDrawerBtn" aria-label="Open History Drawer" aria-expanded="false" aria-controls="aiSidebar">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                             </button>
-                            <h2 class="ai-chat-title" id="aiChatTitle">AI Assistant <small style="font-size: 0.75em; color: #6c757d; font-weight: normal;">Free Structured Assistant</small></h2>
+                            <h2 class="ai-chat-title" id="aiChatTitle">
+                                AI Assistant
+                                <small class="ai-provider-badge" id="aiProviderBadge">
+                                    {{ $providerLabel }}
+                                    @can('super-admin')
+                                        <a href="{{ route('ai-assistant.providers.index') }}" class="ai-provider-config-link" title="Configure AI providers">configure →</a>
+                                    @endcan
+                                </small>
+                            </h2>
                         </div>
-                        
+
                         <!-- Accessible Live Region for Screen Readers -->
                         <div id="aiAriaLive" class="ai-sr-only" aria-live="polite" aria-atomic="true"></div>
 
@@ -130,8 +143,14 @@
                             <!-- Empty State & Suggestions -->
                             <div class="ai-empty-state" id="aiEmptyState">
                                 <h3>AI Assistant</h3>
-                                <p>I am your free structured business assistant. I can query real-time data securely without requiring any external AI API or paid subscription.</p>
-                                
+                                <p>
+                                    @if($activeProvider)
+                                        I am your AI Assistant, powered by <strong>{{ ucfirst($activeProvider->provider) }}</strong>@if($activeProvider->model) ({{ $activeProvider->model }})@endif. Ask me anything about your business — sales, purchases, inventory, customers, suppliers, dues, or any other question.
+                                    @else
+                                        I am your free structured business assistant. I can query real-time data securely without requiring any external AI API or paid subscription.
+                                    @endif
+                                </p>
+
                                 <div class="ai-suggestions-grid">
                                     <div class="ai-suggestion-group">
                                         <h5>Daily & Sales</h5>
@@ -184,9 +203,9 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div id="aiTranscript"></div>
-                            
+
                             <div id="aiLoading" class="ai-loading-indicator" style="display: none;" aria-hidden="true">
                                 <div class="ai-spinner"></div>
                                 <span>Generating insights...</span>
@@ -235,7 +254,15 @@
 document.addEventListener('DOMContentLoaded', function() {
     const apiBase = "{{ route('ai-assistant.conversations.index') }}";
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-    
+
+    // Server-injected provider label so the badge survives a "New chat" reset.
+    const providerBadgeHtml =
+        '{{ $providerLabel }}' +
+        @can('super-admin')
+            ' <a href="{{ route('ai-assistant.providers.index') }}" class="ai-provider-config-link" title="Configure AI providers">configure →</a>' +
+        @endcan
+        '';
+
     // UI Elements
     const elements = {
         sidebar: document.getElementById('aiSidebar'),
@@ -289,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const response = await fetch(apiBase + endpoint, options);
             const data = await response.json().catch(() => null);
-            
+
             if (!response.ok) {
                 let errorMsg = 'An unexpected error occurred.';
                 if (response.status === 422 && data && data.errors && data.errors.prompt) {
@@ -307,14 +334,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             return data;
         } catch (error) {
-            // Throw generic network error if fetch itself fails
             if (error.message === 'Failed to fetch' || error.message.includes('NetworkError')) {
                 throw new Error('Network error. Please check your connection and try again.');
             }
             throw error;
         }
     }
-    
+
     // --- Rendering Helpers ---
     function announce(msg) {
         elements.ariaLive.textContent = '';
@@ -328,9 +354,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- History functions ---
     function renderHistoryList(append = false) {
         if (!append) elements.historyList.innerHTML = '';
-        
+
         state.conversations.forEach(conv => {
-            // Check if element already exists (if appending)
             if (document.getElementById('conv-' + conv.id)) return;
 
             const item = document.createElement('div');
@@ -341,11 +366,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (conv.id === state.currentConversationId) {
                 item.classList.add('active');
             }
-            
+
             const title = document.createElement('div');
             title.className = 'ai-history-item-title';
             title.appendChild(document.createTextNode(conv.title || 'Conversation'));
-            
+
             const delBtn = document.createElement('button');
             delBtn.className = 'ai-history-item-delete';
             delBtn.setAttribute('aria-label', 'Delete conversation');
@@ -359,16 +384,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             item.appendChild(title);
             item.appendChild(delBtn);
-            
+
             item.addEventListener('click', () => loadConversation(conv.id));
             item.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') loadConversation(conv.id);
             });
-            
+
             elements.historyList.appendChild(item);
         });
 
-        // Add Load More button if needed
         const existingLoadMore = document.getElementById('aiLoadMoreHist');
         if (existingLoadMore) existingLoadMore.remove();
 
@@ -418,29 +442,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (state.loadingMessages || !state.msgHasMore || !state.currentConversationId) return;
         state.loadingMessages = true;
         const previousHeight = elements.chatArea.scrollHeight;
-        
+
         try {
             const data = await apiRequest(`/${state.currentConversationId}?page=${state.msgPage}`);
             if (!prepend) {
-                elements.chatTitle.textContent = data.conversation.title || 'Conversation';
+                // Keep the provider badge intact — only update the title text portion.
+                // The chat title element holds both the conversation name and the badge.
+                // We replace only the leading text node, preserving the <small> badge.
+                const titleText = document.createTextNode(data.conversation.title || 'Conversation');
+                elements.chatTitle.innerHTML = '';
+                elements.chatTitle.appendChild(titleText);
+                elements.chatTitle.insertAdjacentHTML('beforeend', ' <small class="ai-provider-badge" id="aiProviderBadge">' + providerBadgeHtml + '</small>');
             }
-            
+
             if (data.messages && data.messages.data) {
                 state.msgHasMore = data.messages.current_page < data.messages.last_page;
-                
-                // Messages are returned desc by controller, we want to display chronologically (oldest at top).
-                // But for prepending, we just insert them in chronological order at the top.
+
                 const reversed = data.messages.data.reverse();
-                
+
                 const fragment = document.createDocumentFragment();
                 reversed.forEach(msg => {
                     const msgEl = window.renderAIMessage(msg.role, msg.content, msg.response_type, msg.metadata, svgs);
                     fragment.appendChild(msgEl);
                 });
-                
+
                 if (prepend) {
                     elements.transcript.insertBefore(fragment, elements.transcript.firstChild);
-                    // Maintain scroll position
                     const newHeight = elements.chatArea.scrollHeight;
                     elements.chatArea.scrollTop = newHeight - previousHeight;
                 } else {
@@ -450,7 +477,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 state.msgPage++;
 
-                // Render "Load older messages" button if has more
                 const existingLoadMore = document.getElementById('aiLoadMoreMsg');
                 if (existingLoadMore) existingLoadMore.remove();
 
@@ -468,29 +494,29 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) {
             const errEl = window.renderAIError("Failed to load messages: " + e.message, svgs);
             elements.transcript.appendChild(errEl);
-            if (!prepend) elements.chatTitle.textContent = 'Error';
+            if (!prepend) {
+                elements.chatTitle.innerHTML = 'Error <small class="ai-provider-badge">' + providerBadgeHtml + '</small>';
+            }
         } finally {
             state.loadingMessages = false;
         }
     }
 
     async function loadConversation(id) {
-        if (state.isSubmitting) return; // Block switching while generating
-        
+        if (state.isSubmitting) return;
+
         state.currentConversationId = id;
         state.msgPage = 1;
         state.msgHasMore = true;
-        
+
         elements.transcript.innerHTML = '';
         elements.emptyState.style.display = 'none';
-        elements.chatTitle.textContent = 'Loading...';
-        
-        // Update active class in sidebar
+        elements.chatTitle.innerHTML = 'Loading... <small class="ai-provider-badge">' + providerBadgeHtml + '</small>';
+
         document.querySelectorAll('.ai-history-item').forEach(el => el.classList.remove('active'));
         const activeItem = document.getElementById('conv-' + id);
         if (activeItem) activeItem.classList.add('active');
-        
-        // Close drawer on mobile
+
         closeDrawer();
 
         await loadConversationMessages(false);
@@ -503,7 +529,11 @@ document.addEventListener('DOMContentLoaded', function() {
         state.msgHasMore = true;
         elements.transcript.innerHTML = '';
         elements.emptyState.style.display = 'block';
-        elements.chatTitle.innerHTML = 'AI Assistant <small style="font-size: 0.75em; color: #6c757d; font-weight: normal;">Free Structured Assistant</small>';
+        // Preserve the dynamic provider badge instead of hardcoding "Free Structured Assistant".
+        elements.chatTitle.innerHTML =
+            'AI Assistant <small class="ai-provider-badge" id="aiProviderBadge">' +
+            providerBadgeHtml +
+            '</small>';
         document.querySelectorAll('.ai-history-item').forEach(el => el.classList.remove('active'));
         closeDrawer();
         elements.input.focus();
@@ -513,7 +543,6 @@ document.addEventListener('DOMContentLoaded', function() {
     async function deleteConversation(id) {
         try {
             await apiRequest(`/${id}`, 'DELETE');
-            // Remove from state
             state.conversations = state.conversations.filter(c => c.id !== id);
             renderHistoryList();
             if (state.currentConversationId === id) {
@@ -527,17 +556,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Submission ---
     async function submitPrompt(promptStr) {
         if (!promptStr.trim() || state.isSubmitting) return;
-        
+
         const currentId = state.currentConversationId;
-        
-        // Setup UI
+
         state.isSubmitting = true;
         elements.input.value = '';
         elements.input.disabled = true;
         elements.submitBtn.disabled = true;
         elements.emptyState.style.display = 'none';
         elements.loading.style.display = 'flex';
-        
+
         const msgUser = window.renderAIMessage('user', promptStr, 'text', null, svgs);
         elements.transcript.appendChild(msgUser);
         scrollToBottom();
@@ -546,18 +574,19 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             let endpoint = currentId ? `/${currentId}/prompt` : '';
             const data = await apiRequest(endpoint, 'POST', { prompt: promptStr });
-            
-            // Stale check (did user click New Chat while waiting?)
+
             if (state.currentConversationId !== currentId && state.currentConversationId !== null) {
-                // Just discard UI rendering, it persisted successfully on server
                 return;
             }
 
-            // If it was a new conversation, update state
             if (!currentId) {
                 state.currentConversationId = data.conversation.id;
-                elements.chatTitle.textContent = data.conversation.title;
-                // Add to top of history
+                // Replace only the conversation title text; keep the provider badge.
+                elements.chatTitle.innerHTML =
+                    document.createTextNode(data.conversation.title).textContent +
+                    ' <small class="ai-provider-badge" id="aiProviderBadge">' +
+                    providerBadgeHtml +
+                    '</small>';
                 state.conversations.unshift(data.conversation);
                 renderHistoryList();
             }
@@ -569,15 +598,13 @@ document.addEventListener('DOMContentLoaded', function() {
             announce("Response generated.");
 
         } catch (e) {
-            // Stale check
             if (state.currentConversationId !== currentId) return;
-            
+
             elements.loading.style.display = 'none';
             const errEl = window.renderAIError(e.message, svgs);
             elements.transcript.appendChild(errEl);
             scrollToBottom();
-            
-            // Restore input text so user doesn't lose it
+
             elements.input.value = promptStr;
         } finally {
             state.isSubmitting = false;
@@ -601,8 +628,7 @@ document.addEventListener('DOMContentLoaded', function() {
             submitPrompt(elements.input.value);
         }
     });
-    
-    // Auto-resize textarea
+
     elements.input.addEventListener('input', function() {
         this.style.height = '48px';
         this.style.height = (this.scrollHeight) + 'px';
@@ -610,7 +636,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     elements.newChatBtn.addEventListener('click', startNewChat);
 
-    // Suggested prompts
     document.querySelectorAll('.ai-suggestion-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const prompt = btn.getAttribute('data-prompt');

@@ -27,6 +27,17 @@ class AIConversation extends Model
         'title',
     ];
 
+
+
+    /**
+     * Scope to a specific user (replaces the old forUserAndTenant).
+     */
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+
     /**
      * Get the user that owns the conversation.
      *
