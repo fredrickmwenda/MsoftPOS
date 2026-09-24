@@ -7,7 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class Employee extends Model
 {
     protected $fillable = [
-        "name", "image", "department_id", "email", "phone_number",
+        "name", 
+        "image", 
+        "department_id",
+        "email", 
+        "phone_number",
         "user_id",
         "shift_id", 
         "staff_id", 
@@ -21,6 +25,11 @@ class Employee extends Model
         "sales_target",
         "warehouse_id" // <-- ADD THIS HERE
 
+    ];
+
+        
+    protected $casts = [
+        'sales_target' => 'array',   // auto json_encode on save, json_decode on read
     ];
 
     public function payroll()

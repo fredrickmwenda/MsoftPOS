@@ -163,10 +163,6 @@
                         <label>{{ __('file.Country') }}</label>
                         <input type="text" name="country" class="form-control">
                     </div>
-                    {{-- <div class="col-md-4 form-group">
-                        <label>{{ __('file.Staff Id') }}</label>
-                        <input type="text" name="staff_id" class="form-control">
-                    </div> --}}
 
                     {{-- Sale Agent Commission --}}
                     <div class="col-md-12 mt-4">
@@ -193,9 +189,9 @@
                         <div class="form-group">
                             <input type="checkbox" name="user" id="add-user" value="1" />&nbsp;
                             <label for="add-user">{{ __('file.Add User') }}
-                                <x-info
+                                <span class="ti ti-info-circle" data-toggle="tooltip"
                                     title="If checked, sale agent will be able to login with username and password you set"
-                                    type="info" />
+                                    style="color:#004085;display:inline-block;font-size: 15px;cursor: help;"></span>
                             </label>
                         </div>
                     </div>
@@ -445,7 +441,6 @@
                                         alert(data);
                                     }
                                 });
-                                // dt.rows({ page: 'current', selected: true }).remove().draw(false);
                             } else if (!employee_id.length)
                                 alert('No employee is selected!');
                         } else
@@ -476,15 +471,6 @@
             $("#editModal input[name='city']").val(row.data('city'));
             $("#editModal input[name='state']").val(row.data('state'));
             $("#editModal input[name='country']").val(row.data('country'));
-            // $("#editModal input[name='staff_id']").val(row.data('staff_id'));
-
-            // if (row.data('is_sale_agent') == 1) {
-            //     $('#edit_is_sale_agent').prop('checked', true);
-            //     $('#edit-sale-agent-section').show();
-            // } else {
-            //     $('#edit_is_sale_agent').prop('checked', false);
-            //     $('#edit-sale-agent-section').hide();
-            // }
 
             // Clear existing commission rows
             $('#edit-commission-wrapper').html('');
@@ -560,7 +546,6 @@
                 $('#edit-sale-agent-section').show();
                 validateSalesTargets();
                 if ($('#edit-commission-wrapper').children().length === 0) {
-                    // only add empty row if no rows exist (new agent case)
                     $('#edit-commission-wrapper').append(`
                 <div class="commission-row row mb-2">
                     <div class="col-md-3">
@@ -582,8 +567,6 @@
 
             } else {
                 $('#edit-sale-agent-section').hide();
-                // ❌ don't clear wrapper here
-                // $('#edit-commission-wrapper').html('');
             }
         });
 

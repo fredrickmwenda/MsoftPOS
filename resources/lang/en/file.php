@@ -979,7 +979,12 @@ return [
 	'Grace In (min)' => 'Grace In (min)',
 	'Grace Out (min)' => 'Grace Out (min)',
 	'Type shift name' => 'Type Shift Name',
-	
+	'Add Sale Agent' => 'Add Sale Agent',
+	'Sales Target' => 'Sales Target',
+	'Total Sales Amount From' => 'Total Sales Amount From',
+	'Total Sales Amount To' => 'Total Sales Amount To',
+	'Commission Percent' => 'Commission Percent',
+	'Update Sale Agent' => 'Update Sale Agent',
 
 
 

@@ -46,13 +46,6 @@
                                     </div>
                                 </div>
 
-                                {{-- <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{ __('file.WhatsApp Number') }}</label>
-                                        <input type="text" name="wa_number" class="form-control">
-                                    </div>
-                                </div> --}}
-
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>{{ __('file.Address') }} *</label>
@@ -66,13 +59,6 @@
                                         <input type="text" name="city" required class="form-control">
                                     </div>
                                 </div>
-
-                                {{-- <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{ __('file.State') }}</label>
-                                        <input type="text" name="state" class="form-control">
-                                    </div>
-                                </div> --}}
 
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -122,9 +108,9 @@
                                     <div class="form-group">
                                         <input type="checkbox" name="user" id="add-user" value="1" />&nbsp;
                                         <label for="add-user">{{ __('file.Add User') }}
-                                            <x-info
+                                            <span class="ti ti-info-circle" data-toggle="tooltip"
                                                 title="If checked, sale agent will be able to login with username and password you set"
-                                                type="info" />
+                                                style="color:#004085;display:inline-block;font-size: 15px;cursor: help;"></span>
                                         </label>
                                     </div>
                                 </div>

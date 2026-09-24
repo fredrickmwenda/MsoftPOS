@@ -73,10 +73,10 @@ class SaleAgentController extends Controller
 
     public function create()
     {
-        if (! Auth::user()->hasPermissionTo('sale-agents-add')) {
-            return redirect()->back()
-                ->with('not_permitted', __('file.Sorry! You are not allowed to access this module'));
-        }
+        // if (! Auth::user()->hasPermissionTo('sale-agents-add')) {
+        //     return redirect()->back()
+        //         ->with('not_permitted', __('file.Sorry! You are not allowed to access this module'));
+        // }
 
         $lims_role_list       = Role::where('is_active', true)
             ->whereNotIn('id', self::EXCLUDED_ROLE_IDS)
