@@ -2,64 +2,77 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Designation;
 use Illuminate\Http\Request;
+use App\Models\Designation;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Auth;
 
 class DesignationController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+ 
+        if(Auth::user()->hasPermissionTo('department')) {
+            $lims_designation_all = Designation::where('is_active', true)->get();
+            return view('backend.hrm.designation.index', compact('lims_designation_all'));
+        }
+        else
+            return redirect()->back()->with('not_permitted', __('db.Sorry! You are not allowed to access this module'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $this->validate($request, [
+            'name' => [
+                'max:255',
+                    Rule::unique('designations')->where(function ($query) {
+                    return $query->where('is_active', 1);
+                }),
+            ],
+        ]);
+
+        $data = $request->all();
+        $data['is_active'] = true;
+        $designation = Designation::create($data);
+        if($request->ajax()){
+            return response()->json($designation);
+        }
+        return redirect('designations')->with('message', __('db.Designation created successfully'));
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Designation $designation)
+    public function update(Request $request, $id)
     {
-        //
+        $this->validate($request,[
+            'name' => [
+                'max:255',
+                Rule::unique('designations')->ignore($request->designation_id)->where(function ($query) {
+                    return $query->where('is_active', 1);
+                }),
+            ],
+        ]);
+
+        $data = $request->all();
+        $lims_designation_data = Designation::find($data['designation_id']);
+        $lims_designation_data->update($data);
+        return redirect('designations')->with('message', __('db.Designation updated successfully'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Designation $designation)
+    public function deleteBySelection(Request $request)
     {
-        //
+        $designation_id = $request['designationIdArray'];
+        foreach ($designation_id as $id) {
+            $lims_designation_data = Designation::find($id);
+            $lims_designation_data->is_active = false;
+            $lims_designation_data->save();
+        }
+        return 'Designation deleted successfully!';
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Designation $designation)
+    public function destroy($id)
     {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Designation $designation)
-    {
-        //
+        $lims_designation_data = Designation::find($id);
+        $lims_designation_data->is_active = false;
+        $lims_designation_data->save();
+        return redirect('designations')->with('message', __('db.Designation deleted successfully'));
     }
 }

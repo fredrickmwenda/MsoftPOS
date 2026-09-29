@@ -388,7 +388,7 @@
 </nav>
  <!-- navbar-->
 <header>
-    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #0a382b, #f5f8fe) !important;">
 
         <a id="toggle-btn" href="#" class="menu-btn"><i class="fa fa-bars"> </i></a>
 
@@ -600,7 +600,7 @@
             <audio id="mysoundclip2" preload="auto">
                 <source src="{{url('beep/beep-07.mp3')}}"></source>
             </audio>
-            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #13bd60, #f5f8fe) !important;">
+            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #0a382b, #f5f8fe) !important;">
                 <div class="pos-payment-buttons">
                         @if(in_array("cash",$options))
                         <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> {{trans('file.Cash')}}</button>

@@ -1368,31 +1368,7 @@ class ReportController extends Controller
                             }
                         }
                         $nestedData['purchased_qty'] = $purchased_qty;
-                        //transfer data
-                        /*$nestedData['transfered_amount'] = ProductTransfer::where([
-                                                ['product_id', $product->id],
-                                                ['variant_id', $variant_id]
-                                        ])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total');
 
-                        $lims_product_transfer_data = ProductTransfer::select('purchase_unit_id', 'qty')->where([
-                                                ['product_id', $product->id],
-                                                ['variant_id', $variant_id]
-                                        ])->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->get();
-
-                        $transfered_qty = 0;
-                        if(count($lims_product_transfer_data)) {
-                            foreach ($lims_product_transfer_data as $product_transfer) {
-                                $unit = DB::table('units')->find($product_transfer->purchase_unit_id);
-                                if($unit->operator == '*'){
-                                    $transfered_qty += $product_transfer->qty * $unit->operation_value;
-                                }
-                                elseif($unit->operator == '/'){
-                                    $transfered_qty += $product_transfer->qty / $unit->operation_value;
-                                }
-                            }
-                        }
-                        $nestedData['transfered_qty'] = $transfered_qty;*/
-                        //sale data
                         $nestedData['sold_amount'] = Product_Sale::where([
                                                 ['product_id', $product->id],
                                                 ['variant_id', $variant_id]
@@ -1505,24 +1481,8 @@ class ReportController extends Controller
                         }
                     }
                     $nestedData['purchased_qty'] = $purchased_qty;
-                    //transfer data
-                    /*$nestedData['transfered_amount'] = ProductTransfer::where('product_id', $product->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total');
 
-                    $lims_product_transfer_data = ProductTransfer::select('purchase_unit_id', 'qty')->where('product_id', $product->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->get();
-
-                    $transfered_qty = 0;
-                    if(count($lims_product_transfer_data)) {
-                        foreach ($lims_product_transfer_data as $product_transfer) {
-                            $unit = DB::table('units')->find($product_transfer->purchase_unit_id);
-                            if($unit->operator == '*'){
-                                $transfered_qty += $product_transfer->qty * $unit->operation_value;
-                            }
-                            elseif($unit->operator == '/'){
-                                $transfered_qty += $product_transfer->qty / $unit->operation_value;
-                            }
-                        }
-                    }
-                    $nestedData['transfered_qty'] = $transfered_qty;*/
+                    
                     //sale data
                     $nestedData['sold_amount'] = Product_Sale::where('product_id', $product->id)->whereDate('created_at', '>=' , $start_date)->whereDate('created_at', '<=' , $end_date)->sum('total');
 
@@ -1636,40 +1596,7 @@ class ReportController extends Controller
                             }
                         }
                         $nestedData['purchased_qty'] = $purchased_qty;
-                        //transfer data
-                        /*$nestedData['transfered_amount'] = DB::table('transfers')
-                                ->join('product_transfer', 'transfers.id', '=', 'product_transfer.transfer_id')
-                                ->where([
-                                    ['product_transfer.product_id', $product->id],
-                                    ['product_transfer.variant_id', $variant_id],
-                                    ['transfers.to_warehouse_id', $warehouse_id]
-                                ])->whereDate('transfers.created_at', '>=', $start_date)
-                                  ->whereDate('transfers.created_at', '<=' , $end_date)
-                                  ->sum('total');
-                        $lims_product_transfer_data = DB::table('transfers')
-                                ->join('product_transfer', 'transfers.id', '=', 'product_transfer.transfer_id')
-                                ->where([
-                                    ['product_transfer.product_id', $product->id],
-                                    ['product_transfer.variant_id', $variant_id],
-                                    ['transfers.to_warehouse_id', $warehouse_id]
-                                ])->whereDate('transfers.created_at', '>=', $start_date)
-                                  ->whereDate('transfers.created_at', '<=' , $end_date)
-                                  ->select('product_transfer.purchase_unit_id', 'product_transfer.qty')
-                                  ->get();
-
-                        $transfered_qty = 0;
-                        if(count($lims_product_transfer_data)) {
-                            foreach ($lims_product_transfer_data as $product_transfer) {
-                                $unit = DB::table('units')->find($product_transfer->purchase_unit_id);
-                                if($unit->operator == '*'){
-                                    $transfered_qty += $product_transfer->qty * $unit->operation_value;
-                                }
-                                elseif($unit->operator == '/'){
-                                    $transfered_qty += $product_transfer->qty / $unit->operation_value;
-                                }
-                            }
-                        }
-                        $nestedData['transfered_qty'] = $transfered_qty;*/
+                        
                         //sale data
                         $nestedData['sold_amount'] = DB::table('sales')
                                     ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')->where([
@@ -1824,38 +1751,7 @@ class ReportController extends Controller
                         }
                     }
                     $nestedData['purchased_qty'] = $purchased_qty;
-                    //transfer data
-                    /*$nestedData['transfered_amount'] = DB::table('transfers')
-                            ->join('product_transfer', 'transfers.id', '=', 'product_transfer.transfer_id')
-                            ->where([
-                                ['product_transfer.product_id', $product->id],
-                                ['transfers.to_warehouse_id', $warehouse_id]
-                            ])->whereDate('transfers.created_at', '>=', $start_date)
-                              ->whereDate('transfers.created_at', '<=' , $end_date)
-                              ->sum('total');
-                    $lims_product_transfer_data = DB::table('transfers')
-                            ->join('product_transfer', 'transfers.id', '=', 'product_transfer.transfer_id')
-                            ->where([
-                                ['product_transfer.product_id', $product->id],
-                                ['transfers.to_warehouse_id', $warehouse_id]
-                            ])->whereDate('transfers.created_at', '>=', $start_date)
-                              ->whereDate('transfers.created_at', '<=' , $end_date)
-                              ->select('product_transfer.purchase_unit_id', 'product_transfer.qty')
-                              ->get();
-
-                    $transfered_qty = 0;
-                    if(count($lims_product_transfer_data)) {
-                        foreach ($lims_product_transfer_data as $product_transfer) {
-                            $unit = DB::table('units')->find($product_transfer->purchase_unit_id);
-                            if($unit->operator == '*'){
-                                $transfered_qty += $product_transfer->qty * $unit->operation_value;
-                            }
-                            elseif($unit->operator == '/'){
-                                $transfered_qty += $product_transfer->qty / $unit->operation_value;
-                            }
-                        }
-                    }
-                    $nestedData['transfered_qty'] = $transfered_qty;*/
+                    
                     //sale data
                     $nestedData['sold_amount'] = DB::table('sales')
                                 ->join('product_sales', 'sales.id', '=', 'product_sales.sale_id')->where([
@@ -2005,7 +1901,7 @@ class ReportController extends Controller
             "grand_totals"    => $grand_totals
         );
 
-        echo json_encode($json_data);
+        return response()->json($json_data);
     }
 
     public function purchaseReport(Request $request)
@@ -2353,9 +2249,7 @@ class ReportController extends Controller
             $end_date = date("Y-m-d");
         }
         $lims_warehouse_list = Warehouse::where('is_active', true)->get();
-        // $lims_biller_list = User::where('is_active', true)
-        //                             ->where('role_id', 5)
-        //                             ->get();
+
         $lims_biller_list = User::where('is_active', true)
             ->whereHas('roles', function ($query) {
                 $query->whereIn('role_id', [5]);
@@ -2494,7 +2388,8 @@ class ReportController extends Controller
             "data"            => $data,
             "grand_totals"    => $grand_totals
         );
-        echo json_encode($json_data);
+
+        return response()->json($json_data);
     }
 
     public function warehousePurchaseData(Request $request)
@@ -2631,7 +2526,7 @@ class ReportController extends Controller
             "data"            => $data,
             "grand_totals"    => $grand_totals
         );
-        echo json_encode($json_data);
+         return response()->json($json_data);
     }
 
     public function warehouseQuotationData(Request $request)
@@ -2758,7 +2653,7 @@ class ReportController extends Controller
             "data"            => $data,
             "grand_totals"    => $grand_totals
         );
-        echo json_encode($json_data);
+         return response()->json($json_data);
     }
 
     public function warehouseReturnData(Request $request)
@@ -2874,7 +2769,7 @@ class ReportController extends Controller
             "data"            => $data,
             "grand_totals"    => $grand_totals
         );
-        echo json_encode($json_data);
+         return response()->json($json_data);
     }
 
     public function warehouseExpenseData(Request $request)
@@ -2972,7 +2867,7 @@ class ReportController extends Controller
             "data"            => $data,
             "grand_totals"    => $grand_totals
         );
-        echo json_encode($json_data);
+         return response()->json($json_data);
     }
 
     public function userReport(Request $request)
@@ -5914,154 +5809,7 @@ public function stockCoverageData(Request $request)
     echo json_encode($json_data);
 }
 
-// public function activityLogData(Request $request)
-// {
-//     $columns = array(
-//         1 => 'created_at',
-//         2 => 'log_name',
-//         3 => 'description',
-//     );
 
-//     $start_date = $request->input('start_date');
-//     $end_date = $request->input('end_date');
-//     $log_name = $request->input('log_name');
-//     $user_id = $request->input('user_id');
-
-//     $query = DB::table('activity_logs');
-
-//     if($start_date && $end_date) {
-//         $query->whereDate('created_at', '>=', $start_date)
-//               ->whereDate('created_at', '<=', $end_date);
-//     }
-
-//     if($log_name) {
-//         $query->where('log_name', $log_name);
-//     }
-
-//     if($user_id) {
-//         $query->where('causer_id', $user_id)->where('causer_type', 'App\Models\User');
-//     }
-
-//     $totalData = $query->count();
-//     $totalFiltered = $totalData;
-
-//     $limit = $request->input('length') != -1 ? $request->input('length') : $totalData;
-//     $start = $request->input('start');
-//     $order = $columns[$request->input('order.0.column')] ?? 'created_at';
-//     $dir = $request->input('order.0.dir') ?? 'desc';
-
-//     if(empty($request->input('search.value'))) {
-//         $logs = (clone $query)->offset($start)
-//                       ->limit($limit)
-//                       ->orderBy($order, $dir)
-//                       ->get();
-//     } else {
-//         $search = $request->input('search.value');
-//         $query->where(function($q) use ($search) {
-//             $q->where('description', 'LIKE', "%{$search}%")
-//               ->orWhere('log_name', 'LIKE', "%{$search}%");
-//         });
-        
-//         $logs = (clone $query)->offset($start)
-//                       ->limit($limit)
-//                       ->orderBy($order, $dir)
-//                       ->get();
-        
-//         $totalFiltered = (clone $query)->count();
-//     }
-
-//     $data = array();
-//     if(!empty($logs))
-//     {
-//         foreach ($logs as $key => $log)
-//         {
-//             $nestedData['id'] = $log->id;
-//             $nestedData['key'] = $key;
-//             $nestedData['date'] = date(config('date_format') . ' H:i:s', strtotime($log->created_at));
-//             $nestedData['log_name'] = ucfirst($log->log_name ?? 'default');
-            
-//             // --- Build Human-Readable Description ---
-//             $action = ucfirst($log->description); // e.g., Created, Updated, Deleted
-//             $logNameDisplay = ucfirst(str_replace('_', ' ', $log->log_name ?? 'record')); // e.g., Product, Sale, Product Sale
-            
-//             $properties = json_decode($log->properties, true);
-//             $context = $properties['context'] ?? [];
-//             $changes = $properties['attributes'] ?? [];
-
-//             // 1. Try to find a primary identifier (like Name or Reference Number)
-//             $entityIdentifier = null;
-//             if (!empty($context)) {
-//                 $priorityKeys = [
-//                     'name', 'reference_no', 'product_name', 'customer_name', 'user_name', 
-//                     'sale_reference', 'purchase_reference', 'transfer_reference', 
-//                     'tax_name', 'warehouse_name', 'category_name', 'group_name', 
-//                     'return_reference', 'adjustment_reference', 'quotation_reference', 'batch_no'
-//                 ];
-                
-//                 foreach ($priorityKeys as $keyName) {
-//                     if (isset($context[$keyName]) && !in_array($context[$keyName], ['N/A', 'Unknown Product', 'Unknown Customer', 'None', ''])) {
-//                         $entityIdentifier = $context[$keyName];
-//                         break;
-//                     }
-//                 }
-//             }
-
-//             // 2. Construct the base description sentence
-//             $descHtml = $action . ' ' . $logNameDisplay;
-//             if ($entityIdentifier) {
-//                 $descHtml .= ': <strong>' . e($entityIdentifier) . '</strong>';
-//             }
-
-//             // 3. If it's an update, append the fields that changed
-//             if (strtolower($log->description) === 'updated' && !empty($changes)) {
-//                 $changedFields = array_keys($changes);
-//                 // Exclude irrelevant timestamp fields from the summary
-//                 $changedFields = array_diff($changedFields, ['updated_at', 'created_at']);
-                
-//                 if (!empty($changedFields)) {
-//                     $descHtml .= '<br><small class="text-muted"><i class="fa fa-pencil"></i> Changed: ' . e(implode(', ', $changedFields)) . '</small>';
-//                 }
-//             }
-
-//             $nestedData['description'] = $descHtml;
-            
-//             // Format Subject
-//             $subject = 'N/A';
-//             if ($log->subject_type && $log->subject_id) {
-//                 $subject = class_basename($log->subject_type) . ' #' . $log->subject_id;
-//             }
-//             $nestedData['subject'] = $subject;
-
-//             // Format Causer
-//             $causer = 'System';
-//             if ($log->causer_type && $log->causer_id) {
-//                 $causerData = app($log->causer_type)->find($log->causer_id);
-//                 if ($causerData) {
-//                     $causer = $causerData->name ?? $causerData->email ?? class_basename($log->causer_type) . ' #' . $log->causer_id;
-//                 }
-//             }
-//             $nestedData['causer'] = $causer;
-
-//             // Properties button
-//             $propertiesBtn = '';
-//             if ($log->properties) {
-//                 $propertiesBtn = '<button class="btn btn-sm btn-info view-properties" data-id="'.$log->id.'"><i class="fa fa-eye"></i> View Details</button>';
-//             }
-//             $nestedData['properties'] = $propertiesBtn;
-
-//             $data[] = $nestedData;
-//         }
-//     }
-
-//     $json_data = array(
-//         "draw"            => intval($request->input('draw')),
-//         "recordsTotal"    => intval($totalData),
-//         "recordsFiltered" => intval($totalFiltered),
-//         "data"            => $data
-//     );
-
-//     echo json_encode($json_data);
-// }
 
 public function activityLogDetails($id)
 {

@@ -11,18 +11,14 @@ class PayrollItemMeta extends Model
     use HasFactory;
 
     protected $fillable = [
-        'payroll_id',
-        'payroll_item_id',
-        'percentage',
-        'name',
-        'type',
-        'amount_type',
-        'amount'
+        'payroll_id', 'payroll_item_id',
+        'name', 'type', 'amount_type',
+        'percentage', 'amount',
     ];
 
     protected $casts = [
         'percentage' => 'decimal:2',
-        'amount' => 'decimal:2',
+        'amount'     => 'decimal:2',
     ];
 
     public function payroll(): BelongsTo

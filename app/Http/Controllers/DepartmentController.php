@@ -13,7 +13,7 @@ class DepartmentController extends Controller
     {
         if(Auth::user()->hasPermissionTo('department')) {
             $lims_department_all = Department::where('is_active', true)->get();
-            return view('backend.department.index', compact('lims_department_all'));
+            return view('backend.hrm.department.index', compact('lims_department_all'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');

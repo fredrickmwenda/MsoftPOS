@@ -22,7 +22,7 @@
         @if($general_setting->site_logo)
         <a href="{{url('/')}}"> <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a></a>
         @else
-        <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+        <a href="{{url('/')}}"><h1 class="d-inline" style="color: #000000!important;">{{$general_setting->site_title}}</h1></a>
         @endif
         
     <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
@@ -34,13 +34,13 @@
 </nav>
 <!-- navbar-->
 <header>
-    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #0a382b, #f5f8fe) !important;">
 
         <a id="toggle-btn" href="#" class="menu-btn"><i class="fa fa-bars"> </i></a>
 
         <span class="brand-big mb-3 mt-2">
             
-            <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+            <a href="{{url('/')}}"><h1 class="d-inline" style="color: #000000!important;">{{$general_setting->site_title}}</h1></a>
             
         </span>
 
@@ -95,10 +95,10 @@
             </div>
             <li class="nav-item ml-4"><a id="btnFullscreen" data-toggle="tooltip" title="Full Screen"><i class="dripicons-expand"></i></a></li>
             <li class="nav-item">
-    <a href="#" id="launch-customer-display" data-toggle="tooltip" title="Launch Customer Display">
-        <i class="dripicons-device-desktop"></i>
-    </a>
-</li>
+                <a href="#" id="launch-customer-display" data-toggle="tooltip" title="Launch Customer Display">
+                    <i class="dripicons-device-desktop"></i>
+                </a>
+            </li>
             {{-- Use cached permission checks from controller instead of DB calls --}}
             @if($permissionChecks['pos_setting'])
             <li class="nav-item"><a class="dropdown-item" data-toggle="tooltip" href="{{route('setting.pos')}}" title="{{trans('file.POS Setting')}}"><i class="dripicons-gear"></i></a> </li>
@@ -186,7 +186,7 @@
                 <source src="{{url('beep/beep-07.mp3')}}"></source>
             </audio>
 
-            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #13bd60, #f5f8fe) !important;">
+            <div class="col-md-2 order-3 order-md-1" style="border-radius: 0px !important;  background: linear-gradient(to bottom, #0a382b, #f5f8fe) !important;">
                 <div class="pos-payment-buttons">
                         @if(in_array("cash",$options))
                         <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="cash-btn"><i class="fa fa-money"></i> {{trans('file.Cash')}}</button>
@@ -463,7 +463,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-12 totals" style="border-top: 2px solid #e4e6fc; padding-top: 10px; color: #13bd60;">
+                                <div class="col-12 totals" style="border-top: 2px solid #e4e6fc; padding-top: 10px; color: #0a382b;">
                                     <div class="row">
                                         <div class="col-sm-4">
                                             <span class="totals-title">{{trans('file.Items')}}</span><span id="item">0</span>
@@ -1160,10 +1160,6 @@
 @push('scripts')
 <script type="text/javascript">
 
-
-    
-
-
     $("ul#sale").siblings('a').attr('aria-expanded','true');
     $("ul#sale").addClass("show");
     $("ul#sale #sale-pos-menu").addClass("active");
@@ -1171,6 +1167,98 @@
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        }
+    });
+
+    /* ============================================================
+   CUSTOMER DISPLAY — broadcast + window launcher
+   ============================================================ */
+    const displayChannel = new BroadcastChannel('pos_dual_screen');
+    let customerDisplayWindow = null;
+
+    // ---------- Open / focus the display window ----------
+    $('#launch-customer-display').on('click', function (e) {
+        e.preventDefault();
+        if (customerDisplayWindow && !customerDisplayWindow.closed) {
+            customerDisplayWindow.focus();
+            syncDisplayState();
+            return;
+        }
+        customerDisplayWindow = window.open(
+            '{{ route("customer.display") }}',
+            'CustomerDisplay',
+            'width=1100,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no'
+        );
+        // give the new window time to load, then push current state
+        setTimeout(syncDisplayState, 1200);
+    });
+
+    // ---------- Helpers ----------
+    function broadcastToDisplay(type, payload) {
+        try {
+            displayChannel.postMessage(Object.assign({ type: type }, payload || {}));
+        } catch (e) { /* ignore */ }
+    }
+
+    function isDisplayOpen() {
+        return customerDisplayWindow && !customerDisplayWindow.closed;
+    }
+
+    function syncDisplayState() {
+        if (!isDisplayOpen()) return;
+        if ($('table.order-list tbody tr').length > 0) {
+            broadcastCartUpdate();
+        } else {
+            broadcastToDisplay('cart_clear');
+        }
+    }
+
+    function broadcastCartUpdate() {
+        if (!isDisplayOpen()) return;
+
+        const items = [];
+        $('table.order-list tbody tr').each(function () {
+            const row     = $(this);
+            // product name lives in first cell's <strong>
+            const name    = row.find('td:first-child strong').first().text().trim()
+                        || row.find('td:first-child').text().trim();
+            const code    = row.find('.product-code').val() || '';
+            const qty     = parseFloat(row.find('.qty').val())   || 0;
+            const sub     = parseFloat(row.find('.sub-total').text()) || 0;
+            items.push({ name: name, code: code, qty: qty, subtotal: sub });
+        });
+
+        const totals = {
+            items:      parseFloat($('input[name="total_qty"]').val())      || 0,
+            subtotal:   parseFloat($('input[name="total_price"]').val())    || 0,
+            tax:        parseFloat($('input[name="total_tax"]').val())      || 0,
+            discount:   parseFloat($('input[name="total_discount"]').val()) || 0,
+            grandTotal: parseFloat($('input[name="grand_total"]').val())    || 0,
+            ref:        $('#reference-no').val() || '',
+            customer:   $('#customer_id option:selected').text() || ''
+        };
+
+        broadcastToDisplay('cart_update', { items: items, totals: totals });
+    }
+
+    function broadcastPaymentStart() {
+        if (!isDisplayOpen()) return;
+        const amount      = parseFloat($('#grand-total').text()) || 0;
+        const method      = ($('select[name="paid_by_id"] option:selected').text() || 'Cash').trim();
+        const paying      = parseFloat($('input[name="paying_amount"]').val()) || 0;
+        const changeAmt   = Math.max(0, paying - amount);
+
+        broadcastToDisplay('payment_start', {
+            amount: amount,
+            method: method,
+            change: changeAmt
+        });
+    }
+
+    // ---------- Listen for display_ready (display refreshed / became visible) ----------
+    displayChannel.addEventListener('message', function (ev) {
+        if (ev.data && ev.data.type === 'display_ready') {
+            syncDisplayState();
         }
     });
 
@@ -1201,434 +1289,442 @@
     var currency = <?php echo json_encode($currency) ?>;
     var valid;
 
-// array data depend on warehouse
-var lims_product_array = [];
-var product_code = [];
-var product_name = [];
-var product_qty = [];
-var product_type = [];
-var product_id = [];
-var product_list = [];
-var qty_list = [];
+    // array data depend on warehouse
+    var lims_product_array = [];
+    var product_code = [];
+    var product_name = [];
+    var product_qty = [];
+    var product_type = [];
+    var product_id = [];
+    var product_list = [];
+    var qty_list = [];
 
-// array data with selection
-var product_price = [];
-var wholesale_price = [];
-var product_shelf = [];
-var product_discount = [];
-var tax_rate = [];
-var tax_name = [];
-var tax_method = [];
-var unit_name = [];
-var unit_operator = [];
-var unit_operation_value = [];
-var is_imei = [];
-var is_variant = [];
-var gift_card_amount = [];
+    // array data with selection
+    var product_price = [];
+    var wholesale_price = [];
+    var product_shelf = [];
+    var product_discount = [];
+    var tax_rate = [];
+    var tax_name = [];
+    var tax_method = [];
+    var unit_name = [];
+    var unit_operator = [];
+    var unit_operation_value = [];
+    var is_imei = [];
+    var is_variant = [];
+    var gift_card_amount = [];
 
-var product_warehouse_price = [];
+    var product_warehouse_price = [];
 
-// temporary array
-var temp_unit_name = [];
-var temp_unit_operator = [];
-var temp_unit_operation_value = [];
+    // temporary array
+    var temp_unit_name = [];
+    var temp_unit_operator = [];
+    var temp_unit_operation_value = [];
 
-var deposit = <?php echo json_encode($deposit) ?>;
-var points = <?php echo json_encode($points) ?>;
-var reward_point_setting = <?php echo json_encode($lims_reward_point_setting_data) ?>;
+    var deposit = <?php echo json_encode($deposit) ?>;
+    var points = <?php echo json_encode($points) ?>;
+    var reward_point_setting = <?php echo json_encode($lims_reward_point_setting_data) ?>;
 
-@if($lims_pos_setting_data)
-var product_row_number = <?php echo json_encode($lims_pos_setting_data->product_number) ?>;
-@endif
-var rowindex;
-var customer_group_rate;
-var row_product_price;
-var pos;
-var keyboard_active = <?php echo json_encode($keybord_active); ?>;
-var isAdmin = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id <= 2)) ?>;
-var isStaff = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id > 2)) ?>;
-var warehouse_id = <?php echo json_encode(\Auth::user()->warehouse_id) ?>;
-var biller_id = <?php echo json_encode(\Auth::user()->biller_id) ?>;
-var coupon_list = <?php echo json_encode($lims_coupon_list) ?>;
-var currency = <?php echo json_encode($currency) ?>;
-var currencyChange = false;
-$('#currency').val(currency['id']);
+    @if($lims_pos_setting_data)
+    var product_row_number = <?php echo json_encode($lims_pos_setting_data->product_number) ?>;
+    @endif
+    var rowindex;
+    var customer_group_rate;
+    var row_product_price;
+    var pos;
+    var keyboard_active = <?php echo json_encode($keybord_active); ?>;
+    var isAdmin = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id <= 2)) ?>;
+    var isStaff = <?php echo json_encode(Auth::user()->roles->contains(fn($role) => $role->id > 2)) ?>;
+    var warehouse_id = <?php echo json_encode(\Auth::user()->warehouse_id) ?>;
+    var biller_id = <?php echo json_encode(\Auth::user()->biller_id) ?>;
+    var coupon_list = <?php echo json_encode($lims_coupon_list) ?>;
+    var currency = <?php echo json_encode($currency) ?>;
+    var currencyChange = false;
+    $('#currency').val(currency['id']);
 
-function loadWarehouseProducts() {
-    var warehouse_id = $('select[name="warehouse_id"]').val();
-    if (!warehouse_id) {
-        lims_product_array = [];
-        return;
-    }
-
-    $.ajax({
-        type: 'GET',
-        async: false,
-        url: 'sales/getproduct/' + warehouse_id,
-        success: function(data) {
+    function loadWarehouseProducts() {
+        var warehouse_id = $('select[name="warehouse_id"]').val();
+        if (!warehouse_id) {
             lims_product_array = [];
-            product_code = data[0];
-            product_name = data[1];
-            product_qty = data[2];
-            product_type = data[3];
-            product_id = data[4];
-            product_list = data[5];
-            qty_list = data[6];
-            product_warehouse_price = data[7];
-            batch_no = data[8];
-            product_batch_id = data[9];
-            expired_date = data[10];
-            is_embeded = data[11];
-            product_shelf = data[12];
-
-            $.each(product_code, function(index) {
-                if(is_embeded[index])
-                    lims_product_array.push(
-                         'Code: ' + product_code[index] +
-                        ' | Name: ' + product_name[index] +
-                        ' | Price: ' + product_warehouse_price[index] +
-                        ' | Qty: ' + product_qty[index] +
-                        ' | Shelf: ' + product_shelf[index] +
-                        ' | Embedded: ' + is_embeded[index] 
-                    );
-                else
-                    lims_product_array.push(
-                         'Code: ' + product_code[index] +
-                        ' | Name: ' + product_name[index] +
-                        ' | Price: ' + product_warehouse_price[index] +
-                        ' | Qty: ' + product_qty[index] +
-                        ' | Shelf: ' + product_shelf[index] 
-                    );
-            });
-        },
-        error: function() {
-            lims_product_array = [];
+            return;
         }
-    });
-}
 
-$('#currency').change(function(){
-    var rate = $(this).find(':selected').data('rate');
-    var currency_id = $(this).val();
-    $('#exchange_rate').val(rate);
-    //$('input[name="currency_id"]').val(currency_id);
-    currency['exchange_rate'] = rate;
-    $("table.order-list tbody .qty").each(function(index) {
-        rowindex = index;
-        currencyChange = true;
-        checkDiscount($(this).val(), true);
-        couponDiscount();
-    });
-});
+        $.ajax({
+            type: 'GET',
+            async: false,
+            url: 'sales/getproduct/' + warehouse_id,
+            success: function(data) {
+                lims_product_array = [];
+                product_code = data[0];
+                product_name = data[1];
+                product_qty = data[2];
+                product_type = data[3];
+                product_id = data[4];
+                product_list = data[5];
+                qty_list = data[6];
+                product_warehouse_price = data[7];
+                batch_no = data[8];
+                product_batch_id = data[9];
+                expired_date = data[10];
+                is_embeded = data[11];
+                product_shelf = data[12];
 
-var localStorageQty = [];
-var localStorageProductId = [];
-var localStorageProductDiscount = [];
-var localStorageTaxRate = [];
-var localStorageNetUnitPrice = [];
-var localStorageTaxValue = [];
-var localStorageTaxName = [];
-var localStorageTaxMethod = [];
-var localStorageSubTotalUnit = [];
-var localStorageSubTotal = [];
-var localStorageProductCode = [];
-var localStorageSaleUnit = [];
-var localStorageTempUnitName = [];
-var localStorageSaleUnitOperator = [];
-var localStorageSaleUnitOperationValue = [];
-
-$("#reference-no").val(getSavedValue("reference-no"));
-$("#order-discount").val(getSavedValue("order-discount"));
-$("#order-discount-val").val(getSavedValue("order-discount-val"));
-$("#order-discount-type").val(getSavedValue("order-discount-type"));
-$("#order-tax-rate-select").val(getSavedValue("order-tax-rate-select"));
-
-
-$("#shipping-cost-val").val(getSavedValue("shipping-cost-val"));
-
-if(localStorage.getItem("tbody-id")) {
-  $("#tbody-id").html(localStorage.getItem("tbody-id"));
-}
-
-function saveValue(e) {
-    var id = e.id;  // get the sender's id to save it.
-    var val = e.value; // get the value.
-    localStorage.setItem(id, val);// Every time user writing something, the localStorage's value will override.
-}
-//get the saved value function - return the value of "v" from localStorage.
-function getSavedValue  (v) {
-    if (!localStorage.getItem(v)) {
-        return "";// You can change this to your defualt value.
-    }
-    return localStorage.getItem(v);
-}
-
-if(getSavedValue("localStorageQty")) {
-  localStorageQty = getSavedValue("localStorageQty").split(",");
-  localStorageProductDiscount = getSavedValue("localStorageProductDiscount").split(",");
-  localStorageTaxRate = getSavedValue("localStorageTaxRate").split(",");
-  localStorageNetUnitPrice = getSavedValue("localStorageNetUnitPrice").split(",");
-  localStorageTaxValue = getSavedValue("localStorageTaxValue").split(",");
-  localStorageTaxName = getSavedValue("localStorageTaxName").split(",");
-  localStorageTaxMethod = getSavedValue("localStorageTaxMethod").split(",");
-  localStorageSubTotalUnit = getSavedValue("localStorageSubTotalUnit").split(",");
-  localStorageSubTotal = getSavedValue("localStorageSubTotal").split(",");
-  localStorageProductId = getSavedValue("localStorageProductId").split(",");
-  localStorageProductCode = getSavedValue("localStorageProductCode").split(",");
-  localStorageSaleUnit = getSavedValue("localStorageSaleUnit").split(",");
-  localStorageTempUnitName = getSavedValue("localStorageTempUnitName").split(",,");
-  localStorageSaleUnitOperator = getSavedValue("localStorageSaleUnitOperator").split(",,");
-  localStorageSaleUnitOperationValue = getSavedValue("localStorageSaleUnitOperationValue").split(",,");
-  /*localStorageQty.pop();
-  localStorage.setItem("localStorageQty", localStorageQty);*/
-  for(var i = 0; i < localStorageQty.length; i++) {
-    
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ') .qty').val(localStorageQty[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.discount-value').val(localStorageProductDiscount[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-rate').val(localStorageTaxRate[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.net_unit_price').val(localStorageNetUnitPrice[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-value').val(localStorageTaxValue[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-name').val(localStorageTaxName[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-method').val(localStorageTaxMethod[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.product-price').text(localStorageSubTotalUnit[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sub-total').text(localStorageSubTotal[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.subtotal-value').val(localStorageSubTotal[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.product-id').val(localStorageProductId[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.product-code').val(localStorageProductCode[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit').val(localStorageSaleUnit[i]);
-    if(i==0) {
-      localStorageTempUnitName[i] += ',';
-      localStorageSaleUnitOperator[i] += ',';
-      localStorageSaleUnitOperationValue[i] += ',';
-    }
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit-operator').val(localStorageSaleUnitOperator[i]);
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit-operation-value').val(localStorageSaleUnitOperationValue[i]);
-
-    product_price.push(parseFloat($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.product_price').val()));
-    var quantity = parseFloat($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.qty').val());
-    product_discount.push(parseFloat(localStorageProductDiscount[i] / localStorageQty[i]).toFixed({{$general_setting->decimal}}));
-    tax_rate.push(parseFloat($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-rate').val()));
-    tax_name.push($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-name').val());
-    tax_method.push($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.tax-method').val());
-    temp_unit_name = $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit').val().split(',');
-    unit_name.push(localStorageTempUnitName[i]);
-    unit_operator.push($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit-operator').val());
-    unit_operation_value.push($('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit-operation-value').val());
-    $('table.order-list tbody tr:nth-child(' + (i + 1) + ')').find('.sale-unit').val(temp_unit_name[0]);
-    calculateTotal();
-    //calculateRowProductData(localStorageQty[i]);
-  }
-}
-
-
-
-
-
-$('.selectpicker').selectpicker({
-  style: 'btn-link',
-});
-
-if(keyboard_active==1){
-
-    $("input.numkey:text").keyboard({
-        usePreview: false,
-        layout: 'custom',
-        display: {
-        'accept'  : '&#10004;',
-        'cancel'  : '&#10006;'
-        },
-        customLayout : {
-          'normal' : ['1 2 3', '4 5 6', '7 8 9','0 {dec} {bksp}','{clear} {cancel} {accept}']
-        },
-        restrictInput : true, // Prevent keys not in the displayed keyboard from being typed in
-        preventPaste : true,  // prevent ctrl-v and right click
-        autoAccept : true,
-        css: {
-            // input & preview
-            // keyboard container
-            container: 'center-block dropdown-menu', // jumbotron
-            // default state
-            buttonDefault: 'btn btn-default',
-            // hovered button
-            buttonHover: 'btn-primary',
-            // Action keys (e.g. Accept, Cancel, Tab, etc);
-            // this replaces "actionClass" option
-            buttonAction: 'active'
-        },
-    });
-
-    $('input[type="text"]').keyboard({
-        usePreview: false,
-        autoAccept: true,
-        autoAcceptOnEsc: true,
-        css: {
-            // input & preview
-            // keyboard container
-            container: 'center-block dropdown-menu', // jumbotron
-            // default state
-            buttonDefault: 'btn btn-default',
-            // hovered button
-            buttonHover: 'btn-primary',
-            // Action keys (e.g. Accept, Cancel, Tab, etc);
-            // this replaces "actionClass" option
-            buttonAction: 'active',
-            // used when disabling the decimal button {dec}
-            // when a decimal exists in the input area
-            buttonDisabled: 'disabled'
-        },
-        change: function(e, keyboard) {
-                keyboard.$el.val(keyboard.$preview.val())
-                keyboard.$el.trigger('propertychange')
-              }
-    });
-
-    $('textarea').keyboard({
-        usePreview: false,
-        autoAccept: true,
-        autoAcceptOnEsc: true,
-        css: {
-            // input & preview
-            // keyboard container
-            container: 'center-block dropdown-menu', // jumbotron
-            // default state
-            buttonDefault: 'btn btn-default',
-            // hovered button
-            buttonHover: 'btn-primary',
-            // Action keys (e.g. Accept, Cancel, Tab, etc);
-            // this replaces "actionClass" option
-            buttonAction: 'active',
-            // used when disabling the decimal button {dec}
-            // when a decimal exists in the input area
-            buttonDisabled: 'disabled'
-        },
-        change: function(e, keyboard) {
-                keyboard.$el.val(keyboard.$preview.val())
-                keyboard.$el.trigger('propertychange')
-              }
-    });
-
-    $('#lims_productcodeSearch').keyboard().autocomplete().addAutocomplete({
-        position: {
-            of: '#lims_productcodeSearch',
-            my: 'left top',
-            at: 'left bottom+5',
-            collision: 'flip'
-        }
-    });
-}
-
-
-$('.customer-submit-btn').on("click", function(e) {
-    e.preventDefault();
-    const toastMagic = new ToastMagic();
-
-    $.ajax({
-        type: 'POST',
-        url: '{{ route('customer.storeCustomer') }}',
-        data: $("#customer-form").serialize(),
-        headers: {
-            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-        },
-        success: function(response) {
-            // Success message
-            toastMagic.success('Customer added successfully!');
-
-            // Append new customer to select
-            let key = response['id'];
-            let value = response['name'] + ' [' + response['phone_number'] + ']';
-            $('select[name="customer_id"]').append('<option value="' + key + '">' + value + '</option>');
-            $('select[name="customer_id"]').val(key);
-            $('.selectpicker').selectpicker('refresh');
-
-            // Hide modal
-            $("#addCustomer").modal('hide');
-
-            // Optionally reset the form
-            // $('#customer-form')[0].reset();
-        },
-        error: function(xhr) {
-            if (xhr.status === 422) {
-                // Validation error
-                const errors = xhr.responseJSON.errors;
-                $.each(errors, function(field, messages) {
-                    toastMagic.error(messages[0]); // Show the first validation message per field
+                $.each(product_code, function(index) {
+                    if(is_embeded[index])
+                        lims_product_array.push(
+                             'Code: ' + product_code[index] +
+                            ' | Name: ' + product_name[index] +
+                            ' | Price: ' + product_warehouse_price[index] +
+                            ' | Qty: ' + product_qty[index] +
+                            ' | Shelf: ' + product_shelf[index] +
+                            ' | Embedded: ' + is_embeded[index] 
+                        );
+                    else
+                        lims_product_array.push(
+                             'Code: ' + product_code[index] +
+                            ' | Name: ' + product_name[index] +
+                            ' | Price: ' + product_warehouse_price[index] +
+                            ' | Qty: ' + product_qty[index] +
+                            ' | Shelf: ' + product_shelf[index] 
+                        );
                 });
-            } else {
-                // Other errors (e.g. 500)
-                toastMagic.error('An unexpected error occurred. Please try again.');
-                console.error('Error details:', xhr.responseText);
+            },
+            error: function() {
+                lims_product_array = [];
             }
-        }
+        });
+    }
+
+    $('#currency').change(function(){
+        var rate = $(this).find(':selected').data('rate');
+        var currency_id = $(this).val();
+        $('#exchange_rate').val(rate);
+        //$('input[name="currency_id"]').val(currency_id);
+        currency['exchange_rate'] = rate;
+        $("table.order-list tbody .qty").each(function(index) {
+            rowindex = index;
+            currencyChange = true;
+            checkDiscount($(this).val(), true);
+            couponDiscount();
+        });
     });
-});
+
+    var localStorageQty = [];
+    var localStorageProductId = [];
+    var localStorageProductDiscount = [];
+    var localStorageTaxRate = [];
+    var localStorageNetUnitPrice = [];
+    var localStorageTaxValue = [];
+    var localStorageTaxName = [];
+    var localStorageTaxMethod = [];
+    var localStorageSubTotalUnit = [];
+    var localStorageSubTotal = [];
+    var localStorageProductCode = [];
+    var localStorageSaleUnit = [];
+    var localStorageTempUnitName = [];
+    var localStorageSaleUnitOperator = [];
+    var localStorageSaleUnitOperationValue = [];
+
+    $("#reference-no").val(getSavedValue("reference-no"));
+    $("#order-discount").val(getSavedValue("order-discount"));
+    $("#order-discount-val").val(getSavedValue("order-discount-val"));
+    $("#order-discount-type").val(getSavedValue("order-discount-type"));
+    $("#order-tax-rate-select").val(getSavedValue("order-tax-rate-select"));
 
 
-  $("li#notification-icon").on("click", function (argument) {
-      $.get('notifications/mark-as-read', function(data) {
-          $("span.notification-number").text(alert_product);
-      });
-  });
+    $("#shipping-cost-val").val(getSavedValue("shipping-cost-val"));
 
-  $("#register-details-btn").on("click", function (e) {
-      e.preventDefault();
-      $.ajax({
-          url: 'cash-register/showDetails/'+warehouse_id,
-          type: "GET",
-          success:function(data) {
-              $('#register-details-modal #cash_in_hand').text(data['cash_in_hand']);
-              $('#register-details-modal #total_sale_amount').text(data['total_sale_amount']);
-              $('#register-details-modal #total_payment').text(data['total_payment']);
-              $('#register-details-modal #cash_payment').text(data['cash_payment']);
-              $('#register-details-modal #credit_card_payment').text(data['credit_card_payment']);
-              $('#register-details-modal #cheque_payment').text(data['cheque_payment']);
-              $('#register-details-modal #gift_card_payment').text(data['gift_card_payment']);
-              $('#register-details-modal #deposit_payment').text(data['deposit_payment']);
-              $('#register-details-modal #paypal_payment').text(data['paypal_payment']);
-              $('#register-details-modal #total_sale_return').text(data['total_sale_return']);
-              $('#register-details-modal #total_expense').text(data['total_expense']);
-              $('#register-details-modal #total_cash').text(data['total_cash']);
-              $('#register-details-modal input[name=cash_register_id]').val(data['id']);
-          }
-      });
-      $('#register-details-modal').modal('show');
-  });
+    if(localStorage.getItem("tbody-id")) {
+      $("#tbody-id").html(localStorage.getItem("tbody-id"));
+    }
 
-  $("#today-sale-btn").on("click", function (e) {
-      e.preventDefault();
-      $.ajax({
-          url: 'sales/today-sale/',
-          type: "GET",
-          success:function(data) {
-              $('#today-sale-modal .total_sale_amount').text(data['total_sale_amount']);
-              $('#today-sale-modal .total_payment').text(data['total_payment']);
-              $('#today-sale-modal .cash_payment').text(data['cash_payment']);
-              $('#today-sale-modal .credit_card_payment').text(data['credit_card_payment']);
-              $('#today-sale-modal .cheque_payment').text(data['cheque_payment']);
-              $('#today-sale-modal .gift_card_payment').text(data['gift_card_payment']);
-              $('#today-sale-modal .deposit_payment').text(data['deposit_payment']);
-              $('#today-sale-modal .paypal_payment').text(data['paypal_payment']);
-              $('#today-sale-modal .total_sale_return').text(data['total_sale_return']);
-              $('#today-sale-modal .total_expense').text(data['total_expense']);
-              $('#today-sale-modal .total_cash').text(data['total_cash']);
-            //   changes by yogesh
-              $('#today-sale-modal .mobile_payment').text(data['mobile_payment']);
-              //   changes end by yogesh
-          }
-      });
-      $('#today-sale-modal').modal('show');
-  });
+    function saveValue(e) {
+        var id = e.id;  // get the sender's id to save it.
+        var val = e.value; // get the value.
+        localStorage.setItem(id, val);// Every time user writing something, the localStorage's value will override.
+    }
+    //get the saved value function - return the value of "v" from localStorage.
+    function getSavedValue  (v) {
+        if (!localStorage.getItem(v)) {
+            return "";// You can change this to your defualt value.
+        }
+        return localStorage.getItem(v);
+    }
 
-  $("#today-profit-btn").on("click", function (e) {
-      e.preventDefault();
-      calculateTodayProfit(0);
-  });
+    if(getSavedValue("localStorageQty")) {
+      try {
+        localStorageQty = getSavedValue("localStorageQty").split(",");
+        localStorageProductDiscount = getSavedValue("localStorageProductDiscount").split(",");
+        localStorageTaxRate = getSavedValue("localStorageTaxRate").split(",");
+        localStorageNetUnitPrice = getSavedValue("localStorageNetUnitPrice").split(",");
+        localStorageTaxValue = getSavedValue("localStorageTaxValue").split(",");
+        localStorageTaxName = getSavedValue("localStorageTaxName").split(",");
+        localStorageTaxMethod = getSavedValue("localStorageTaxMethod").split(",");
+        localStorageSubTotalUnit = getSavedValue("localStorageSubTotalUnit").split(",");
+        localStorageSubTotal = getSavedValue("localStorageSubTotal").split(",");
+        localStorageProductId = getSavedValue("localStorageProductId").split(",");
+        localStorageProductCode = getSavedValue("localStorageProductCode").split(",");
+        localStorageSaleUnit = getSavedValue("localStorageSaleUnit").split(",");
+        localStorageTempUnitName = getSavedValue("localStorageTempUnitName").split(",,");
+        localStorageSaleUnitOperator = getSavedValue("localStorageSaleUnitOperator").split(",,");
+        localStorageSaleUnitOperationValue = getSavedValue("localStorageSaleUnitOperationValue").split(",,");
+      } catch (e) {
+        console.error('Failed to restore cart from localStorage, clearing.', e);
+        ['localStorageQty','localStorageProductDiscount','localStorageTaxRate','localStorageNetUnitPrice',
+         'localStorageTaxValue','localStorageTaxName','localStorageTaxMethod','localStorageSubTotalUnit',
+         'localStorageSubTotal','localStorageProductId','localStorageProductCode','localStorageSaleUnit',
+         'localStorageTempUnitName','localStorageSaleUnitOperator','localStorageSaleUnitOperationValue','tbody-id']
+         .forEach(k => localStorage.removeItem(k));
+        localStorageQty = [];
+      }
 
-  $("#today-profit-modal select[name=warehouseId]").on("change", function() {
-      calculateTodayProfit($(this).val());
-  });
+      for(var i = 0; i < localStorageQty.length; i++) {
+        try {
+            var $row = $('table.order-list tbody tr:nth-child(' + (i + 1) + ')');
+            if (!$row.length) continue; // skip if row missing
 
-  function calculateTodayProfit(warehouse_id) {
-      $.ajax({
+            $row.find('.qty').val(localStorageQty[i]);
+            $row.find('.discount-value').val(localStorageProductDiscount[i] || 0);
+            $row.find('.tax-rate').val(localStorageTaxRate[i] || 0);
+            $row.find('.net_unit_price').val(localStorageNetUnitPrice[i] || 0);
+            $row.find('.tax-value').val(localStorageTaxValue[i] || 0);
+            $row.find('.tax-name').val(localStorageTaxName[i] || '');
+            $row.find('.tax-method').val(localStorageTaxMethod[i] || '');
+            $row.find('.product-price').text(localStorageSubTotalUnit[i] || 0);
+            $row.find('.sub-total').text(localStorageSubTotal[i] || 0);
+            $row.find('.subtotal-value').val(localStorageSubTotal[i] || 0);
+            $row.find('.product-id').val(localStorageProductId[i] || '');
+            $row.find('.product-code').val(localStorageProductCode[i] || '');
+            $row.find('.sale-unit').val(localStorageSaleUnit[i] || '');
+
+            product_price.push(parseFloat($row.find('.product_price').val()) || 0);
+
+            var discount = parseFloat(localStorageProductDiscount[i] || 0) / parseFloat(localStorageQty[i] || 1);
+            product_discount.push(discount.toFixed({{$general_setting->decimal}}));
+
+            tax_rate.push(parseFloat($row.find('.tax-rate').val()) || 0);
+            tax_name.push($row.find('.tax-name').val() || '');
+            tax_method.push($row.find('.tax-method').val() || '');
+
+            var saleUnitVal = $row.find('.sale-unit').val() || '';
+            temp_unit_name = saleUnitVal.split(',');
+
+            unit_name.push(localStorageTempUnitName[i] || '');
+            unit_operator.push($row.find('.sale-unit-operator').val() || '');
+            unit_operation_value.push($row.find('.sale-unit-operation-value').val() || '');
+
+            $row.find('.sale-unit').val(temp_unit_name[0] || '');
+        } catch (e) {
+            console.warn('Skipped row during localStorage restore:', i, e);
+        }
+        calculateTotal();
+        //calculateRowProductData(localStorageQty[i]);
+      }
+    }
+
+    $('.selectpicker').selectpicker({
+      style: 'btn-link',
+    });
+
+    if(keyboard_active==1){
+
+        $("input.numkey:text").keyboard({
+            usePreview: false,
+            layout: 'custom',
+            display: {
+            'accept'  : '&#10004;',
+            'cancel'  : '&#10006;'
+            },
+            customLayout : {
+              'normal' : ['1 2 3', '4 5 6', '7 8 9','0 {dec} {bksp}','{clear} {cancel} {accept}']
+            },
+            restrictInput : true, // Prevent keys not in the displayed keyboard from being typed in
+            preventPaste : true,  // prevent ctrl-v and right click
+            autoAccept : true,
+            css: {
+                // input & preview
+                // keyboard container
+                container: 'center-block dropdown-menu', // jumbotron
+                // default state
+                buttonDefault: 'btn btn-default',
+                // hovered button
+                buttonHover: 'btn-primary',
+                // Action keys (e.g. Accept, Cancel, Tab, etc);
+                // this replaces "actionClass" option
+                buttonAction: 'active'
+            },
+        });
+
+        $('input[type="text"]').keyboard({
+            usePreview: false,
+            autoAccept: true,
+            autoAcceptOnEsc: true,
+            css: {
+                // input & preview
+                // keyboard container
+                container: 'center-block dropdown-menu', // jumbotron
+                // default state
+                buttonDefault: 'btn btn-default',
+                // hovered button
+                buttonHover: 'btn-primary',
+                // Action keys (e.g. Accept, Cancel, Tab, etc);
+                // this replaces "actionClass" option
+                buttonAction: 'active',
+                // used when disabling the decimal button {dec}
+                // when a decimal exists in the input area
+                buttonDisabled: 'disabled'
+            },
+            change: function(e, keyboard) {
+                    keyboard.$el.val(keyboard.$preview.val())
+                    keyboard.$el.trigger('propertychange')
+                  }
+        });
+
+        $('textarea').keyboard({
+            usePreview: false,
+            autoAccept: true,
+            autoAcceptOnEsc: true,
+            css: {
+                // input & preview
+                // keyboard container
+                container: 'center-block dropdown-menu', // jumbotron
+                // default state
+                buttonDefault: 'btn btn-default',
+                // hovered button
+                buttonHover: 'btn-primary',
+                // Action keys (e.g. Accept, Cancel, Tab, etc);
+                // this replaces "actionClass" option
+                buttonAction: 'active',
+                // used when disabling the decimal button {dec}
+                // when a decimal exists in the input area
+                buttonDisabled: 'disabled'
+            },
+            change: function(e, keyboard) {
+                    keyboard.$el.val(keyboard.$preview.val())
+                    keyboard.$el.trigger('propertychange')
+                  }
+        });
+
+        $('#lims_productcodeSearch').keyboard().autocomplete().addAutocomplete({
+            position: {
+                of: '#lims_productcodeSearch',
+                my: 'left top',
+                at: 'left bottom+5',
+                collision: 'flip'
+            }
+        });
+    }
+
+    $('.customer-submit-btn').on("click", function(e) {
+        e.preventDefault();
+        const toastMagic = new ToastMagic();
+
+        $.ajax({
+            type: 'POST',
+            url: '{{ route('customer.storeCustomer') }}',
+            data: $("#customer-form").serialize(),
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                // Success message
+                toastMagic.success('Customer added successfully!');
+
+                // Append new customer to select
+                let key = response['id'];
+                let value = response['name'] + ' [' + response['phone_number'] + ']';
+                $('select[name="customer_id"]').append('<option value="' + key + '">' + value + '</option>');
+                $('select[name="customer_id"]').val(key);
+                $('.selectpicker').selectpicker('refresh');
+
+                // Hide modal
+                $("#addCustomer").modal('hide');
+
+                // Optionally reset the form
+                // $('#customer-form')[0].reset();
+            },
+            error: function(xhr) {
+                if (xhr.status === 422) {
+                    // Validation error
+                    const errors = xhr.responseJSON.errors;
+                    $.each(errors, function(field, messages) {
+                        toastMagic.error(messages[0]); // Show the first validation message per field
+                    });
+                } else {
+                    // Other errors (e.g. 500)
+                    toastMagic.error('An unexpected error occurred. Please try again.');
+                    console.error('Error details:', xhr.responseText);
+                }
+            }
+        });
+    });
+
+    $("li#notification-icon").on("click", function (argument) {
+        $.get('notifications/mark-as-read', function(data) {
+            $("span.notification-number").text(alert_product);
+        });
+    });
+
+    $("#register-details-btn").on("click", function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: 'cash-register/showDetails/'+warehouse_id,
+            type: "GET",
+            success:function(data) {
+                $('#register-details-modal #cash_in_hand').text(data['cash_in_hand']);
+                $('#register-details-modal #total_sale_amount').text(data['total_sale_amount']);
+                $('#register-details-modal #total_payment').text(data['total_payment']);
+                $('#register-details-modal #cash_payment').text(data['cash_payment']);
+                $('#register-details-modal #credit_card_payment').text(data['credit_card_payment']);
+                $('#register-details-modal #cheque_payment').text(data['cheque_payment']);
+                $('#register-details-modal #gift_card_payment').text(data['gift_card_payment']);
+                $('#register-details-modal #deposit_payment').text(data['deposit_payment']);
+                $('#register-details-modal #paypal_payment').text(data['paypal_payment']);
+                $('#register-details-modal #total_sale_return').text(data['total_sale_return']);
+                $('#register-details-modal #total_expense').text(data['total_expense']);
+                $('#register-details-modal #total_cash').text(data['total_cash']);
+                $('#register-details-modal input[name=cash_register_id]').val(data['id']);
+            }
+        });
+        $('#register-details-modal').modal('show');
+    });
+
+    $("#today-sale-btn").on("click", function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: 'sales/today-sale/',
+            type: "GET",
+            success:function(data) {
+                $('#today-sale-modal .total_sale_amount').text(data['total_sale_amount']);
+                $('#today-sale-modal .total_payment').text(data['total_payment']);
+                $('#today-sale-modal .cash_payment').text(data['cash_payment']);
+                $('#today-sale-modal .credit_card_payment').text(data['credit_card_payment']);
+                $('#today-sale-modal .cheque_payment').text(data['cheque_payment']);
+                $('#today-sale-modal .gift_card_payment').text(data['gift_card_payment']);
+                $('#today-sale-modal .deposit_payment').text(data['deposit_payment']);
+                $('#today-sale-modal .paypal_payment').text(data['paypal_payment']);
+                $('#today-sale-modal .total_sale_return').text(data['total_sale_return']);
+                $('#today-sale-modal .total_expense').text(data['total_expense']);
+                $('#today-sale-modal .total_cash').text(data['total_cash']);
+              //   changes by yogesh
+                $('#today-sale-modal .mobile_payment').text(data['mobile_payment']);
+                //   changes end by yogesh
+            }
+        });
+        $('#today-sale-modal').modal('show');
+    });
+
+    $("#today-profit-btn").on("click", function (e) {
+        e.preventDefault();
+        calculateTodayProfit(0);
+    });
+
+    $("#today-profit-modal select[name=warehouseId]").on("change", function() {
+        calculateTodayProfit($(this).val());
+    });
+
+    function calculateTodayProfit(warehouse_id) {
+        $.ajax({
             url: 'sales/today-profit/' + warehouse_id,
             type: "GET",
             success:function(data) {
@@ -1638,1847 +1734,1733 @@ $('.customer-submit-btn').on("click", function(e) {
                 $('#today-profit-modal .profit').text(data['profit']);
             }
         });
-      $('#today-profit-modal').modal('show');
-  }
-
-if(isStaff) {
-    $('#biller_id').addClass('d-none');
-    $('#warehouse_id').addClass('d-none');
-    $('select[name=warehouse_id]').val(warehouse_id);
-    $('select[name=biller_id]').val(biller_id);
-    isCashRegisterAvailable(warehouse_id);
-}
-else {
-    // Try to get warehouse from localStorage first, then from pos_setting default, then from user
-    if(getSavedValue("warehouse_id")){
-      warehouse_id = getSavedValue("warehouse_id");
-    }
-    else if($("input[name='warehouse_id_hidden']").val()){
-      warehouse_id = $("input[name='warehouse_id_hidden']").val();
+        $('#today-profit-modal').modal('show');
     }
 
-    // Try to get biller from localStorage first, then from pos_setting default, then from user
-    if(getSavedValue("biller_id")){
-      biller_id = getSavedValue("biller_id");
+    if(isStaff) {
+        $('#biller_id').addClass('d-none');
+        $('#warehouse_id').addClass('d-none');
+        $('select[name=warehouse_id]').val(warehouse_id);
+        $('select[name=biller_id]').val(biller_id);
+        isCashRegisterAvailable(warehouse_id);
     }
-    else if($("input[name='biller_id_hidden']").val()){
-      biller_id = $("input[name='biller_id_hidden']").val();
-    }
-    
-    $('select[name=warehouse_id]').val(warehouse_id);
-    $('select[name=biller_id]').val(biller_id);
-}
-
-  // Try to get customer from localStorage first, then from pos_setting default
-  if(getSavedValue("customer_id")) {
-    $('select[name=customer_id]').val(getSavedValue("customer_id"));
-  }
-  else if($("input[name='customer_id_hidden']").val()){
-    $('select[name=customer_id]').val($("input[name='customer_id_hidden']").val());
-  }
-
-  // Auto-set defaults: if only one warehouse/biller/customer, select it
-  // If first option is a placeholder, use the second option
-  function setDefaultSelectValues() {
-    // Get pos_setting defaults if available
-    var posSettingWarehouse = $("input[name='warehouse_id_hidden']").val();
-    var posSettingBiller = $("input[name='biller_id_hidden']").val();
-    var posSettingCustomer = $("input[name='customer_id_hidden']").val();
-
-    // Set warehouse default - prefer pos_setting, then first available
-    var warehouseOptions = $('select[name=warehouse_id] option');
-    if(posSettingWarehouse && $('select[name=warehouse_id] option[value="' + posSettingWarehouse + '"]').length) {
-      $('select[name=warehouse_id]').val(posSettingWarehouse);
-    }
-    else if(warehouseOptions.length > 0) {
-      var firstOption = warehouseOptions.eq(0);
-      if(firstOption.val() === '' || firstOption.val() === null) {
-        if(warehouseOptions.length > 1) {
-          $('select[name=warehouse_id]').val(warehouseOptions.eq(1).val());
+    else {
+        // Try to get warehouse from localStorage first, then from pos_setting default, then from user
+        if(getSavedValue("warehouse_id")){
+          warehouse_id = getSavedValue("warehouse_id");
         }
-      } else {
-        $('select[name=warehouse_id]').val(firstOption.val());
-      }
-    }
-
-    // Set biller default - prefer pos_setting, then first available
-    var billerOptions = $('select[name=biller_id] option');
-    if(posSettingBiller && $('select[name=biller_id] option[value="' + posSettingBiller + '"]').length) {
-      $('select[name=biller_id]').val(posSettingBiller);
-    }
-    else if(billerOptions.length === 1 || (billerOptions.length === 2 && $('select[name=biller_id] option:first').val() === '')) {
-      var firstRealOption = billerOptions.length === 1 ? billerOptions.eq(0) : billerOptions.eq(1);
-      $('select[name=biller_id]').val(firstRealOption.val());
-    }
-
-    // Set customer default - prefer pos_setting, then first available
-    var customerOptions = $('select[name=customer_id] option');
-    if(posSettingCustomer && $('select[name=customer_id] option[value="' + posSettingCustomer + '"]').length) {
-      $('select[name=customer_id]').val(posSettingCustomer);
-    }
-    else if(customerOptions.length > 0) {
-      var firstOption = customerOptions.eq(0);
-      if(firstOption.val() === '' || firstOption.val() === null) {
-        if(customerOptions.length > 1) {
-          $('select[name=customer_id]').val(customerOptions.eq(1).val());
+        else if($("input[name='warehouse_id_hidden']").val()){
+          warehouse_id = $("input[name='warehouse_id_hidden']").val();
         }
-      } else {
-        $('select[name=customer_id]').val(firstOption.val());
-      }
+
+        // Try to get biller from localStorage first, then from pos_setting default, then from user
+        if(getSavedValue("biller_id")){
+          biller_id = getSavedValue("biller_id");
+        }
+        else if($("input[name='biller_id_hidden']").val()){
+          biller_id = $("input[name='biller_id_hidden']").val();
+        }
+        
+        $('select[name=warehouse_id]').val(warehouse_id);
+        $('select[name=biller_id]').val(biller_id);
     }
-  }
 
-  setDefaultSelectValues();
+    // Try to get customer from localStorage first, then from pos_setting default
+    if(getSavedValue("customer_id")) {
+      $('select[name=customer_id]').val(getSavedValue("customer_id"));
+    }
+    else if($("input[name='customer_id_hidden']").val()){
+      $('select[name=customer_id]').val($("input[name='customer_id_hidden']").val());
+    }
 
-$('.selectpicker').selectpicker('refresh');
+    // Auto-set defaults: if only one warehouse/biller/customer, select it
+    // If first option is a placeholder, use the second option
+    function setDefaultSelectValues() {
+        // Get pos_setting defaults if available
+        var posSettingWarehouse = $("input[name='warehouse_id_hidden']").val();
+        var posSettingBiller = $("input[name='biller_id_hidden']").val();
+        var posSettingCustomer = $("input[name='customer_id_hidden']").val();
 
-var id = $("#customer_id").val();
-$.get('sales/getcustomergroup/' + id, function(data) {
-    customer_group_rate = (data / 100);
-});
-
-// Use DOM value or fallback to warehouse_id (selectpicker may not have updated the select yet)
-loadWarehouseProducts();
-if (warehouse_id) {
-    isCashRegisterAvailable(warehouse_id);
-}
-
-function  isCashRegisterAvailable(warehouse_id) {
-    $.ajax({
-        url: 'cash-register/check-availability/'+warehouse_id,
-        type: "GET",
-        success:function(data) {
-            if(data == 'false') {
-              $("#register-details-btn").addClass('d-none');
-              $('#cash-register-modal select[name=warehouse_id]').val(warehouse_id);
-
-              if(isAdmin)
-                $("#cash-register-modal .warehouse-section").removeClass('d-none');
-              else
-                $("#cash-register-modal .warehouse-section").addClass('d-none');
-
-              $('.selectpicker').selectpicker('refresh');
-              $("#cash-register-modal").modal('show');
+        // Set warehouse default - prefer pos_setting, then first available
+        var warehouseOptions = $('select[name=warehouse_id] option');
+        if(posSettingWarehouse && $('select[name=warehouse_id] option[value="' + posSettingWarehouse + '"]').length) {
+          $('select[name=warehouse_id]').val(posSettingWarehouse);
+        }
+        else if(warehouseOptions.length > 0) {
+          var firstOption = warehouseOptions.eq(0);
+          if(firstOption.val() === '' || firstOption.val() === null) {
+            if(warehouseOptions.length > 1) {
+              $('select[name=warehouse_id]').val(warehouseOptions.eq(1).val());
             }
-            else
-              $("#register-details-btn").removeClass('d-none');
-        }
-    });
-}
-
-if(keyboard_active==1){
-    $('#lims_productcodeSearch').bind('keyboardChange', function (e, keyboard, el) {
-        var customer_id = $('#customer_id').val();
-        var warehouse_id = $('select[name="warehouse_id"]').val();
-        temp_data = $('#lims_productcodeSearch').val();
-        if(!customer_id){
-            $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
-            alert('Please select Customer!');
-        }
-        else if(!warehouse_id){
-            $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
-            alert('Please select Warehouse!');
-        }
-    });
-}
-else{
-    $('#lims_productcodeSearch').on('input', function(){
-        var customer_id = $('#customer_id').val();
-        var warehouse_id = $('#warehouse_id').val();
-        temp_data = $('#lims_productcodeSearch').val();
-        if(!customer_id){
-            $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
-            alert('Please select Customer!');
-        }
-        else if(!warehouse_id){
-            $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
-            alert('Please select Warehouse!');
+          } else {
+            $('select[name=warehouse_id]').val(firstOption.val());
+          }
         }
 
-    });
-}
-$(document).ready(function () {
-    
-    // Remove payment row
-    $(document).on("click", ".remove-payment", function () {
-        $(this).closest(".payment-row").remove();
-        // refreshPaymentMethodOptions();
-        calculateTotal();
-         // Get updated values
-        let payingAmount = parseFloat($('input[name="paying_amount"]').val()) || 0;
-        let mainPaid = parseFloat($('input[name="paid_amount"]').val()) || 0;
-        let totalSplit = getTotalSplitAmount();
-        let totalPaid = mainPaid + totalSplit;
-
-        // Update change
-        change(payingAmount, totalPaid);
-        
-        // Hide the container if no more split payments
-        if ($('#paymentMethodsContainer').children().length === 0) {
-            $('#paymentMethodsContainer').hide();
+        // Set biller default - prefer pos_setting, then first available
+        var billerOptions = $('select[name=biller_id] option');
+        if(posSettingBiller && $('select[name=biller_id] option[value="' + posSettingBiller + '"]').length) {
+          $('select[name=biller_id]').val(posSettingBiller);
         }
-    });
+        else if(billerOptions.length === 1 || (billerOptions.length === 2 && $('select[name=biller_id] option:first').val() === '')) {
+          var firstRealOption = billerOptions.length === 1 ? billerOptions.eq(0) : billerOptions.eq(1);
+          $('select[name=biller_id]').val(firstRealOption.val());
+        }
 
-    function refreshPaymentMethodOptions() {
-        let usedMethods = getSelectedPaymentMethods();
-
-        let options = [
-            { value: 1, label: 'Cash' },
-            { value: 2, label: 'Gift Card' },
-            { value: 3, label: 'Credit Card' },
-            { value: 4, label: 'Cheque' },
-            { value: 5, label: 'Paypal' },
-            { value: 6, label: 'Deposit' },
-            { value: 7, label: 'Points' },
-            { value: 8, label: 'Mobile Money' }
-        ];
-
-        $(".payment-method-select").each(function () {
-            let currentVal = $(this).val();
-            let selectOptions = options.filter(opt => {
-                return !usedMethods.includes(opt.value) || opt.value == currentVal;
-            }).map(opt => {
-                let selected = opt.value == currentVal ? 'selected' : '';
-                return `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
-            }).join('');
-
-            $(this).html(selectOptions).selectpicker('refresh');
-        });
+        // Set customer default - prefer pos_setting, then first available
+        var customerOptions = $('select[name=customer_id] option');
+        if(posSettingCustomer && $('select[name=customer_id] option[value="' + posSettingCustomer + '"]').length) {
+          $('select[name=customer_id]').val(posSettingCustomer);
+        }
+        else if(customerOptions.length > 0) {
+          var firstOption = customerOptions.eq(0);
+          if(firstOption.val() === '' || firstOption.val() === null) {
+            if(customerOptions.length > 1) {
+              $('select[name=customer_id]').val(customerOptions.eq(1).val());
+            }
+          } else {
+            $('select[name=customer_id]').val(firstOption.val());
+          }
+        }
     }
 
-});
-$("#print-btn").on("click", function(){
-      var divToPrint=document.getElementById('sale-details');
-      var newWin=window.open('','Print-Window');
-      newWin.document.open();
-      newWin.document.write('<link rel="stylesheet" href="<?php echo asset('vendor/bootstrap/css/bootstrap.min.css') ?>" type="text/css"><style type="text/css">@media print {.modal-dialog { max-width: 1000px;} }</style><body onload="window.print()">'+divToPrint.innerHTML+'</body>');
-      newWin.document.close();
-      setTimeout(function(){newWin.close();},10);
-});
+    setDefaultSelectValues();
 
-$('body').on('click', function(e){
-    $('.filter-window').hide('slide', {direction: 'right'}, 'fast');
-});
+    $('.selectpicker').selectpicker('refresh');
 
-// $('#category-filter').on('click', function(e){
-//     e.stopPropagation();
-//     $('.filter-window').show('slide', {direction: 'right'}, 'fast');
-//     $('.category').show();
-//     $('.brand').hide();
-// });
-
-// $('.category-img').on('click', function(){
-//     var category_id = $(this).data('category');
-//     var brand_id = 0;
-
-//     $(".table-container").children().remove();
-//     $.get('sales/getproduct/' + category_id + '/' + brand_id, function(data) {
-//         populateProduct(data);
-//     });
-// });
-
-// $('#brand-filter').on('click', function(e){
-//     e.stopPropagation();
-//     $('.filter-window').show('slide', {direction: 'right'}, 'fast');
-//     $('.brand').show();
-//     $('.category').hide();
-// });
-
-// $('.brand-img').on('click', function(){
-//     var brand_id = $(this).data('brand');
-//     var category_id = 0;
-
-//     $(".table-container").children().remove();
-//     $.get('sales/getproduct/' + category_id + '/' + brand_id, function(data) {
-//         populateProduct(data);
-//     });
-// });
-
-// $('#featured-filter').on('click', function(){
-//     $(".table-container").children().remove();
-//     $.get('sales/getfeatured', function(data) {
-//         populateProduct(data);
-//     });
-// });
-
-// function populateProduct(data) {
-//     var tableData = '<table id="product-table" class="table no-shadow product-list"> <thead class="d-none"> <tr> <th></th> <th></th> <th></th> <th></th> <th></th> </tr></thead> <tbody><tr>';
-
-//     if (Object.keys(data).length != 0) {
-//         $.each(data['name'], function(index) {
-//             var product_info = data['code'][index]+' (' + data['name'][index] + ')';
-            
-//             // Determine the correct image path
-//             var imagePath = getProductImagePath(data['image'][index]);
-            
-//             if(index % 5 == 0 && index != 0)
-//                 tableData += '</tr><tr><td class="product-img sound-btn" title="'+data['name'][index]+'" data-product = "'+product_info+'"><img src="' + imagePath + '" width="100%" /><p>'+data['name'][index]+'</p><span>'+data['code'][index]+'</span></td>';
-//             else
-//                 tableData += '<td class="product-img sound-btn" title="'+data['name'][index]+'" data-product = "'+product_info+'"><img src="' + imagePath + '" width="100%" /><p>'+data['name'][index]+'</p><span>'+data['code'][index]+'</span></td>';
-//         });
-
-//         if(data['name'].length % 5){
-//             var number = 5 - (data['name'].length % 5);
-//             while(number > 0)
-//             {
-//                 tableData += '<td style="border:none;"></td>';
-//                 number--;
-//             }
-//         }
-
-//         tableData += '</tr></tbody></table>';
-//         $(".table-container").html(tableData);
-//         $('#product-table').DataTable( {
-//           "order": [[0, 'desc']],
-//           'pageLength': product_row_number,
-//            'language': {
-//               'paginate': {
-//                   'previous': '<i class="fa fa-angle-left"></i>',
-//                   'next': '<i class="fa fa-angle-right"></i>'
-//               }
-//           },
-//           dom: 'tp'
-//         });
-//         $('table.product-list').hide();
-//         $('table.product-list').show(500);
-//     }
-//     else{
-//         tableData += '<td class="text-center">No data avaialable</td></tr></tbody></table>'
-//         $(".table-container").html(tableData);
-//     }
-// }
-
-/**
- * Helper function to determine the correct image path
- * Priority: small > medium > product > default fallback
- */
-// function getProductImagePath(imageName) {
-//     if (!imageName) {
-//         return 'images/product/zummXD2dvAtI.png'; // Default fallback
-//     }
-    
-//     // Try small folder first
-//     return 'images/product/small/' + imageName;
-//     // Note: In a real implementation, you'd want to check if the file exists
-//     // For now, we'll assume small exists, or you can use the AJAX approach below
-// }
-
-/**
- * Alternative: Async approach using AJAX to check file existence
- * Uncomment if you want to check file existence before displaying
- */
-// function getProductImagePathAsync(imageName, callback) {
-//     if (!imageName) {
-//         callback('images/product/zummXD2dvAtI.png');
-//         return;
-//     }
-    
-//     var paths = [
-//         'images/product/small/' + imageName,
-//         'images/product/medium/' + imageName,
-//         'images/product/' + imageName,
-//         'images/product/zummXD2dvAtI.png' // fallback
-//     ];
-    
-//     function checkPath(index) {
-//         if (index >= paths.length) {
-//             callback(paths[paths.length - 1]); // Use fallback
-//             return;
-//         }
-        
-//         var img = new Image();
-//         img.onload = function() {
-//             callback(paths[index]); // Image found
-//         };
-//         img.onerror = function() {
-//             checkPath(index + 1); // Try next path
-//         };
-//         img.src = paths[index];
-//     }
-    
-//     checkPath(0);
-// }
-
-$('select[name="customer_id"]').on('change', function() {
-    saveValue(this);
-    var id = $(this).val();
+    var id = $("#customer_id").val();
     $.get('sales/getcustomergroup/' + id, function(data) {
         customer_group_rate = (data / 100);
     });
-});
 
-$('select[name="biller_id"]').on('change', function() {
-    saveValue(this);
-});
-
-$('select[name="warehouse_id"]').on('change', function() {
-    saveValue(this);
-    warehouse_id = $(this).val();
+    // Use DOM value or fallback to warehouse_id (selectpicker may not have updated the select yet)
     loadWarehouseProducts();
-    isCashRegisterAvailable(warehouse_id);
-});
-
-var lims_productcodeSearch = $('#lims_productcodeSearch');
-
-lims_productcodeSearch.autocomplete({
-    minLength: 1,
-    appendTo: 'body',
-    source: function(request, response) {
-        var term = (request.term || '').trim();
-        if (!term) {
-            response([]);
-            return;
-        }
-        var matcher = new RegExp(".*" + $.ui.autocomplete.escapeRegex(term) + ".*", "i");
-        response($.grep(lims_product_array, function(item) {
-            return matcher.test(item);
-        }));
-    },
-    response: function(event, ui) {
-        if (ui.content.length == 1) {
-            var data = ui.content[0].value;
-            $(this).autocomplete( "close" );
-            productSearch(data);
-        } 
-        else if(ui.content.length == 0 && $('#lims_productcodeSearch').val().length == 13) {
-            // FIXED: pass raw barcode only; productSearch will append ?customer_id?qty
-            productSearch($('#lims_productcodeSearch').val());
-        }
-    },
-    select: function(event, ui) {
-        var data = ui.item.value;
-        ui.item.value = '';
-        productSearch(data);
-    },
-});
-
-$('#myTable').keyboard({
-    accepted : function(event, keyboard, el) {
-      checkQuantity(el.value, true);
-  }
-});
-
-$("#myTable").on('click', '.plus', function() {
-    rowindex = $(this).closest('tr').index();
-    var qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
-    if(!qty)
-      qty = 1;
-    else
-      qty = parseFloat(qty) + 1;
-    if(is_variant[rowindex])
-        checkQuantity(String(qty), true);
-    else
-        checkDiscount(qty, true);
-});
-
-$("#myTable").on('click', '.minus', function() {
-    rowindex = $(this).closest('tr').index();
-    var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) - 1;
-    if (qty > 0) {
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-    } else {
-        qty = 1;
-    }
-    if(is_variant[rowindex])
-        checkQuantity(String(qty), true);
-    else
-        checkDiscount(qty, true);
-});
-
-   $("select[name=price_option]").on("change", function () {
-        console.log($(this).val());
-        $("#editModal input[name=edit_unit_price]").val($(this).val());
-    });
-
-$("#myTable").on("change", ".batch-no", function () {
-    rowindex = $(this).closest('tr').index();
-    var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-id').val();
-    var warehouse_id = $('#warehouse_id').val();
-    $.get('check-batch-availability/' + product_id + '/' + $(this).val() + '/' + warehouse_id, function(data) {
-        if(data['message'] != 'ok') {
-            alert(data['message']);
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.batch-no').val('');
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val('');
-        }
-        else {
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val(data['product_batch_id']);
-            code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
-            pos = product_code.indexOf(code);
-            product_qty[pos] = data['qty'];
-        }
-    });
-});
-
-//Change quantity
-$("#myTable").on('input', '.qty', function() {
-    rowindex = $(this).closest('tr').index();
-    if($(this).val() < 0 && $(this).val() != '') {
-      $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(1);
-      alert("Quantity can't be less than 0");
-    }
-    if(is_variant[rowindex])
-        checkQuantity($(this).val(), true);
-    else
-        checkDiscount($(this).val(), true);
-});
-
-$("#myTable").on('click', '.qty', function() {
-    rowindex = $(this).closest('tr').index();
-});
-
-$(document).on('click', '.sound-btn', function() {
-    var audio = $("#mysoundclip1")[0];
-    audio.play();
-});
-
-$(document).on('click', '.product-img', function() {
-    var customer_id = $('#customer_id').val();
-    var warehouse_id = $('select[name="warehouse_id"]').val();
-    if(!customer_id)
-        alert('Please select Customer!');
-    else if(!warehouse_id)
-        alert('Please select Warehouse!');
-    else{
-        var data = $(this).data('product');
-        product_info = data.split(" ");
-        pos = product_code.indexOf(product_info[0]);
-        if(pos < 0)
-            alert('Product is not avaialable in the selected warehouse');
-        else{
-            productSearch(data);
-        }
-    }
-});
-//Delete product
-$("table.order-list tbody").on("click", ".ibtnDel", function(event) {
-    var audio = $("#mysoundclip2")[0];
-    audio.play();
-    rowindex = $(this).closest('tr').index();
-    product_price.splice(rowindex, 1);
-    wholesale_price.splice(rowindex, 1);
-    product_discount.splice(rowindex, 1);
-    tax_rate.splice(rowindex, 1);
-    tax_name.splice(rowindex, 1);
-    tax_method.splice(rowindex, 1);
-    unit_name.splice(rowindex, 1);
-    unit_operator.splice(rowindex, 1);
-    unit_operation_value.splice(rowindex, 1);
-
-    localStorageProductId.splice(rowindex, 1);
-    localStorageQty.splice(rowindex, 1);
-    localStorageSaleUnit.splice(rowindex, 1);
-    localStorageProductDiscount.splice(rowindex, 1);
-    localStorageTaxRate.splice(rowindex, 1);
-    localStorageNetUnitPrice.splice(rowindex, 1);
-    localStorageTaxValue.splice(rowindex, 1);
-    localStorageSubTotalUnit.splice(rowindex, 1);
-    localStorageSubTotal.splice(rowindex, 1);
-    localStorageProductCode.splice(rowindex, 1);
-
-    localStorageTaxName.splice(rowindex, 1);
-    localStorageTaxMethod.splice(rowindex, 1);
-    localStorageTempUnitName.splice(rowindex, 1);
-    localStorageSaleUnitOperator.splice(rowindex, 1);
-    localStorageSaleUnitOperationValue.splice(rowindex, 1);
-
-    localStorage.setItem("localStorageProductId", localStorageProductId);
-    localStorage.setItem("localStorageQty", localStorageQty);
-    localStorage.setItem("localStorageSaleUnit", localStorageSaleUnit);
-    localStorage.setItem("localStorageProductCode", localStorageProductCode);
-    localStorage.setItem("localStorageProductDiscount", localStorageProductDiscount);
-    localStorage.setItem("localStorageTaxRate", localStorageTaxRate);
-    localStorage.setItem("localStorageTaxName", localStorageTaxName);
-    localStorage.setItem("localStorageTaxMethod", localStorageTaxMethod);
-    localStorage.setItem("localStorageTempUnitName", localStorageTempUnitName);
-    localStorage.setItem("localStorageSaleUnitOperator", localStorageSaleUnitOperator);
-    localStorage.setItem("localStorageSaleUnitOperationValue", localStorageSaleUnitOperationValue);
-    localStorage.setItem("localStorageNetUnitPrice", localStorageNetUnitPrice);
-    localStorage.setItem("localStorageTaxValue", localStorageTaxValue);
-    localStorage.setItem("localStorageSubTotalUnit", localStorageSubTotalUnit);
-    localStorage.setItem("localStorageSubTotal", localStorageSubTotal);
-
-    $(this).closest("tr").remove();
-    localStorage.setItem("tbody-id", $("table.order-list tbody").html());
-    calculateTotal();
-});
-
-//Edit product
-$("table.order-list").on("click", ".edit-product", function() {
-    rowindex = $(this).closest('tr').index();
-    edit();
-});
- 
-//Update product
-$('button[name="update_btn"]').on("click", function() {
-    // Always coerce to numbers safely
-    let edit_discount = parseFloat($('#editModal input[name="edit_discount"]').val()) || 0;
-    let edit_qty = parseFloat($('#editModal input[name="edit_qty"]').val()) || 0;
-    let edit_unit_price = parseFloat($('#editModal input[name="edit_unit_price"]').val()) || 0;
-
-    let new_unit_price = edit_unit_price - edit_discount;
-    console.log("New unit price:", new_unit_price);
-
-    if (edit_discount > edit_unit_price) {
-        alert('Invalid Discount Input!');
-        return;
+    if (warehouse_id) {
+        isCashRegisterAvailable(warehouse_id);
     }
 
-    if (edit_qty <= 0) {
-        $('input[name="edit_qty"]').val(1);
-        edit_qty = 1;
-        alert("Quantity can't be less than 0");
-    }
+    function  isCashRegisterAvailable(warehouse_id) {
+        $.ajax({
+            url: 'cash-register/check-availability/'+warehouse_id,
+            type: "GET",
+            success:function(data) {
+                if(data == 'false') {
+                  $("#register-details-btn").addClass('d-none');
+                  $('#cash-register-modal select[name=warehouse_id]').val(warehouse_id);
 
-    var tax_rate_all = <?php echo json_encode($tax_rate_all) ?>;
-    let selectedTaxId = $('select[name="edit_tax_rate"]').val();
-    let currentTaxRate = parseFloat(tax_rate_all[selectedTaxId]) || 0;
+                  if(isAdmin)
+                    $("#cash-register-modal .warehouse-section").removeClass('d-none');
+                  else
+                    $("#cash-register-modal .warehouse-section").addClass('d-none');
 
-    tax_rate[rowindex] = localStorageTaxRate[rowindex] = currentTaxRate;
-    tax_name[rowindex] = localStorageTaxName[rowindex] = $('select[name="edit_tax_rate"] option:selected').text();
-
-    // ✅ Always store as numeric values
-    product_discount[rowindex] = edit_discount;
-    product_price[rowindex] = new_unit_price;
-
-    console.log({
-        edit_qty,
-        edit_unit_price,
-        edit_discount,
-        new_unit_price,
-        row_product_price: product_price[rowindex]
-    });
-
-    // Call checkDiscount
-    if (edit_discount > 0) {
-        checkDiscount(edit_qty, true, edit_discount);
-    } else {
-        checkDiscount(edit_qty, false);
-    }
-
-    // ✅ After discount changes, recalc total & tax safely
-    calculateTotal();
-});
-
-
-$('button[name="order_discount_btn"]').on("click", function() {
-    calculateGrandTotal();
-});
-
-$('button[name="shipping_cost_btn"]').on("click", function() {
-    calculateGrandTotal();
-});
-
-$('button[name="order_tax_btn"]').on("click", function() {
-    calculateGrandTotal();
-});
-
-$(".coupon-check").on("click",function() {
-    couponDiscount();
-});
-
-// Validate payment method and required fields before submit
-function validatePaymentMethod() {
-    var paid_amount = $('input[name="paid_amount"]').val();
-    var paymentMethod = $('select[name="paid_by_id"]').val();
-    
-    if (!paid_amount || parseFloat(paid_amount) <= 0) {
-        alert('Please enter a valid paid amount');
-        return false;
-    }
-    
-    if (paymentMethod == 2) { // Gift Card
-        var gift_card_id = $('select[name="gift_card_id_select"]').val() || $('input[name="gift_card_id"]').val();
-        if (!gift_card_id) {
-            alert('Please select a gift card');
-            return false;
-        }
-    }
-    
-    if (paymentMethod == 4) { // Cheque
-        var cheque_no = $('input[name="cheque_no"]').val();
-        if (!cheque_no) {
-            alert('Please enter the cheque number');
-            return false;
-        }
-    }
-    
-    // Validate split payment methods
-    var splitValidationPassed = true;
-    $('select[name="paid_by_id_select[]"]').each(function() {
-        let splitMethod = $(this).val();
-        let row = $(this).closest('.payment-row');
-        
-        if (splitMethod == 4) { // Cheque
-            let cheque_no = row.find('input[name="split_cheque_no[]"]').val();
-            if (!cheque_no) {
-                alert('Please enter the cheque number for all cheque payments in split payments');
-                splitValidationPassed = false;
-                return false;
+                  $('.selectpicker').selectpicker('refresh');
+                  $("#cash-register-modal").modal('show');
+                }
+                else
+                  $("#register-details-btn").removeClass('d-none');
             }
-        }
-        
-        if (splitMethod == 2) { // Gift Card
-            let gift_card_id = row.find('select[name="split_gift_card_id[]"]').val();
-            if (!gift_card_id) {
-                alert('Please select a gift card for all gift card payments in split payments');
-                splitValidationPassed = false;
-                return false;
-            }
-        }
-    });
-    
-    if (!splitValidationPassed) {
-        return false;
-    }
-    
-    if (paymentMethod == 6) { // Deposit
-        var customer_id = $('#customer_id').val();
-        if (!customer_id) {
-            alert('Please select a customer for deposit payment');
-            return false;
-        }
-        var customerDeposit = parseFloat(deposit[customer_id]) || 0;
-        if (parseFloat(paid_amount) > customerDeposit) {
-            alert('Amount exceeds customer deposit! Customer deposit: ' + customerDeposit);
-            return false;
-        }
-    }
-    
-    if (paymentMethod == 7) { // Points
-        var customer_id = $('#customer_id').val();
-        if (!customer_id) {
-            alert('Please select a customer for points payment');
-            return false;
-        }
-        if (typeof reward_point_setting === 'undefined') {
-            alert('Reward point setting is not available');
-            return false;
-        }
-        var customerPoints = parseInt(points[customer_id], 10) || 0;
-        var perPointAmount = parseFloat(reward_point_setting['per_point_amount']) || 1;
-        var requiredPoints = Math.ceil(parseFloat(paid_amount) / perPointAmount);
-        if (requiredPoints > customerPoints) {
-            alert('Customer does not have sufficient points. Available points: ' + customerPoints);
-            return false;
-        }
-    }
-    
-    if (paymentMethod == 8) { // Mobile Money
-        var mobile_operator = $('#mobile_money_operator').val() || $('input[name="selected_mobile_op"]').val();
-        var mobile_number = $('input[name="mobile_number"]').val();
-        if (!mobile_operator) {
-            alert('Please select a mobile money operator');
-            return false;
-        }
-        if (!mobile_number) {
-            alert('Please enter a mobile number');
-            return false;
-        }
-    }
-    
-    return true;
-}
-
-$(".payment-btn").on("click", function() {
-    var audio = $("#mysoundclip2")[0];
-    audio.play();
-    $('input[name="paid_amount"]').val($("#grand-total").text());
-    $('input[name="paying_amount"]').val($("#grand-total").text());
-    $('.qc').data('initial', 1);
-});
-
-$("#draft-btn").on("click",function(){
-    console.log('draft');
-    var audio = $("#mysoundclip2")[0];
-    audio.play();
-    $('input[name="sale_status"]').val(3);
-    $('input[name="paying_amount"]').prop('required',false);
-    $('input[name="paid_amount"]').prop('required',false);
-    var rownumber = $('table.order-list tbody tr:last').index();
-    if (rownumber < 0) {
-        alert("Please insert product to order table!")
-    }
-    else {
-        $('.payment-form').submit();
-    }
-});
-
-$("#submit-btn").on("click", function() {
-    if(validatePaymentMethod()) {
-        $('.payment-form').submit();
-    }
-});
-
-document.addEventListener("DOMContentLoaded", function () {
-    // ✅ Function: show or hide global .mobile_money_fields depending on selections
-    function toggleGlobalMobileMoneyFields() {
-        // Check if any select currently has value '8'
-        const hasMobileMoney = Array.from(document.querySelectorAll('select[name="paid_by_id_select[]"]'))
-            .some(select => select.value === '8');
-        console.log('Has Mobile Money:', hasMobileMoney);
-
-        const fields = document.querySelectorAll('.mobile_money_fields');
-        fields.forEach(field => {
-            field.style.display = hasMobileMoney ? 'block' : 'none';
         });
     }
 
-    // ✅ Listen to change event on all current & future selects
-    $(document).on("change", 'select[name="paid_by_id_select[]"].payment-method-select', function () {
-        toggleGlobalMobileMoneyFields();
-        // Show/hide cheque field based on selected payment method
-        let row = $(this).closest('.payment-row');
-        let methodValue = $(this).val();
-        row.find('.cheque-split').toggle(methodValue === '4');
-        row.find('.giftcard-split').toggle(methodValue === '2');
+    if(keyboard_active==1){
+        $('#lims_productcodeSearch').bind('keyboardChange', function (e, keyboard, el) {
+            var customer_id = $('#customer_id').val();
+            var warehouse_id = $('select[name="warehouse_id"]').val();
+            temp_data = $('#lims_productcodeSearch').val();
+            if(!customer_id){
+                $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
+                alert('Please select Customer!');
+            }
+            else if(!warehouse_id){
+                $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
+                alert('Please select Warehouse!');
+            }
+        });
+    }
+    else{
+        $('#lims_productcodeSearch').on('input', function(){
+            var customer_id = $('#customer_id').val();
+            var warehouse_id = $('#warehouse_id').val();
+            temp_data = $('#lims_productcodeSearch').val();
+            if(!customer_id){
+                $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
+                alert('Please select Customer!');
+            }
+            else if(!warehouse_id){
+                $('#lims_productcodeSearch').val(temp_data.substring(0, temp_data.length - 1));
+                alert('Please select Warehouse!');
+            }
+
+        });
+    }
+    $(document).ready(function () {
         
-        // Clear cheque number when toggling away from cheque
-        if (methodValue !== '4') {
-            row.find('input[name="split_cheque_no[]"]').val('');
+        // Remove payment row
+        $(document).on("click", ".remove-payment", function () {
+            $(this).closest(".payment-row").remove();
+            // refreshPaymentMethodOptions();
+            calculateTotal();
+             // Get updated values
+            let payingAmount = parseFloat($('input[name="paying_amount"]').val()) || 0;
+            let mainPaid = parseFloat($('input[name="paid_amount"]').val()) || 0;
+            let totalSplit = getTotalSplitAmount();
+            let totalPaid = mainPaid + totalSplit;
+
+            // Update change
+            change(payingAmount, totalPaid);
+            
+            // Hide the container if no more split payments
+            if ($('#paymentMethodsContainer').children().length === 0) {
+                $('#paymentMethodsContainer').hide();
+            }
+        });
+
+        function refreshPaymentMethodOptions() {
+            let usedMethods = getSelectedPaymentMethods();
+
+            let options = [
+                { value: 1, label: 'Cash' },
+                { value: 2, label: 'Gift Card' },
+                { value: 3, label: 'Credit Card' },
+                { value: 4, label: 'Cheque' },
+                { value: 5, label: 'Paypal' },
+                { value: 6, label: 'Deposit' },
+                { value: 7, label: 'Points' },
+                { value: 8, label: 'Mobile Money' }
+            ];
+
+            $(".payment-method-select").each(function () {
+                let currentVal = $(this).val();
+                let selectOptions = options.filter(opt => {
+                    return !usedMethods.includes(opt.value) || opt.value == currentVal;
+                }).map(opt => {
+                    let selected = opt.value == currentVal ? 'selected' : '';
+                    return `<option value="${opt.value}" ${selected}>${opt.label}</option>`;
+                }).join('');
+
+                $(this).html(selectOptions).selectpicker('refresh');
+            });
         }
-        if (methodValue !== '2') {
-            row.find('select[name="split_gift_card_id[]"]').val('');
-        }
+
+    });
+    $("#print-btn").on("click", function(){
+          var divToPrint=document.getElementById('sale-details');
+          var newWin=window.open('','Print-Window');
+          newWin.document.open();
+          newWin.document.write('<link rel="stylesheet" href="<?php echo asset('vendor/bootstrap/css/bootstrap.min.css') ?>" type="text/css"><style type="text/css">@media print {.modal-dialog { max-width: 1000px;} }</style><body onload="window.print()">'+divToPrint.innerHTML+'</body>');
+          newWin.document.close();
+          setTimeout(function(){newWin.close();},10);
     });
 
-    // ✅ Initialize state on load
-    toggleGlobalMobileMoneyFields();
-
-    $("#multiplePaymentBtn").on("click", function () {
-        let usedMethods = getSelectedPaymentMethods();
-
-        let options = [
-            { value: 1, label: 'Cash' },
-            { value: 2, label: 'Gift Card' },
-            { value: 3, label: 'Credit Card' },
-            { value: 4, label: 'Cheque' },
-            { value: 5, label: 'Paypal' },
-            { value: 6, label: 'Deposit' },
-            { value: 7, label: 'Points' },
-            { value: 8, label: 'Mobile Money' }
-        ];
-
-        let availableOptions = options.filter(opt => !usedMethods.includes(opt.value));
-
-        if (availableOptions.length === 0) {
-            alert("All payment methods have been used.");
-            return;
-        }
-
-        let selectOptions = availableOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
-
-        let paymentRow = `
-            <div class="row mt-2 payment-row align-items-end" style="border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                <div class="col-md-2">
-                    <label class="font-weight-bold" style="font-size: 12px;">Amount *</label>
-                    <input type="number" name="split_amount[]" class="form-control numkey" step="any" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="font-weight-bold" style="font-size: 12px;">Method</label>
-                    <div class="d-flex align-items-center">
-                        <select name="paid_by_id_select[]" class="form-control selectpicker payment-method-select" style="width: calc(100% - 35px);">
-                            ${selectOptions}
-                        </select>
-                        <button type="button" class="btn btn-sm btn-danger ml-2 remove-payment"><i class="fa fa-trash"></i></button>
-                    </div>
-                </div>
-                <div class="col-md-3 cheque-split" style="display: none;">
-                    <label class="font-weight-bold" style="font-size: 12px;">Cheque # *</label>
-                    <input type="text" name="split_cheque_no[]" class="form-control split-cheque-field" placeholder="Cheque #">
-                </div>
-                <div class="col-md-4 giftcard-split" style="display: none;">
-                    <label class="font-weight-bold" style="font-size: 12px;">Gift Card</label>
-                    <select name="split_gift_card_id[]" class="form-control selectpicker split-gift-card-select" data-live-search="true" data-live-search-style="begins" title="Select..." style="width: 100%;"></select>
-                </div>
-            </div>
-        `;
-
-        // Show the container when first payment method is added
-        if ($('#paymentMethodsContainer').children().length === 0) {
-            $('#paymentMethodsContainer').show();
-        }
-        $("#paymentMethodsContainer").append(paymentRow);
-        $('.selectpicker').selectpicker('refresh');
-        toggleGlobalMobileMoneyFields();
+    $('body').on('click', function(e){
+        $('.filter-window').hide('slide', {direction: 'right'}, 'fast');
     });
-    
-});
-function getSelectedPaymentMethods() {
-    let methods = [];
 
-    let mainMethod = $("select[name='paid_by_id']").val();
-    if (mainMethod) methods.push(parseInt(mainMethod));
-
-    $("select[name='paid_by_id_select[]']").each(function () {
-        let val = $(this).val();
-        if (val) methods.push(parseInt(val));
+    $('select[name="customer_id"]').on('change', function() {
+        saveValue(this);
+        var id = $(this).val();
+        $.get('sales/getcustomergroup/' + id, function(data) {
+            customer_group_rate = (data / 100);
+        });
+        if ($('table.order-list tbody tr').length > 0) broadcastCartUpdate();
     });
-   
 
-    return methods;
-}
-
-$("#gift-card-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(2);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    $('.mobile_money').hide();
-    
-    giftCard();
-});
-
-$("#credit-card-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(3);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    creditCard();
-});
-
-$("#cheque-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(4);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    cheque();
-});
-
-$("#cash-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(1);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').show();
-    hide();
-});
-
-$("#paypal-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(5);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    hide();
-});
-
-$("#deposit-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(6);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    hide();
-    deposits();
-});
-
-$("#point-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(7);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    hide();
-    pointCalculation();
-});
-
-
-$("#mobile_money-btn").on("click",function() {
-    $('select[name="paid_by_id"]').val(8);
-    $('.selectpicker').selectpicker('refresh');
-    $('div.qc').hide();
-    hide();
-    mobile_money();
-});
-
-
-$('select[name="paid_by_id"]').on("change", function() {
-    var id = $(this).val();
-    $(".payment-form").off("submit");
-    if(id == 2) {
-        $('div.qc').hide();
-        giftCard();
-    }
-    else if (id == 3) {
-        $('div.qc').hide();
-        creditCard();
-    }
-    else if (id == 4) {
-        $('div.qc').hide();
-        cheque();
-    }
-    else if (id == 8) {
-        $('div.qc').hide();
-        mobile_money();
-    }
-    else {
-        hide();
-        if(id == 1)
-            $('div.qc').show();
-        else if(id == 6) {
-            $('div.qc').hide();
-            deposits();
-        }
-        else if(id == 7) {
-            $('div.qc').hide();
-            pointCalculation();
-        }
-    }
-        $("#paymentMethodsContainer").empty().hide();
-    refreshPaymentMethodOptions();
-});
-
-$('#add-payment select[name="gift_card_id_select"]').on("change", function() {
-    var balance = gift_card_amount[$(this).val()] - gift_card_expense[$(this).val()];
-    $('#add-payment input[name="gift_card_id"]').val($(this).val());
-    if($('input[name="paid_amount"]').val() > balance){
-        alert('Amount exceeds card balance! Gift Card balance: '+ balance);
-    }
-});
-
-$('#add-payment input[name="paying_amount"]').on("input", function() {
-    change($(this).val(), $('input[name="paid_amount"]').val());
-});
-
-$('input[name="paid_amount"]').on("input", function() {
-    if( $(this).val() > parseFloat($('input[name="paying_amount"]').val()) ) {
-        alert('Paying amount cannot be bigger than recieved amount');
-        $(this).val('');
-    }
-    else if( $(this).val() > parseFloat($('#grand-total').text()) ){
-        alert('Paying amount cannot be bigger than grand total');
-        $(this).val('');
-    }
-
-    change( $('input[name="paying_amount"]').val(), $(this).val() );
-    var id = $('select[name="paid_by_id"]').val();
-    if(id == 2){
-        var balance = gift_card_amount[$("#gift_card_id_select").val()] - gift_card_expense[$("#gift_card_id_select").val()];
-        if($(this).val() > balance)
-            alert('Amount exceeds card balance! Gift Card balance: '+ balance);
-    }
-    else if(id == 6){
-        if( $('input[name="paid_amount"]').val() > deposit[$('#customer_id').val()] )
-            alert('Amount exceeds customer deposit! Customer deposit : '+ deposit[$('#customer_id').val()]);
-    }
-});
-
-
-
-
-$('.transaction-btn-plus').on("click", function() {
-    $(this).addClass('d-none');
-    $('.transaction-btn-close').removeClass('d-none');
-});
-
-$('.transaction-btn-close').on("click", function() {
-    $(this).addClass('d-none');
-    $('.transaction-btn-plus').removeClass('d-none');
-});
-
-$('.coupon-btn-plus').on("click", function() {
-    $(this).addClass('d-none');
-    $('.coupon-btn-close').removeClass('d-none');
-});
-
-$('.coupon-btn-close').on("click", function() {
-    $(this).addClass('d-none');
-    $('.coupon-btn-plus').removeClass('d-none');
-});
-
-$(document).on('click', '.qc-btn', function(e) {
-    if($(this).data('amount')) {
-        if($('.qc').data('initial')) {
-            $('input[name="paying_amount"]').val( $(this).data('amount').toFixed({{$general_setting->decimal}}) );
-            $('.qc').data('initial', 0);
-        }
-        else {
-            $('input[name="paying_amount"]').val( (parseFloat($('input[name="paying_amount"]').val()) + $(this).data('amount')).toFixed({{$general_setting->decimal}}) );
-        }
-    }
-    else
-        $('input[name="paying_amount"]').val('{{number_format(0, $general_setting->decimal, '.', '')}}');
-    change( $('input[name="paying_amount"]').val(), $('input[name="paid_amount"]').val() );
-});
-
-$(document).on("input", 'input[name="split_amount[]"]', function() {
-    let payingAmount = parseFloat($('input[name="paying_amount"]').val()) || 0;
-    console.log('Paying Amount:', payingAmount);
-    let totalSplit = getTotalSplitAmount();
-    let mainPaid = parseFloat($('input[name="paid_amount"]').val()) || 0;
-    console.log('Main Paid:', mainPaid);
-    let totalPaid = totalSplit + payingAmount;
-    console.log('Total Paid (main + split):', totalPaid);
-
-    if (totalPaid > mainPaid) {
-        alert('Total paid (main + split) cannot be greater than paying amount');
-        $(this).val('');
-        totalSplit = getTotalSplitAmount(); // recalculate after clearing this input
-        totalPaid = totalSplit + payingAmount;
-    }
-
-    change(mainPaid, totalPaid);
-});
-
-document.addEventListener("DOMContentLoaded", function () {
-    const dropdown = document.getElementById("mobile_money_operator");
-    const hiddenField = document.getElementById("selected_mobile_op");
-    dropdown.addEventListener("change", function () {
-        hiddenField.value = dropdown.value;
+    $('select[name="biller_id"]').on('change', function() {
+        saveValue(this);
     });
-    hiddenField.value = dropdown.value;
-});
-    
-$(document).on('submit', '.payment-form', function(e) {
-    $('#payment-error-alert').addClass('d-none');
-    $("table.order-list tbody .qty").each(function(index) {
-        if ($(this).val() == '') {
-            alert('One of products has no quantity!');
-            e.preventDefault();
-        }
+
+    $('select[name="warehouse_id"]').on('change', function() {
+        saveValue(this);
+        warehouse_id = $(this).val();
+        loadWarehouseProducts();
+        isCashRegisterAvailable(warehouse_id);
     });
-    var rownumber = $('table.order-list tbody tr:last').index();
-    if (rownumber < 0) {
-        alert("Please insert product to order table!")
-        e.preventDefault();
-        return; 
-    }
-    else if(parseFloat($('input[name="total_qty"]').val()) <= 0) {
-        alert('Product quantity is 0');
-        e.preventDefault();
-        return;
-    }
-    // Check if change is negative (insufficient payment)
-    var changeVal = parseFloat($("#change").text().replace(/,/g, '')) || 0;
-    if (changeVal < 0) {
-        e.preventDefault();
-        $('#payment-error-message').text('Insufficient payment - the amount received is less than the total due. Please collect the full amount before submitting.');
-        $('#payment-error-alert').removeClass('d-none');
-        $('#add-payment').modal('show');
-        return;
-    }
-    $("#submit-button").prop('disabled', true);
-    $('input[name="paid_by_id"]').val($('select[name="paid_by_id"]').val());
-    $('input[name="order_tax_rate"]').val($('select[name="order_tax_rate_select"]').val());
 
-});
+    var lims_productcodeSearch = $('#lims_productcodeSearch');
 
-
-function change(paying_amount, paid_amount) {
-    $("#change").text( parseFloat(paying_amount - paid_amount).toFixed({{$general_setting->decimal}}) );
-}
-
-function getTotalSplitAmount() {
-    let total = 0;
-    $('input[name="split_amount[]"]').each(function() {
-        total += parseFloat($(this).val()) || 0;
-    });
-    return total;
-}
-
-function productSearch(data) {
-    var code_match = data.match(/Code:\s*([^|]+)/);
-    console.log(code_match);
-    
-    // FIXED: extract code before ? or space so barcode strings don't get corrupted
-    var searchProductCode = code_match ? code_match[1].trim() : data.split('?')[0].split(' ')[0];
-     
-    if (searchProductCode.length < 1) {
-        alert('Please insert product code!');
-        return;
-    }
-    var pre_qty = 0;
-    $(".product-code").each(function(i) {
-        if ($(this).val() == searchProductCode) {
-            rowindex = i;
-            pre_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
-        }
-    });
-    var ajaxData = searchProductCode + '?' + $('#customer_id').val() + '?' + (parseFloat(pre_qty) + 1);
-    console.log(ajaxData);
-    
-    $.ajax({
-        type: 'GET',
-        async: false,
-        url: 'sales/lims_product_search',
-        data: {
-            data: ajaxData,
-            warehouse_id: $('select[name="warehouse_id"]').val()   // FIXED: send warehouse
-        },
-        success: function(response) {
-            // FIXED: handle error responses from controller
-            if(response.error) {
-                alert(response.error);
+    lims_productcodeSearch.autocomplete({
+        minLength: 1,
+        appendTo: 'body',
+        source: function(request, response) {
+            var term = (request.term || '').trim();
+            if (!term) {
+                response([]);
                 return;
             }
-            
-            var flag = 1;
-            if (pre_qty > 0) {
-                var qty = response[15];
-                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                
-                // FIXED: uses GLOBAL product_code array (was shadowed by local var before)
-                pos = product_code.indexOf(response[1]);
-                
-                if(!response[11] && product_warehouse_price[pos]) {
-                    product_price[rowindex] = parseFloat(product_warehouse_price[pos] * currency['exchange_rate']) + parseFloat(product_warehouse_price[pos] * currency['exchange_rate'] * customer_group_rate);
-                }
-                else{
-                    product_price[rowindex] = parseFloat(response[2] * currency['exchange_rate']) + parseFloat(response[2] * currency['exchange_rate'] * customer_group_rate);
-                }
-                flag = 0;
-                checkQuantity(String(qty), true);
-                flag = 0;
-                localStorage.setItem("tbody-id", $("table.order-list tbody").html());
-            }
-            $("input[name='product_code_name']").val('');
-            if(flag){
-                addNewProduct(response);
-            }
-            else if(response[18] != 'null' && response[18] != '') {
-                var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
-                if(imeiNumbers)
-                    imeiNumbers += ','+response[18];
-                else
-                    imeiNumbers = response[18];
-                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(imeiNumbers);
+            var matcher = new RegExp(".*" + $.ui.autocomplete.escapeRegex(term) + ".*", "i");
+            response($.grep(lims_product_array, function(item) {
+                return matcher.test(item);
+            }));
+        },
+        response: function(event, ui) {
+            if (ui.content.length == 1) {
+                var data = ui.content[0].value;
+                $(this).autocomplete( "close" );
+                productSearch(data);
+            } 
+            else if(ui.content.length == 0 && $('#lims_productcodeSearch').val().length == 13) {
+                // FIXED: pass raw barcode only; productSearch will append ?customer_id?qty
+                productSearch($('#lims_productcodeSearch').val());
             }
         },
-        error: function(xhr) {
-            // FIXED: show server errors instead of failing silently
-            if(xhr.status === 404) {
-                var resp = xhr.responseJSON;
-                alert(resp && resp.error ? resp.error : 'Product not found in the selected warehouse.');
-            } else {
-                alert('An error occurred while searching for the product.');
+        select: function(event, ui) {
+            var data = ui.item.value;
+            ui.item.value = '';
+            productSearch(data);
+        },
+    });
+
+    $('#myTable').keyboard({
+        accepted : function(event, keyboard, el) {
+          checkQuantity(el.value, true);
+      }
+    });
+
+    $("#myTable").on('click', '.plus', function() {
+        rowindex = $(this).closest('tr').index();
+        var qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
+        if(!qty)
+          qty = 1;
+        else
+          qty = parseFloat(qty) + 1;
+        if(is_variant[rowindex])
+            checkQuantity(String(qty), true);
+        else
+            checkDiscount(qty, true);
+    });
+
+    $("#myTable").on('click', '.minus', function() {
+        rowindex = $(this).closest('tr').index();
+        var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) - 1;
+        if (qty > 0) {
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
+        } else {
+            qty = 1;
+        }
+        if(is_variant[rowindex])
+            checkQuantity(String(qty), true);
+        else
+            checkDiscount(qty, true);
+    });
+
+       $("select[name=price_option]").on("change", function () {
+            console.log($(this).val());
+            $("#editModal input[name=edit_unit_price]").val($(this).val());
+        });
+
+    $("#myTable").on("change", ".batch-no", function () {
+        rowindex = $(this).closest('tr').index();
+        var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-id').val();
+        var warehouse_id = $('#warehouse_id').val();
+        $.get('check-batch-availability/' + product_id + '/' + $(this).val() + '/' + warehouse_id, function(data) {
+            if(data['message'] != 'ok') {
+                alert(data['message']);
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.batch-no').val('');
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val('');
+            }
+            else {
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-batch-id').val(data['product_batch_id']);
+                code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
+                pos = product_code.indexOf(code);
+                product_qty[pos] = data['qty'];
+            }
+        });
+    });
+
+    //Change quantity
+    $("#myTable").on('input', '.qty', function() {
+        rowindex = $(this).closest('tr').index();
+        if($(this).val() < 0 && $(this).val() != '') {
+          $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(1);
+          alert("Quantity can't be less than 0");
+        }
+        if(is_variant[rowindex])
+            checkQuantity($(this).val(), true);
+        else
+            checkDiscount($(this).val(), true);
+    });
+
+    $("#myTable").on('click', '.qty', function() {
+        rowindex = $(this).closest('tr').index();
+    });
+
+    $(document).on('click', '.sound-btn', function() {
+        var audio = $("#mysoundclip1")[0];
+        audio.play();
+    });
+
+    $(document).on('click', '.product-img', function() {
+        var customer_id = $('#customer_id').val();
+        var warehouse_id = $('select[name="warehouse_id"]').val();
+        if(!customer_id)
+            alert('Please select Customer!');
+        else if(!warehouse_id)
+            alert('Please select Warehouse!');
+        else{
+            var data = $(this).data('product');
+            product_info = data.split(" ");
+            pos = product_code.indexOf(product_info[0]);
+            if(pos < 0)
+                alert('Product is not avaialable in the selected warehouse');
+            else{
+                productSearch(data);
             }
         }
     });
-}
+    //Delete product
+    $("table.order-list tbody").on("click", ".ibtnDel", function(event) {
+        var audio = $("#mysoundclip2")[0];
+        audio.play();
+        rowindex = $(this).closest('tr').index();
+        product_price.splice(rowindex, 1);
+        wholesale_price.splice(rowindex, 1);
+        product_discount.splice(rowindex, 1);
+        tax_rate.splice(rowindex, 1);
+        tax_name.splice(rowindex, 1);
+        tax_method.splice(rowindex, 1);
+        unit_name.splice(rowindex, 1);
+        unit_operator.splice(rowindex, 1);
+        unit_operation_value.splice(rowindex, 1);
 
-function addNewProduct(data){
-    var newRow = $('<tr id='+ data[1] +'>');
-    var cols = '';
-    temp_unit_name = (data[6]).split(',');
-    pos = product_code.indexOf(data[1]);
-    cols += '<td class="col-sm-3 product-title"><strong class="edit-product btn btn-link" data-toggle="modal" data-target="#editModal"><span style="margin-left: -19px; white-space: break-spaces;"><strong>' + data[0] + ' <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg></strong><br><span>' + data[1]+ '</span>' + '<p>In Stock: <span class="in-stock"></span></p></td>';
-    cols += '<td class="col-sm-2"><input type="text" class="form-control batch-no" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
+        localStorageProductId.splice(rowindex, 1);
+        localStorageQty.splice(rowindex, 1);
+        localStorageSaleUnit.splice(rowindex, 1);
+        localStorageProductDiscount.splice(rowindex, 1);
+        localStorageTaxRate.splice(rowindex, 1);
+        localStorageNetUnitPrice.splice(rowindex, 1);
+        localStorageTaxValue.splice(rowindex, 1);
+        localStorageSubTotalUnit.splice(rowindex, 1);
+        localStorageSubTotal.splice(rowindex, 1);
+        localStorageProductCode.splice(rowindex, 1);
 
-    cols += '<td class="col-sm-2 product-price"></td>';
-    cols += '<td class="col-sm-2"><div class="input-group"><span class="input-group-btn"><button type="button" class="btn btn-default minus"><span class="dripicons-minus"></span></button></span><input type="text" name="qty[]" class="form-control qty numkey input-number" step="any" value="'+data[15]+'" required><span class="input-group-btn"><button type="button" class="btn btn-default plus"><span class="dripicons-plus"></span></button></span></div></td>';
-    cols += '<td class="col-sm-2 sub-total"></td>';
-    cols += '<td class="col-sm-1"><button type="button" class="ibtnDel btn btn-danger btn-sm"><i class="dripicons-cross"></i></button></td>';
-    cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
-    cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[9] + '"/>';
-    cols += '<input type="hidden" class="product_price" />';
-    cols += '<input type="hidden" class="sale-unit" name="sale_unit[]" value="' + temp_unit_name[0] + '"/>';
-    cols += '<input type="hidden" class="net_unit_price" name="net_unit_price[]" />';
-    cols += '<input type="hidden" class="discount-value" name="discount[]" />';
-    cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + data[3] + '"/>';
-    cols += '<input type="hidden" class="tax-value" name="tax[]" />';
-    cols += '<input type="hidden" class="tax-name" value="'+data[4]+'" />';
-    cols += '<input type="hidden" class="tax-method" value="'+data[5]+'" />';
-    cols += '<input type="hidden" class="sale-unit-operator" value="'+data[7]+'" />';
-    cols += '<input type="hidden" class="sale-unit-operation-value" value="'+data[8]+'" />';
-    cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" />';
-    cols += '<input type="hidden" class="imei-number" name="imei_number[]" />';
+        localStorageTaxName.splice(rowindex, 1);
+        localStorageTaxMethod.splice(rowindex, 1);
+        localStorageTempUnitName.splice(rowindex, 1);
+        localStorageSaleUnitOperator.splice(rowindex, 1);
+        localStorageSaleUnitOperationValue.splice(rowindex, 1);
 
-    newRow.append(cols);
-    if(keyboard_active==1) {
-        $("table.order-list tbody").prepend(newRow).find('.qty').keyboard({usePreview: false, layout: 'custom', display: { 'accept'  : '&#10004;', 'cancel'  : '&#10006;' }, customLayout : {
-          'normal' : ['1 2 3', '4 5 6', '7 8 9','0 {dec} {bksp}','{clear} {cancel} {accept}']}, restrictInput : true, preventPaste : true, autoAccept : true, css: { container: 'center-block dropdown-menu', buttonDefault: 'btn btn-default', buttonHover: 'btn-primary',buttonAction: 'active', buttonDisabled: 'disabled'},});
-    }
-    else
-        $("table.order-list tbody").prepend(newRow);
+        localStorage.setItem("localStorageProductId", localStorageProductId);
+        localStorage.setItem("localStorageQty", localStorageQty);
+        localStorage.setItem("localStorageSaleUnit", localStorageSaleUnit);
+        localStorage.setItem("localStorageProductCode", localStorageProductCode);
+        localStorage.setItem("localStorageProductDiscount", localStorageProductDiscount);
+        localStorage.setItem("localStorageTaxRate", localStorageTaxRate);
+        localStorage.setItem("localStorageTaxName", localStorageTaxName);
+        localStorage.setItem("localStorageTaxMethod", localStorageTaxMethod);
+        localStorage.setItem("localStorageTempUnitName", localStorageTempUnitName);
+        localStorage.setItem("localStorageSaleUnitOperator", localStorageSaleUnitOperator);
+        localStorage.setItem("localStorageSaleUnitOperationValue", localStorageSaleUnitOperationValue);
+        localStorage.setItem("localStorageNetUnitPrice", localStorageNetUnitPrice);
+        localStorage.setItem("localStorageTaxValue", localStorageTaxValue);
+        localStorage.setItem("localStorageSubTotalUnit", localStorageSubTotalUnit);
+        localStorage.setItem("localStorageSubTotal", localStorageSubTotal);
 
-    rowindex = newRow.index();
+        $(this).closest("tr").remove();
+        localStorage.setItem("tbody-id", $("table.order-list tbody").html());
+        calculateTotal();
+    });
 
-    if(!data[11] && product_warehouse_price[pos]) {
-        product_price.splice(rowindex, 0, parseFloat(product_warehouse_price[pos] * currency['exchange_rate']) + parseFloat(product_warehouse_price[pos] * currency['exchange_rate'] * customer_group_rate));
-    }
-    else {
-        product_price.splice(rowindex, 0, parseFloat(data[2] * currency['exchange_rate']) + parseFloat(data[2] * currency['exchange_rate'] * customer_group_rate));
-    }
+    //Edit product
+    $("table.order-list").on("click", ".edit-product", function() {
+        rowindex = $(this).closest('tr').index();
+        edit();
+    });
+     
+    //Update product
+    $('button[name="update_btn"]').on("click", function() {
+        // Always coerce to numbers safely
+        let edit_discount = parseFloat($('#editModal input[name="edit_discount"]').val()) || 0;
+        let edit_qty = parseFloat($('#editModal input[name="edit_qty"]').val()) || 0;
+        let edit_unit_price = parseFloat($('#editModal input[name="edit_unit_price"]').val()) || 0;
 
-    if(data[16])
-        wholesale_price.splice(rowindex, 0, parseFloat(data[16] * currency['exchange_rate']) + parseFloat(data[16] * currency['exchange_rate'] * customer_group_rate));
-    else
-        wholesale_price.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+        let new_unit_price = edit_unit_price - edit_discount;
+        console.log("New unit price:", new_unit_price);
 
-    product_discount.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
-    tax_rate.splice(rowindex, 0, parseFloat(data[3]));
-    tax_name.splice(rowindex, 0, data[4]);
-    tax_method.splice(rowindex, 0, data[5]);
-    unit_name.splice(rowindex, 0, data[6]);
-    unit_operator.splice(rowindex, 0, data[7]);
-    unit_operation_value.splice(rowindex, 0, data[8]);
-    is_imei.splice(rowindex, 0, data[13]);
-    is_variant.splice(rowindex, 0, data[14]);
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product_price').val(product_price[rowindex]);
-    localStorageQty.splice(rowindex, 0, data[15]);
-    localStorageProductId.splice(rowindex, 0, data[9]);
-    localStorageProductCode.splice(rowindex, 0, data[1]);
-    localStorageSaleUnit.splice(rowindex, 0, temp_unit_name[0]);
-    localStorageProductDiscount.splice(rowindex, 0, product_discount[rowindex]);
-    localStorageTaxRate.splice(rowindex, 0, tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
-    localStorageTaxName.splice(rowindex, 0, data[4]);
-    localStorageTaxMethod.splice(rowindex, 0, data[5]);
-    localStorageTempUnitName.splice(rowindex, 0, data[6]);
-    localStorageSaleUnitOperator.splice(rowindex, 0, data[7]);
-    localStorageSaleUnitOperationValue.splice(rowindex, 0, data[8]);
-    localStorageNetUnitPrice.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
-    localStorageTaxValue.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
-    localStorageSubTotalUnit.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
-    localStorageSubTotal.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
-
-    localStorage.setItem("localStorageProductId", localStorageProductId);
-    localStorage.setItem("localStorageSaleUnit", localStorageSaleUnit);
-    localStorage.setItem("localStorageProductCode", localStorageProductCode);
-    localStorage.setItem("localStorageTaxName", localStorageTaxName);
-    localStorage.setItem("localStorageTaxMethod", localStorageTaxMethod);
-    localStorage.setItem("localStorageTempUnitName", localStorageTempUnitName);
-    localStorage.setItem("localStorageSaleUnitOperator", localStorageSaleUnitOperator);
-    localStorage.setItem("localStorageSaleUnitOperationValue", localStorageSaleUnitOperationValue);
-    checkQuantity(data[15], true);
-    checkDiscount(data[15], true);
-    localStorage.setItem("tbody-id", $("table.order-list tbody").html());
-    if(data[16]) {
-        populatePriceOption();
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
-    }
-}
-
-function populatePriceOption() {
-    $('#editModal select[name=price_option]').empty();
-    $('#editModal select[name=price_option]').append('<option value="'+ product_price[rowindex] +'">'+ product_price[rowindex] +'</option>');
-    if(wholesale_price[rowindex] > 0)
-        $('#editModal select[name=price_option]').append('<option value="'+ wholesale_price[rowindex] +'">'+ wholesale_price[rowindex] +'</option>');
-    $('.selectpicker').selectpicker('refresh');
-}
-
-function edit(){
-    console.log("Editing row index: " + rowindex);
-    $(".imei-section").remove();
-    if(is_imei[rowindex]) {
-        var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
-
-        if(imeiNumbers.length) {
-            imeiArrays = [...new Set(imeiNumbers.split(","))];
-            htmlText = `<div class="col-md-8 form-group imei-section">
-                        <label>IMEI or Serial Numbers</label>
-                        <div class="table-responsive">
-                            <table id="imei-table" class="table table-hover">
-                                <tbody>`;
-            for (var i = 0; i < imeiArrays.length; i++) {
-                htmlText += `<tr>
-                                <td>
-                                    <input type="text" class="form-control imei-numbers" name="imei_numbers[]" value="`+imeiArrays[i]+`" />
-                                </td>
-                                <td>
-                                    <button type="button" class="imei-del btn btn-sm btn-danger">X</button>
-                                </td>
-                            </tr>`;
-            }
-            htmlText += `</tbody>
-                            </table>
-                        </div>
-                    </div>`;
-            $("#editModal .modal-element").append(htmlText);
+        if (edit_discount > edit_unit_price) {
+            alert('Invalid Discount Input!');
+            return;
         }
-    } 
 
+        if (edit_qty <= 0) {
+            $('input[name="edit_qty"]').val(1);
+            edit_qty = 1;
+            alert("Quantity can't be less than 0");
+        }
 
-    populatePriceOption();
-    //$("#product-cost").text(cost[rowindex]);
-    var row_product_name_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(1)').text();
-    $('#modal_header').text(row_product_name_code);
+        var tax_rate_all = <?php echo json_encode($tax_rate_all) ?>;
+        let selectedTaxId = $('select[name="edit_tax_rate"]').val();
+        let currentTaxRate = parseFloat(tax_rate_all[selectedTaxId]) || 0;
 
-    var qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val();
-    $('input[name="edit_qty"]').val(qty);
+        tax_rate[rowindex] = localStorageTaxRate[rowindex] = currentTaxRate;
+        tax_name[rowindex] = localStorageTaxName[rowindex] = $('select[name="edit_tax_rate"] option:selected').text();
 
-    cur_product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
+        // ✅ Always store as numeric values
+        product_discount[rowindex] = edit_discount;
+        product_price[rowindex] = new_unit_price;
 
-    $('input[name="edit_discount"]').val(parseFloat(product_discount[rowindex]).toFixed({{$general_setting->decimal}}));
-
-
-
-    var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
-    pos = product_code.indexOf(row_product_code);
-    if(product_type[pos] == 'standard'){
-        unitConversion();
-        temp_unit_name = (unit_name[rowindex]).split(',');
-        temp_unit_name.pop();
-        temp_unit_operator = (unit_operator[rowindex]).split(',');
-        temp_unit_operator.pop();
-        temp_unit_operation_value = (unit_operation_value[rowindex]).split(',');
-        temp_unit_operation_value.pop();
-        $('select[name="edit_unit"]').empty();
-        $.each(temp_unit_name, function(key, value) {
-            $('select[name="edit_unit"]').append('<option value="' + key + '">' + value + '</option>');
+        console.log({
+            edit_qty,
+            edit_unit_price,
+            edit_discount,
+            new_unit_price,
+            row_product_price: product_price[rowindex]
         });
-        $("#edit_unit").show();
-    }
-    else{
-        row_product_price = product_price[rowindex];
-        $("#edit_unit").hide();
-    }
-    $('input[name="edit_unit_price"]').val(row_product_price.toFixed({{$general_setting->decimal}}));
-    $('.selectpicker').selectpicker('refresh');
-}
 
-function couponDiscount() {
-    var rownumber = $('table.order-list tbody tr:last').index();
-    if (rownumber < 0) {
-        alert("Please insert product to order table!")
+        // Call checkDiscount
+        if (edit_discount > 0) {
+            checkDiscount(edit_qty, true, edit_discount);
+        } else {
+            checkDiscount(edit_qty, false);
+        }
+
+        // ✅ After discount changes, recalc total & tax safely
+        calculateTotal();
+    });
+
+    $('button[name="order_discount_btn"]').on("click", function() {
+        calculateGrandTotal();
+    });
+
+    $('button[name="shipping_cost_btn"]').on("click", function() {
+        calculateGrandTotal();
+    });
+
+    $('button[name="order_tax_btn"]').on("click", function() {
+        calculateGrandTotal();
+    });
+
+    $(".coupon-check").on("click",function() {
+        couponDiscount();
+    });
+
+    // Validate payment method and required fields before submit
+    function validatePaymentMethod() {
+        var paid_amount = $('input[name="paid_amount"]').val();
+        var paymentMethod = $('select[name="paid_by_id"]').val();
+        
+        if (!paid_amount || parseFloat(paid_amount) <= 0) {
+            alert('Please enter a valid paid amount');
+            return false;
+        }
+        
+        if (paymentMethod == 2) { // Gift Card
+            var gift_card_id = $('select[name="gift_card_id_select"]').val() || $('input[name="gift_card_id"]').val();
+            if (!gift_card_id) {
+                alert('Please select a gift card');
+                return false;
+            }
+        }
+        
+        if (paymentMethod == 4) { // Cheque
+            var cheque_no = $('input[name="cheque_no"]').val();
+            if (!cheque_no) {
+                alert('Please enter the cheque number');
+                return false;
+            }
+        }
+        
+        // Validate split payment methods
+        var splitValidationPassed = true;
+        $('select[name="paid_by_id_select[]"]').each(function() {
+            let splitMethod = $(this).val();
+            let row = $(this).closest('.payment-row');
+            
+            if (splitMethod == 4) { // Cheque
+                let cheque_no = row.find('input[name="split_cheque_no[]"]').val();
+                if (!cheque_no) {
+                    alert('Please enter the cheque number for all cheque payments in split payments');
+                    splitValidationPassed = false;
+                    return false;
+                }
+            }
+            
+            if (splitMethod == 2) { // Gift Card
+                let gift_card_id = row.find('select[name="split_gift_card_id[]"]').val();
+                if (!gift_card_id) {
+                    alert('Please select a gift card for all gift card payments in split payments');
+                    splitValidationPassed = false;
+                    return false;
+                }
+            }
+        });
+        
+        if (!splitValidationPassed) {
+            return false;
+        }
+        
+        if (paymentMethod == 6) { // Deposit
+            var customer_id = $('#customer_id').val();
+            if (!customer_id) {
+                alert('Please select a customer for deposit payment');
+                return false;
+            }
+            var customerDeposit = parseFloat(deposit[customer_id]) || 0;
+            if (parseFloat(paid_amount) > customerDeposit) {
+                alert('Amount exceeds customer deposit! Customer deposit: ' + customerDeposit);
+                return false;
+            }
+        }
+        
+        if (paymentMethod == 7) { // Points
+            var customer_id = $('#customer_id').val();
+            if (!customer_id) {
+                alert('Please select a customer for points payment');
+                return false;
+            }
+            if (typeof reward_point_setting === 'undefined') {
+                alert('Reward point setting is not available');
+                return false;
+            }
+            var customerPoints = parseInt(points[customer_id], 10) || 0;
+            var perPointAmount = parseFloat(reward_point_setting['per_point_amount']) || 1;
+            var requiredPoints = Math.ceil(parseFloat(paid_amount) / perPointAmount);
+            if (requiredPoints > customerPoints) {
+                alert('Customer does not have sufficient points. Available points: ' + customerPoints);
+                return false;
+            }
+        }
+        
+        if (paymentMethod == 8) { // Mobile Money
+            var mobile_operator = $('#mobile_money_operator').val() || $('input[name="selected_mobile_op"]').val();
+            var mobile_number = $('input[name="mobile_number"]').val();
+            if (!mobile_operator) {
+                alert('Please select a mobile money operator');
+                return false;
+            }
+            if (!mobile_number) {
+                alert('Please enter a mobile number');
+                return false;
+            }
+        }
+        
+        return true;
     }
-    else if($("#coupon-code").val() != ''){
-        valid = 0;
-        $.each(coupon_list, function(key, value) {
-            if($("#coupon-code").val() == value['code']){
-                valid = 1;
-                todyDate = <?php echo json_encode(date('Y-m-d'))?>;
-                if(parseFloat(value['quantity']) <= parseFloat(value['used']))
-                    alert('This Coupon is no longer available');
-                else if(todyDate > value['expired_date'])
-                    alert('This Coupon has expired!');
-                else if(value['type'] == 'fixed'){
-                    if(parseFloat($('input[name="grand_total"]').val()) >= value['minimum_amount']) {
-                        $('input[name="grand_total"]').val($('input[name="grand_total"]').val() - (value['amount'] * currency['exchange_rate']));
-                        $('#grand-total').text(parseFloat($('input[name="grand_total"]').val()).toFixed({{$general_setting->decimal}}));
+
+    $(".payment-btn").on("click", function() {
+        var audio = $("#mysoundclip2")[0];
+        audio.play();
+        $('input[name="paid_amount"]').val($("#grand-total").text());
+        $('input[name="paying_amount"]').val($("#grand-total").text());
+        $('.qc').data('initial', 1);
+    });
+
+    $("#draft-btn").on("click",function(){
+        console.log('draft');
+        var audio = $("#mysoundclip2")[0];
+        audio.play();
+        $('input[name="sale_status"]').val(3);
+        $('input[name="paying_amount"]').prop('required',false);
+        $('input[name="paid_amount"]').prop('required',false);
+        var rownumber = $('table.order-list tbody tr:last').index();
+        if (rownumber < 0) {
+            alert("Please insert product to order table!")
+        }
+        else {
+            $('.payment-form').submit();
+        }
+    });
+
+    $("#submit-btn").on("click", function() {
+        if(validatePaymentMethod()) {
+            $('.payment-form').submit();
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // ✅ Function: show or hide global .mobile_money_fields depending on selections
+        function toggleGlobalMobileMoneyFields() {
+            // Check if any select currently has value '8'
+            const hasMobileMoney = Array.from(document.querySelectorAll('select[name="paid_by_id_select[]"]'))
+                .some(select => select.value === '8');
+            console.log('Has Mobile Money:', hasMobileMoney);
+
+            const fields = document.querySelectorAll('.mobile_money_fields');
+            fields.forEach(field => {
+                field.style.display = hasMobileMoney ? 'block' : 'none';
+            });
+        }
+
+        // ✅ Listen to change event on all current & future selects
+        $(document).on("change", 'select[name="paid_by_id_select[]"].payment-method-select', function () {
+            toggleGlobalMobileMoneyFields();
+            // Show/hide cheque field based on selected payment method
+            let row = $(this).closest('.payment-row');
+            let methodValue = $(this).val();
+            row.find('.cheque-split').toggle(methodValue === '4');
+            row.find('.giftcard-split').toggle(methodValue === '2');
+            
+            // Clear cheque number when toggling away from cheque
+            if (methodValue !== '4') {
+                row.find('input[name="split_cheque_no[]"]').val('');
+            }
+            if (methodValue !== '2') {
+                row.find('select[name="split_gift_card_id[]"]').val('');
+            }
+        });
+
+        // ✅ Initialize state on load
+        toggleGlobalMobileMoneyFields();
+
+        $("#multiplePaymentBtn").on("click", function () {
+            let usedMethods = getSelectedPaymentMethods();
+
+            let options = [
+                { value: 1, label: 'Cash' },
+                { value: 2, label: 'Gift Card' },
+                { value: 3, label: 'Credit Card' },
+                { value: 4, label: 'Cheque' },
+                { value: 5, label: 'Paypal' },
+                { value: 6, label: 'Deposit' },
+                { value: 7, label: 'Points' },
+                { value: 8, label: 'Mobile Money' }
+            ];
+
+            let availableOptions = options.filter(opt => !usedMethods.includes(opt.value));
+
+            if (availableOptions.length === 0) {
+                alert("All payment methods have been used.");
+                return;
+            }
+
+            let selectOptions = availableOptions.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+
+            let paymentRow = `
+                <div class="row mt-2 payment-row align-items-end" style="border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                    <div class="col-md-2">
+                        <label class="font-weight-bold" style="font-size: 12px;">Amount *</label>
+                        <input type="number" name="split_amount[]" class="form-control numkey" step="any" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="font-weight-bold" style="font-size: 12px;">Method</label>
+                        <div class="d-flex align-items-center">
+                            <select name="paid_by_id_select[]" class="form-control selectpicker payment-method-select" style="width: calc(100% - 35px);">
+                                ${selectOptions}
+                            </select>
+                            <button type="button" class="btn btn-sm btn-danger ml-2 remove-payment"><i class="fa fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="col-md-3 cheque-split" style="display: none;">
+                        <label class="font-weight-bold" style="font-size: 12px;">Cheque # *</label>
+                        <input type="text" name="split_cheque_no[]" class="form-control split-cheque-field" placeholder="Cheque #">
+                    </div>
+                    <div class="col-md-4 giftcard-split" style="display: none;">
+                        <label class="font-weight-bold" style="font-size: 12px;">Gift Card</label>
+                        <select name="split_gift_card_id[]" class="form-control selectpicker split-gift-card-select" data-live-search="true" data-live-search-style="begins" title="Select..." style="width: 100%;"></select>
+                    </div>
+                </div>
+            `;
+
+            // Show the container when first payment method is added
+            if ($('#paymentMethodsContainer').children().length === 0) {
+                $('#paymentMethodsContainer').show();
+            }
+            $("#paymentMethodsContainer").append(paymentRow);
+            $('.selectpicker').selectpicker('refresh');
+            toggleGlobalMobileMoneyFields();
+        });
+        
+    });
+    function getSelectedPaymentMethods() {
+        let methods = [];
+
+        let mainMethod = $("select[name='paid_by_id']").val();
+        if (mainMethod) methods.push(parseInt(mainMethod));
+
+        $("select[name='paid_by_id_select[]']").each(function () {
+            let val = $(this).val();
+            if (val) methods.push(parseInt(val));
+        });
+       
+
+        return methods;
+    }
+
+    $("#gift-card-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(2);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        $('.mobile_money').hide();
+        
+        giftCard();
+    });
+
+    $("#credit-card-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(3);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        creditCard();
+    });
+
+    $("#cheque-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(4);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        cheque();
+    });
+
+    $("#cash-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(1);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').show();
+        hide();
+    });
+
+    $('#add-payment').on('shown.bs.modal', function () {
+        broadcastPaymentStart();
+    });
+
+    $('#add-payment').on('hidden.bs.modal', function () {
+        // Return the display to cart view if we are still mid-sale
+        if ($('table.order-list tbody tr').length > 0) {
+            syncDisplayState();
+        }
+    });
+
+    $('select[name="paid_by_id"]').on('change', function () {
+        if ($('#add-payment').hasClass('show')) broadcastPaymentStart();
+    });
+
+    $('input[name="paying_amount"]').on('input', function () {
+        if ($('#add-payment').hasClass('show')) broadcastPaymentStart();
+    });
+
+    $("#paypal-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(5);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        hide();
+    });
+
+    $("#deposit-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(6);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        hide();
+        deposits();
+    });
+
+    $("#point-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(7);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        hide();
+        pointCalculation();
+    });
+
+    $("#mobile_money-btn").on("click",function() {
+        $('select[name="paid_by_id"]').val(8);
+        $('.selectpicker').selectpicker('refresh');
+        $('div.qc').hide();
+        hide();
+        mobile_money();
+    });
+
+    $('select[name="paid_by_id"]').on("change", function() {
+        var id = $(this).val();
+        $(".payment-form").off("submit");
+        if(id == 2) {
+            $('div.qc').hide();
+            giftCard();
+        }
+        else if (id == 3) {
+            $('div.qc').hide();
+            creditCard();
+        }
+        else if (id == 4) {
+            $('div.qc').hide();
+            cheque();
+        }
+        else if (id == 8) {
+            $('div.qc').hide();
+            mobile_money();
+        }
+        else {
+            hide();
+            if(id == 1)
+                $('div.qc').show();
+            else if(id == 6) {
+                $('div.qc').hide();
+                deposits();
+            }
+            else if(id == 7) {
+                $('div.qc').hide();
+                pointCalculation();
+            }
+        }
+            $("#paymentMethodsContainer").empty().hide();
+        refreshPaymentMethodOptions();
+    });
+
+    $('#add-payment select[name="gift_card_id_select"]').on("change", function() {
+        var balance = gift_card_amount[$(this).val()] - gift_card_expense[$(this).val()];
+        $('#add-payment input[name="gift_card_id"]').val($(this).val());
+        if($('input[name="paid_amount"]').val() > balance){
+            alert('Amount exceeds card balance! Gift Card balance: '+ balance);
+        }
+    });
+
+    $('#add-payment input[name="paying_amount"]').on("input", function() {
+        change($(this).val(), $('input[name="paid_amount"]').val());
+    });
+
+    $('input[name="paid_amount"]').on("input", function() {
+        if( $(this).val() > parseFloat($('input[name="paying_amount"]').val()) ) {
+            alert('Paying amount cannot be bigger than recieved amount');
+            $(this).val('');
+        }
+        else if( $(this).val() > parseFloat($('#grand-total').text()) ){
+            alert('Paying amount cannot be bigger than grand total');
+            $(this).val('');
+        }
+
+        change( $('input[name="paying_amount"]').val(), $(this).val() );
+        var id = $('select[name="paid_by_id"]').val();
+        if(id == 2){
+            var balance = gift_card_amount[$("#gift_card_id_select").val()] - gift_card_expense[$("#gift_card_id_select").val()];
+            if($(this).val() > balance)
+                alert('Amount exceeds card balance! Gift Card balance: '+ balance);
+        }
+        else if(id == 6){
+            if( $('input[name="paid_amount"]').val() > deposit[$('#customer_id').val()] )
+                alert('Amount exceeds customer deposit! Customer deposit : '+ deposit[$('#customer_id').val()]);
+        }
+    });
+
+    $('.transaction-btn-plus').on("click", function() {
+        $(this).addClass('d-none');
+        $('.transaction-btn-close').removeClass('d-none');
+    });
+
+    $('.transaction-btn-close').on("click", function() {
+        $(this).addClass('d-none');
+        $('.transaction-btn-plus').removeClass('d-none');
+    });
+
+    $('.coupon-btn-plus').on("click", function() {
+        $(this).addClass('d-none');
+        $('.coupon-btn-close').removeClass('d-none');
+    });
+
+    $('.coupon-btn-close').on("click", function() {
+        $(this).addClass('d-none');
+        $('.coupon-btn-plus').removeClass('d-none');
+    });
+
+    $(document).on('click', '.qc-btn', function(e) {
+        if($(this).data('amount')) {
+            if($('.qc').data('initial')) {
+                $('input[name="paying_amount"]').val( $(this).data('amount').toFixed({{$general_setting->decimal}}) );
+                $('.qc').data('initial', 0);
+            }
+            else {
+                $('input[name="paying_amount"]').val( (parseFloat($('input[name="paying_amount"]').val()) + $(this).data('amount')).toFixed({{$general_setting->decimal}}) );
+            }
+        }
+        else
+            $('input[name="paying_amount"]').val('{{number_format(0, $general_setting->decimal, '.', '')}}');
+        change( $('input[name="paying_amount"]').val(), $('input[name="paid_amount"]').val() );
+    });
+
+    $(document).on("input", 'input[name="split_amount[]"]', function() {
+        let payingAmount = parseFloat($('input[name="paying_amount"]').val()) || 0;
+        console.log('Paying Amount:', payingAmount);
+        let totalSplit = getTotalSplitAmount();
+        let mainPaid = parseFloat($('input[name="paid_amount"]').val()) || 0;
+        console.log('Main Paid:', mainPaid);
+        let totalPaid = totalSplit + payingAmount;
+        console.log('Total Paid (main + split):', totalPaid);
+
+        if (totalPaid > mainPaid) {
+            alert('Total paid (main + split) cannot be greater than paying amount');
+            $(this).val('');
+            totalSplit = getTotalSplitAmount(); // recalculate after clearing this input
+            totalPaid = totalSplit + payingAmount;
+        }
+
+        change(mainPaid, totalPaid);
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const dropdown = document.getElementById("mobile_money_operator");
+        const hiddenField = document.getElementById("selected_mobile_op");
+        dropdown.addEventListener("change", function () {
+            hiddenField.value = dropdown.value;
+        });
+        hiddenField.value = dropdown.value;
+    });
+        
+    $(document).on('submit', '.payment-form', function(e) {
+        $('#payment-error-alert').addClass('d-none');
+        $("table.order-list tbody .qty").each(function(index) {
+            if ($(this).val() == '') {
+                alert('One of products has no quantity!');
+                e.preventDefault();
+            }
+        });
+        var rownumber = $('table.order-list tbody tr:last').index();
+        if (rownumber < 0) {
+            alert("Please insert product to order table!")
+            e.preventDefault();
+            return; 
+        }
+        else if(parseFloat($('input[name="total_qty"]').val()) <= 0) {
+            alert('Product quantity is 0');
+            e.preventDefault();
+            return;
+        }
+        // Check if change is negative (insufficient payment)
+        var changeVal = parseFloat($("#change").text().replace(/,/g, '')) || 0;
+        if (changeVal < 0) {
+            e.preventDefault();
+            $('#payment-error-message').text('Insufficient payment - the amount received is less than the total due. Please collect the full amount before submitting.');
+            $('#payment-error-alert').removeClass('d-none');
+            $('#add-payment').modal('show');
+            return;
+        }
+            // let the customer display know
+        broadcastToDisplay('payment_complete');
+        $("#submit-button").prop('disabled', true);
+        $('input[name="paid_by_id"]').val($('select[name="paid_by_id"]').val());
+        $('input[name="order_tax_rate"]').val($('select[name="order_tax_rate_select"]').val());
+
+    });
+
+    function change(paying_amount, paid_amount) {
+        $("#change").text( parseFloat(paying_amount - paid_amount).toFixed({{$general_setting->decimal}}) );
+    }
+
+    function getTotalSplitAmount() {
+        let total = 0;
+        $('input[name="split_amount[]"]').each(function() {
+            total += parseFloat($(this).val()) || 0;
+        });
+        return total;
+    }
+
+    function productSearch(data) {
+        var code_match = data.match(/Code:\s*([^|]+)/);
+        console.log(code_match);
+        
+        // FIXED: extract code before ? or space so barcode strings don't get corrupted
+        var searchProductCode = code_match ? code_match[1].trim() : data.split('?')[0].split(' ')[0];
+         
+        if (searchProductCode.length < 1) {
+            alert('Please insert product code!');
+            return;
+        }
+        var pre_qty = 0;
+        $(".product-code").each(function(i) {
+            if ($(this).val() == searchProductCode) {
+                rowindex = i;
+                pre_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
+            }
+        });
+        var ajaxData = searchProductCode + '?' + $('#customer_id').val() + '?' + (parseFloat(pre_qty) + 1);
+        console.log(ajaxData);
+        
+        $.ajax({
+            type: 'GET',
+            async: false,
+            url: 'sales/lims_product_search',
+            data: {
+                data: ajaxData,
+                warehouse_id: $('select[name="warehouse_id"]').val()   // FIXED: send warehouse
+            },
+            success: function(response) {
+                // FIXED: handle error responses from controller
+                if(response.error) {
+                    alert(response.error);
+                    return;
+                }
+                
+                var flag = 1;
+                if (pre_qty > 0) {
+                    var qty = response[15];
+                    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
+                    
+                    // FIXED: uses GLOBAL product_code array (was shadowed by local var before)
+                    pos = product_code.indexOf(response[1]);
+                    if (pos < 0) {
+                        console.warn('productSearch: product code not loaded for warehouse', response[1]);
+                    }
+                    if(!response[11] && pos >= 0 && product_warehouse_price[pos]) {
+                        product_price[rowindex] = parseFloat(product_warehouse_price[pos] * currency['exchange_rate']) + parseFloat(product_warehouse_price[pos] * currency['exchange_rate'] * customer_group_rate);
+                    }
+                    else{
+                        product_price[rowindex] = parseFloat(response[2] * currency['exchange_rate']) + parseFloat(response[2] * currency['exchange_rate'] * customer_group_rate);
+                    }
+                    flag = 0;
+                    checkQuantity(String(qty), true);
+                    flag = 0;
+                    localStorage.setItem("tbody-id", $("table.order-list tbody").html());
+                }
+                $("input[name='product_code_name']").val('');
+                if(flag){
+                    addNewProduct(response);
+                }
+                else if(response[18] != 'null' && response[18] != '') {
+                    var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
+                    if(imeiNumbers)
+                        imeiNumbers += ','+response[18];
+                    else
+                        imeiNumbers = response[18];
+                    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(imeiNumbers);
+                }
+            },
+            error: function(xhr) {
+                // FIXED: show server errors instead of failing silently
+                if(xhr.status === 404) {
+                    var resp = xhr.responseJSON;
+                    alert(resp && resp.error ? resp.error : 'Product not found in the selected warehouse.');
+                } else {
+                    alert('An error occurred while searching for the product.');
+                }
+            }
+        });
+    }
+
+    function addNewProduct(data){
+        var newRow = $('<tr id='+ data[1] +'>');
+        var cols = '';
+        temp_unit_name = (data[6]).split(',');
+        pos = product_code.indexOf(data[1]);
+        cols += '<td class="col-sm-3 product-title"><strong class="edit-product btn btn-link" data-toggle="modal" data-target="#editModal"><span style="margin-left: -19px; white-space: break-spaces;"><strong>' + data[0] + ' <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" /></svg></strong><br><span>' + data[1]+ '</span>' + '<p>In Stock: <span class="in-stock"></span></p></td>';
+        cols += '<td class="col-sm-2"><input type="text" class="form-control batch-no" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/> </td>';
+
+        cols += '<td class="col-sm-2 product-price"></td>';
+        cols += '<td class="col-sm-2"><div class="input-group"><span class="input-group-btn"><button type="button" class="btn btn-default minus"><span class="dripicons-minus"></span></button></span><input type="text" name="qty[]" class="form-control qty numkey input-number" step="any" value="'+data[15]+'" required><span class="input-group-btn"><button type="button" class="btn btn-default plus"><span class="dripicons-plus"></span></button></span></div></td>';
+        cols += '<td class="col-sm-2 sub-total"></td>';
+        cols += '<td class="col-sm-1"><button type="button" class="ibtnDel btn btn-danger btn-sm"><i class="dripicons-cross"></i></button></td>';
+        cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
+        cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[9] + '"/>';
+        cols += '<input type="hidden" class="product_price" />';
+        cols += '<input type="hidden" class="sale-unit" name="sale_unit[]" value="' + temp_unit_name[0] + '"/>';
+        cols += '<input type="hidden" class="net_unit_price" name="net_unit_price[]" />';
+        cols += '<input type="hidden" class="discount-value" name="discount[]" />';
+        cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + data[3] + '"/>';
+        cols += '<input type="hidden" class="tax-value" name="tax[]" />';
+        cols += '<input type="hidden" class="tax-name" value="'+data[4]+'" />';
+        cols += '<input type="hidden" class="tax-method" value="'+data[5]+'" />';
+        cols += '<input type="hidden" class="sale-unit-operator" value="'+data[7]+'" />';
+        cols += '<input type="hidden" class="sale-unit-operation-value" value="'+data[8]+'" />';
+        cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" />';
+        cols += '<input type="hidden" class="imei-number" name="imei_number[]" />';
+
+        newRow.append(cols);
+        if(keyboard_active==1) {
+            $("table.order-list tbody").prepend(newRow).find('.qty').keyboard({usePreview: false, layout: 'custom', display: { 'accept'  : '&#10004;', 'cancel'  : '&#10006;' }, customLayout : {
+              'normal' : ['1 2 3', '4 5 6', '7 8 9','0 {dec} {bksp}','{clear} {cancel} {accept}']}, restrictInput : true, preventPaste : true, autoAccept : true, css: { container: 'center-block dropdown-menu', buttonDefault: 'btn btn-default', buttonHover: 'btn-primary',buttonAction: 'active', buttonDisabled: 'disabled'},});
+        }
+        else
+            $("table.order-list tbody").prepend(newRow);
+
+        rowindex = newRow.index();
+
+        if(!data[11] && pos >= 0 && product_warehouse_price[pos]) {
+            product_price.splice(rowindex, 0, parseFloat(product_warehouse_price[pos] * currency['exchange_rate']) + parseFloat(product_warehouse_price[pos] * currency['exchange_rate'] * customer_group_rate));
+        }
+        else {
+            product_price.splice(rowindex, 0, parseFloat(data[2] * currency['exchange_rate']) + parseFloat(data[2] * currency['exchange_rate'] * customer_group_rate));
+        }
+
+        if(data[16])
+            wholesale_price.splice(rowindex, 0, parseFloat(data[16] * currency['exchange_rate']) + parseFloat(data[16] * currency['exchange_rate'] * customer_group_rate));
+        else
+            wholesale_price.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+
+        product_discount.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+        tax_rate.splice(rowindex, 0, parseFloat(data[3]));
+        tax_name.splice(rowindex, 0, data[4]);
+        tax_method.splice(rowindex, 0, data[5]);
+        unit_name.splice(rowindex, 0, data[6]);
+        unit_operator.splice(rowindex, 0, data[7]);
+        unit_operation_value.splice(rowindex, 0, data[8]);
+        is_imei.splice(rowindex, 0, data[13]);
+        is_variant.splice(rowindex, 0, data[14]);
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product_price').val(product_price[rowindex]);
+        localStorageQty.splice(rowindex, 0, data[15]);
+        localStorageProductId.splice(rowindex, 0, data[9]);
+        localStorageProductCode.splice(rowindex, 0, data[1]);
+        localStorageSaleUnit.splice(rowindex, 0, temp_unit_name[0]);
+        localStorageProductDiscount.splice(rowindex, 0, product_discount[rowindex]);
+        localStorageTaxRate.splice(rowindex, 0, tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
+        localStorageTaxName.splice(rowindex, 0, data[4]);
+        localStorageTaxMethod.splice(rowindex, 0, data[5]);
+        localStorageTempUnitName.splice(rowindex, 0, data[6]);
+        localStorageSaleUnitOperator.splice(rowindex, 0, data[7]);
+        localStorageSaleUnitOperationValue.splice(rowindex, 0, data[8]);
+        localStorageNetUnitPrice.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+        localStorageTaxValue.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+        localStorageSubTotalUnit.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+        localStorageSubTotal.splice(rowindex, 0, '{{number_format(0, $general_setting->decimal, '.', '')}}');
+
+        localStorage.setItem("localStorageProductId", localStorageProductId);
+        localStorage.setItem("localStorageSaleUnit", localStorageSaleUnit);
+        localStorage.setItem("localStorageProductCode", localStorageProductCode);
+        localStorage.setItem("localStorageTaxName", localStorageTaxName);
+        localStorage.setItem("localStorageTaxMethod", localStorageTaxMethod);
+        localStorage.setItem("localStorageTempUnitName", localStorageTempUnitName);
+        localStorage.setItem("localStorageSaleUnitOperator", localStorageSaleUnitOperator);
+        localStorage.setItem("localStorageSaleUnitOperationValue", localStorageSaleUnitOperationValue);
+        checkQuantity(data[15], true);
+        checkDiscount(data[15], true);
+        localStorage.setItem("tbody-id", $("table.order-list tbody").html());
+        if(data[16]) {
+            populatePriceOption();
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
+        }
+    }
+
+    function populatePriceOption() {
+        $('#editModal select[name=price_option]').empty();
+        $('#editModal select[name=price_option]').append('<option value="'+ product_price[rowindex] +'">'+ product_price[rowindex] +'</option>');
+        if(wholesale_price[rowindex] > 0)
+            $('#editModal select[name=price_option]').append('<option value="'+ wholesale_price[rowindex] +'">'+ wholesale_price[rowindex] +'</option>');
+        $('.selectpicker').selectpicker('refresh');
+    }
+
+    function edit(){
+        console.log("Editing row index: " + rowindex);
+        $(".imei-section").remove();
+        if(is_imei[rowindex]) {
+            var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
+
+            if(imeiNumbers.length) {
+                imeiArrays = [...new Set(imeiNumbers.split(","))];
+                htmlText = `<div class="col-md-8 form-group imei-section">
+                            <label>IMEI or Serial Numbers</label>
+                            <div class="table-responsive">
+                                <table id="imei-table" class="table table-hover">
+                                    <tbody>`;
+                for (var i = 0; i < imeiArrays.length; i++) {
+                    htmlText += `<tr>
+                                    <td>
+                                        <input type="text" class="form-control imei-numbers" name="imei_numbers[]" value="`+imeiArrays[i]+`" />
+                                    </td>
+                                    <td>
+                                        <button type="button" class="imei-del btn btn-sm btn-danger">X</button>
+                                    </td>
+                                </tr>`;
+                }
+                htmlText += `</tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                $("#editModal .modal-element").append(htmlText);
+            }
+        } 
+
+        populatePriceOption();
+        //$("#product-cost").text(cost[rowindex]);
+        var row_product_name_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(1)').text();
+        $('#modal_header').text(row_product_name_code);
+
+        var qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val();
+        $('input[name="edit_qty"]').val(qty);
+
+        cur_product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
+
+        $('input[name="edit_discount"]').val(parseFloat(product_discount[rowindex]).toFixed({{$general_setting->decimal}}));
+
+        var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
+        pos = product_code.indexOf(row_product_code);
+        if(product_type[pos] == 'standard'){
+            unitConversion();
+            temp_unit_name = (unit_name[rowindex] || '').split(',');
+            temp_unit_name.pop();
+            temp_unit_operator = (unit_operator[rowindex] || '').split(',');
+            temp_unit_operator.pop();
+            temp_unit_operation_value = (unit_operation_value[rowindex] || '').split(',');
+            temp_unit_operation_value.pop();
+            $('select[name="edit_unit"]').empty();
+            $.each(temp_unit_name, function(key, value) {
+                $('select[name="edit_unit"]').append('<option value="' + key + '">' + value + '</option>');
+            });
+            $("#edit_unit").show();
+        }
+        else{
+            row_product_price = product_price[rowindex];
+            $("#edit_unit").hide();
+        }
+        $('input[name="edit_unit_price"]').val(row_product_price.toFixed({{$general_setting->decimal}}));
+        $('.selectpicker').selectpicker('refresh');
+    }
+
+    function couponDiscount() {
+        var rownumber = $('table.order-list tbody tr:last').index();
+        if (rownumber < 0) {
+            alert("Please insert product to order table!")
+        }
+        else if($("#coupon-code").val() != ''){
+            valid = 0;
+            $.each(coupon_list, function(key, value) {
+                if($("#coupon-code").val() == value['code']){
+                    valid = 1;
+                    todyDate = <?php echo json_encode(date('Y-m-d'))?>;
+                    if(parseFloat(value['quantity']) <= parseFloat(value['used']))
+                        alert('This Coupon is no longer available');
+                    else if(todyDate > value['expired_date'])
+                        alert('This Coupon has expired!');
+                    else if(value['type'] == 'fixed'){
+                        if(parseFloat($('input[name="grand_total"]').val()) >= value['minimum_amount']) {
+                            $('input[name="grand_total"]').val($('input[name="grand_total"]').val() - (value['amount'] * currency['exchange_rate']));
+                            $('#grand-total').text(parseFloat($('input[name="grand_total"]').val()).toFixed({{$general_setting->decimal}}));
+                            if(!$('input[name="coupon_active"]').val())
+                                alert('Congratulation! You got '+(value['amount'] * currency['exchange_rate'])+' '+currency['code']+' discount');
+                            $(".coupon-check").prop("disabled",true);
+                            $("#coupon-code").prop("disabled",true);
+                            $('input[name="coupon_active"]').val(1);
+                            $("#coupon-modal").modal('hide');
+                            $('input[name="coupon_id"]').val(value['id']);
+                            $('input[name="coupon_discount"]').val(value['amount'] * currency['exchange_rate']);
+                            $('#coupon-text').text(parseFloat(value['amount'] * currency['exchange_rate']).toFixed({{$general_setting->decimal}}));
+                        }
+                        else
+                            alert('Grand Total is not sufficient for discount! Required '+value['minimum_amount']+' '+currency['code']);
+                    }
+                    else{
+                        var grand_total = $('input[name="grand_total"]').val();
+                        var coupon_discount = grand_total * (value['amount'] / 100);
+                        grand_total = grand_total - coupon_discount;
+                        $('input[name="grand_total"]').val(grand_total);
+                        $('#grand-total').text(parseFloat(grand_total).toFixed({{$general_setting->decimal}}));
                         if(!$('input[name="coupon_active"]').val())
-                            alert('Congratulation! You got '+(value['amount'] * currency['exchange_rate'])+' '+currency['code']+' discount');
+                                alert('Congratulation! You got '+value['amount']+'% discount');
                         $(".coupon-check").prop("disabled",true);
                         $("#coupon-code").prop("disabled",true);
                         $('input[name="coupon_active"]').val(1);
                         $("#coupon-modal").modal('hide');
                         $('input[name="coupon_id"]').val(value['id']);
-                        $('input[name="coupon_discount"]').val(value['amount'] * currency['exchange_rate']);
-                        $('#coupon-text').text(parseFloat(value['amount'] * currency['exchange_rate']).toFixed({{$general_setting->decimal}}));
+                        $('input[name="coupon_discount"]').val(coupon_discount);
+                        $('#coupon-text').text(parseFloat(coupon_discount).toFixed({{$general_setting->decimal}}));
                     }
-                    else
-                        alert('Grand Total is not sufficient for discount! Required '+value['minimum_amount']+' '+currency['code']);
                 }
-                else{
-                    var grand_total = $('input[name="grand_total"]').val();
-                    var coupon_discount = grand_total * (value['amount'] / 100);
-                    grand_total = grand_total - coupon_discount;
-                    $('input[name="grand_total"]').val(grand_total);
-                    $('#grand-total').text(parseFloat(grand_total).toFixed({{$general_setting->decimal}}));
-                    if(!$('input[name="coupon_active"]').val())
-                            alert('Congratulation! You got '+value['amount']+'% discount');
-                    $(".coupon-check").prop("disabled",true);
-                    $("#coupon-code").prop("disabled",true);
-                    $('input[name="coupon_active"]').val(1);
-                    $("#coupon-modal").modal('hide');
-                    $('input[name="coupon_id"]').val(value['id']);
-                    $('input[name="coupon_discount"]').val(coupon_discount);
-                    $('#coupon-text').text(parseFloat(coupon_discount).toFixed({{$general_setting->decimal}}));
-                }
-            }
-        });
-        if(!valid)
-            alert('Invalid coupon code!');
-    }
-}
-
-function checkDiscount(qty, flag, manualDiscount = null) {
-    console.log("Discount identifier");
-    var customer_id = $('#customer_id').val();
-    var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
-
-    if (flag) {
-        console.log("Checking discount for qty: " + qty + ", customer_id: " + customer_id + ", product_id: " + product_id);
-        $.ajax({
-            type: 'GET',
-            async: false,
-            url: 'sales/check-discount?qty=' + qty + '&customer_id=' + customer_id + '&product_id=' + product_id,
-            success: function(data) {
-                console.log(data);
-                pos = product_code.indexOf($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .product-code').val());
-                product_price[rowindex] = parseFloat(data[0] * currency['exchange_rate']) + parseFloat(data[0] * currency['exchange_rate'] * customer_group_rate);
-                   let serverDiscount = data[2];
-                    let finalDiscount = (serverDiscount !== null && !isNaN(serverDiscount))
-                        ? parseFloat(serverDiscount)
-                        : parseFloat(manualDiscount || 0);
-                    console.log("Final discount to apply:", finalDiscount);
-
-                    // Sanitize current discount value
-                    let discountText = $('#discount').text().replace(/,/g, '').trim();
-                    let productDiscount = parseFloat(discountText);
-                    if (isNaN(productDiscount)) {
-                        console.warn("Resetting non-numeric discount:", discountText);
-                        productDiscount = 0;
-                    }
-
-                    // Apply the new discount
-                    let updatedDiscount = productDiscount;
-                    if (flag === true)
-                        updatedDiscount = productDiscount + finalDiscount;
-                    else if (flag === false)
-                        updatedDiscount = productDiscount - (finalDiscount * qty);
-                    else if (flag === 'input')
-                        updatedDiscount = productDiscount - finalDiscount * previousqty + finalDiscount * qty;
-                    else
-                        updatedDiscount = productDiscount - finalDiscount;
-
-                    // Ensure it's numeric and formatted
-                    if (isNaN(updatedDiscount)) updatedDiscount = 0;
-
-                    $('#discount').text(updatedDiscount.toFixed({{$general_setting->decimal}}));
-                    console.log("Updated discount:", updatedDiscount);
-            }
-        });
-    }
-
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-    flag = true;
-    checkQuantity(String(qty), flag);
-    localStorage.setItem("tbody-id", $("table.order-list tbody").html());
-}
-
-
-function checkQuantity(sale_qty, flag) {
-    var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
-    pos = product_code.indexOf(row_product_code);
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.in-stock').text(product_qty[pos]);
-    localStorageQty[rowindex] = sale_qty;
-    localStorage.setItem("localStorageQty", localStorageQty);
-    if(without_stock == 'no') {
-        if(product_type[pos] == 'standard') {
-            var operator = unit_operator[rowindex].split(',');
-            var operation_value = unit_operation_value[rowindex].split(',');
-            if(operator[0] == '*')
-                total_qty = sale_qty * operation_value[0];
-            else if(operator[0] == '/')
-                total_qty = sale_qty / operation_value[0];
-            if (total_qty > parseFloat(product_qty[pos])) {
-                alert('Quantity exceeds stock quantity!');
-                if (flag) {
-                    sale_qty = sale_qty.substring(0, sale_qty.length - 1);
-                    localStorageQty[rowindex] = sale_qty;
-                    localStorage.setItem("localStorageQty", localStorageQty);
-                    checkQuantity(sale_qty, true);
-                }
-                else {
-                    localStorageQty[rowindex] = sale_qty;
-                    localStorage.setItem("localStorageQty", localStorageQty);
-                    edit();
-                    return;
-                }
-            }
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
+            });
+            if(!valid)
+                alert('Invalid coupon code!');
         }
-        else if(product_type[pos] == 'combo'){
-            child_id = product_list[pos].split(',');
-            child_qty = qty_list[pos].split(',');
-            $(child_id).each(function(index) {
-                var position = product_id.indexOf(parseInt(child_id[index]));
-                //console.log(position);
-                if( position == -1 || parseFloat(sale_qty * child_qty[index]) > product_qty[position] ) {
+    }
+
+    function checkDiscount(qty, flag, manualDiscount = null) {
+        console.log("Discount identifier");
+        var customer_id = $('#customer_id').val();
+        var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
+
+        if (flag) {
+            console.log("Checking discount for qty: " + qty + ", customer_id: " + customer_id + ", product_id: " + product_id);
+            $.ajax({
+                type: 'GET',
+                async: false,
+                url: 'sales/check-discount?qty=' + qty + '&customer_id=' + customer_id + '&product_id=' + product_id,
+                success: function(data) {
+                    console.log(data);
+                    pos = product_code.indexOf($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .product-code').val());
+                    product_price[rowindex] = parseFloat(data[0] * currency['exchange_rate']) + parseFloat(data[0] * currency['exchange_rate'] * customer_group_rate);
+                       let serverDiscount = data[2];
+                        let finalDiscount = (serverDiscount !== null && !isNaN(serverDiscount))
+                            ? parseFloat(serverDiscount)
+                            : parseFloat(manualDiscount || 0);
+                        console.log("Final discount to apply:", finalDiscount);
+
+                        // Sanitize current discount value
+                        let discountText = $('#discount').text().replace(/,/g, '').trim();
+                        let productDiscount = parseFloat(discountText);
+                        if (isNaN(productDiscount)) {
+                            console.warn("Resetting non-numeric discount:", discountText);
+                            productDiscount = 0;
+                        }
+
+                        // Apply the new discount
+                        let updatedDiscount = productDiscount;
+                        if (flag === true)
+                            updatedDiscount = productDiscount + finalDiscount;
+                        else if (flag === false)
+                            updatedDiscount = productDiscount - (finalDiscount * qty);
+                        else if (flag === 'input')
+                            updatedDiscount = productDiscount - finalDiscount * previousqty + finalDiscount * qty;
+                        else
+                            updatedDiscount = productDiscount - finalDiscount;
+
+                        // Ensure it's numeric and formatted
+                        if (isNaN(updatedDiscount)) updatedDiscount = 0;
+
+                        $('#discount').text(updatedDiscount.toFixed({{$general_setting->decimal}}));
+                        console.log("Updated discount:", updatedDiscount);
+                }
+            });
+        }
+
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
+        flag = true;
+        checkQuantity(String(qty), flag);
+        localStorage.setItem("tbody-id", $("table.order-list tbody").html());
+    }
+
+    function checkQuantity(sale_qty, flag) {
+        var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
+        pos = product_code.indexOf(row_product_code);
+        if (pos < 0) {
+            console.warn('checkQuantity: product not found for code', row_product_code);
+            calculateRowProductData(sale_qty);
+            return;
+        }
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.in-stock').text(product_qty[pos] || 0);
+        localStorageQty[rowindex] = sale_qty;
+        localStorage.setItem("localStorageQty", localStorageQty);
+        if(without_stock == 'no') {
+            if(product_type[pos] == 'standard') {
+                var operatorStr = unit_operator[rowindex] || '';
+                var operationValueStr = unit_operation_value[rowindex] || '';
+                var operator = operatorStr.split(',');
+                var operation_value = operationValueStr.split(',');
+                if(operator[0] == '*')
+                    total_qty = sale_qty * operation_value[0];
+                else if(operator[0] == '/')
+                    total_qty = sale_qty / operation_value[0];
+                if (total_qty > parseFloat(product_qty[pos])) {
                     alert('Quantity exceeds stock quantity!');
                     if (flag) {
                         sale_qty = sale_qty.substring(0, sale_qty.length - 1);
-                        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
+                        localStorageQty[rowindex] = sale_qty;
+                        localStorage.setItem("localStorageQty", localStorageQty);
+                        checkQuantity(sale_qty, true);
                     }
                     else {
+                        localStorageQty[rowindex] = sale_qty;
+                        localStorage.setItem("localStorageQty", localStorageQty);
                         edit();
-                        flag = true;
-                        return false;
+                        return;
                     }
                 }
-            });
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
+            }
+            else if(product_type[pos] == 'combo'){
+                child_id = (product_list[pos] || '').split(',');
+                child_qty = (qty_list[pos] || '').split(',');
+                $(child_id).each(function(index) {
+                    var position = product_id.indexOf(parseInt(child_id[index]));
+                    //console.log(position);
+                    if( position == -1 || parseFloat(sale_qty * child_qty[index]) > product_qty[position] ) {
+                        alert('Quantity exceeds stock quantity!');
+                        if (flag) {
+                            sale_qty = sale_qty.substring(0, sale_qty.length - 1);
+                            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
+                        }
+                        else {
+                            edit();
+                            flag = true;
+                            return false;
+                        }
+                    }
+                });
+            }
         }
-    }
-    else
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
-    if(!flag) {
-        $('#editModal').modal('hide');
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
-    }
-    calculateRowProductData(sale_qty);
-}
-
-function unitConversion() {
-    var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(","));
-    var row_unit_operation_value = unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(","));
-
-    if (row_unit_operator == '*') {
-        row_product_price = product_price[rowindex] * row_unit_operation_value;
-    } else {
-        row_product_price = product_price[rowindex] / row_unit_operation_value;
-    }
-}
-
-function calculateRowProductData(quantity) {
-    if(product_type[pos] == 'standard')
-        unitConversion();
-    else
-        row_product_price = product_price[rowindex];
-    if (tax_method[rowindex] == 1) {
-        var net_unit_price = row_product_price - product_discount[rowindex];
-        var tax = net_unit_price * quantity * (tax_rate[rowindex] / 100);
-        var sub_total = (net_unit_price * quantity) + tax;
-
-        if(parseFloat(quantity))
-            var sub_total_unit = sub_total / quantity;
         else
-            var sub_total_unit = sub_total;
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
+        if(!flag) {
+            $('#editModal').modal('hide');
+            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(sale_qty);
+        }
+        calculateRowProductData(sale_qty);
     }
-    else {
-        var sub_total_unit = row_product_price - product_discount[rowindex];
-        var net_unit_price = (100 / (100 + tax_rate[rowindex])) * sub_total_unit;
-        var tax = (sub_total_unit - net_unit_price) * quantity;
-        var sub_total = sub_total_unit * quantity;
-    }
 
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.discount-value').val((product_discount[rowindex] * quantity).toFixed({{$general_setting->decimal}}));
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-rate').val(tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_price').val(net_unit_price.toFixed({{$general_setting->decimal}}));
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed({{$general_setting->decimal}}));
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-price').text(sub_total_unit.toFixed({{$general_setting->decimal}}));
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text(sub_total.toFixed({{$general_setting->decimal}}));
-    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val(sub_total.toFixed({{$general_setting->decimal}}));
+    function unitConversion() {
+        var opStr  = unit_operator[rowindex] || '';
+        var valStr = unit_operation_value[rowindex] || '';
+        var row_unit_operator = opStr.slice(0, opStr.indexOf(","));
+        var row_unit_operation_value = valStr.slice(0, valStr.indexOf(","));
 
-    localStorageProductDiscount.splice(rowindex, 1, (product_discount[rowindex] * quantity).toFixed({{$general_setting->decimal}}));
-    localStorageTaxRate.splice(rowindex, 1, tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
-    localStorageNetUnitPrice.splice(rowindex, 1, net_unit_price.toFixed({{$general_setting->decimal}}));
-    localStorageTaxValue.splice(rowindex, 1, tax.toFixed({{$general_setting->decimal}}));
-    localStorageSubTotalUnit.splice(rowindex, 1, sub_total_unit.toFixed({{$general_setting->decimal}}));
-    localStorageSubTotal.splice(rowindex, 1, sub_total.toFixed({{$general_setting->decimal}}));
-    localStorage.setItem("localStorageProductDiscount", localStorageProductDiscount);
-    localStorage.setItem("localStorageTaxRate", localStorageTaxRate);
-    localStorage.setItem("localStorageNetUnitPrice", localStorageNetUnitPrice);
-    localStorage.setItem("localStorageTaxValue", localStorageTaxValue);
-    localStorage.setItem("localStorageSubTotalUnit", localStorageSubTotalUnit);
-    localStorage.setItem("localStorageSubTotal", localStorageSubTotal);
-
-    calculateTotal();
-}
-
-function calculateTotal() {
-    //Sum of quantity
-    var total_qty = 0;
-    $("table.order-list tbody .qty").each(function(index) {
-        if ($(this).val() == '') {
-            total_qty += 0;
+        if (row_unit_operator == '*') {
+            row_product_price = product_price[rowindex] * row_unit_operation_value;
+        } else if (row_unit_operator == '/') {
+            row_product_price = product_price[rowindex] / row_unit_operation_value;
         } else {
-            total_qty += parseFloat($(this).val());
+            row_product_price = product_price[rowindex] || 0;
         }
-    });
-    $('input[name="total_qty"]').val(total_qty);
+    }
 
-    //Sum of discount
-    var total_discount = 0;
-    $("table.order-list tbody .discount-value").each(function() {
-        total_discount += parseFloat($(this).val());
-    });
+    function calculateRowProductData(quantity) {
+        if(product_type[pos] == 'standard')
+            unitConversion();
+        else
+            row_product_price = product_price[rowindex];
+        if (tax_method[rowindex] == 1) {
+            var net_unit_price = row_product_price - product_discount[rowindex];
+            var tax = net_unit_price * quantity * (tax_rate[rowindex] / 100);
+            var sub_total = (net_unit_price * quantity) + tax;
 
-    $('input[name="total_discount"]').val(total_discount.toFixed({{$general_setting->decimal}}));
+            if(parseFloat(quantity))
+                var sub_total_unit = sub_total / quantity;
+            else
+                var sub_total_unit = sub_total;
+        }
+        else {
+            var sub_total_unit = row_product_price - product_discount[rowindex];
+            var net_unit_price = (100 / (100 + tax_rate[rowindex])) * sub_total_unit;
+            var tax = (sub_total_unit - net_unit_price) * quantity;
+            var sub_total = sub_total_unit * quantity;
+        }
 
-    //Sum of tax
-    var total_tax = 0;
-    $(".tax-value").each(function() {
-        total_tax += parseFloat($(this).val());
-    });
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.discount-value').val((product_discount[rowindex] * quantity).toFixed({{$general_setting->decimal}}));
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-rate').val(tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_price').val(net_unit_price.toFixed({{$general_setting->decimal}}));
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed({{$general_setting->decimal}}));
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-price').text(sub_total_unit.toFixed({{$general_setting->decimal}}));
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text(sub_total.toFixed({{$general_setting->decimal}}));
+        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val(sub_total.toFixed({{$general_setting->decimal}}));
 
-    $('input[name="total_tax"]').val(total_tax.toFixed({{$general_setting->decimal}}));
+        localStorageProductDiscount.splice(rowindex, 1, (product_discount[rowindex] * quantity).toFixed({{$general_setting->decimal}}));
+        localStorageTaxRate.splice(rowindex, 1, tax_rate[rowindex].toFixed({{$general_setting->decimal}}));
+        localStorageNetUnitPrice.splice(rowindex, 1, net_unit_price.toFixed({{$general_setting->decimal}}));
+        localStorageTaxValue.splice(rowindex, 1, tax.toFixed({{$general_setting->decimal}}));
+        localStorageSubTotalUnit.splice(rowindex, 1, sub_total_unit.toFixed({{$general_setting->decimal}}));
+        localStorageSubTotal.splice(rowindex, 1, sub_total.toFixed({{$general_setting->decimal}}));
+        localStorage.setItem("localStorageProductDiscount", localStorageProductDiscount);
+        localStorage.setItem("localStorageTaxRate", localStorageTaxRate);
+        localStorage.setItem("localStorageNetUnitPrice", localStorageNetUnitPrice);
+        localStorage.setItem("localStorageTaxValue", localStorageTaxValue);
+        localStorage.setItem("localStorageSubTotalUnit", localStorageSubTotalUnit);
+        localStorage.setItem("localStorageSubTotal", localStorageSubTotal);
 
-    //Sum of subtotal
-    var total = 0;
-    $(".sub-total").each(function() {
-        total += parseFloat($(this).text());
-    });
-    $('input[name="total_price"]').val(total.toFixed({{$general_setting->decimal}}));
+        calculateTotal();
+    }
 
-    calculateGrandTotal();
-}
+    function calculateTotal() {
+        //Sum of quantity
+        var total_qty = 0;
+        $("table.order-list tbody .qty").each(function(index) {
+            if ($(this).val() == '') {
+                total_qty += 0;
+            } else {
+                total_qty += parseFloat($(this).val());
+            }
+        });
+        $('input[name="total_qty"]').val(total_qty);
 
-function calculateGrandTotal() {
-    var item = $('table.order-list tbody tr:last').index();
-    var total_qty = parseFloat($('input[name="total_qty"]').val());
-    var subtotal = parseFloat($('input[name="total_price"]').val());
-    var order_tax = parseFloat($('select[name="order_tax_rate_select"]').val());
-    var order_discount_type = $('select[name="order_discount_type_select"]').val();
-    var order_discount_value = parseFloat($('input[name="order_discount_value"]').val());
+        //Sum of discount
+        var total_discount = 0;
+        $("table.order-list tbody .discount-value").each(function() {
+            total_discount += parseFloat($(this).val());
+        });
 
-    if (!order_discount_value)
-        order_discount_value = {{number_format(0, $general_setting->decimal, '.', '')}};
+        $('input[name="total_discount"]').val(total_discount.toFixed({{$general_setting->decimal}}));
 
-    if(order_discount_type == 'Flat') {
-        if(!currencyChange) {
-            var order_discount = parseFloat(order_discount_value);
+        //Sum of tax
+        var total_tax = 0;
+        $(".tax-value").each(function() {
+            total_tax += parseFloat($(this).val());
+        });
+
+        $('input[name="total_tax"]').val(total_tax.toFixed({{$general_setting->decimal}}));
+
+        //Sum of subtotal
+        var total = 0;
+        $(".sub-total").each(function() {
+            total += parseFloat($(this).text());
+        });
+        $('input[name="total_price"]').val(total.toFixed({{$general_setting->decimal}}));
+
+        calculateGrandTotal();
+    }
+
+    function calculateGrandTotal() {
+        var item = $('table.order-list tbody tr:last').index();
+        var total_qty = parseFloat($('input[name="total_qty"]').val());
+        var subtotal = parseFloat($('input[name="total_price"]').val());
+        var order_tax = parseFloat($('select[name="order_tax_rate_select"]').val());
+        var order_discount_type = $('select[name="order_discount_type_select"]').val();
+        var order_discount_value = parseFloat($('input[name="order_discount_value"]').val());
+
+        if (!order_discount_value)
+            order_discount_value = {{number_format(0, $general_setting->decimal, '.', '')}};
+
+        if(order_discount_type == 'Flat') {
+            if(!currencyChange) {
+                var order_discount = parseFloat(order_discount_value);
+            }
+            else
+                var order_discount = parseFloat(order_discount_value*currency['exchange_rate']);
         }
         else
-            var order_discount = parseFloat(order_discount_value*currency['exchange_rate']);
-    }
-    else
-        var order_discount = parseFloat(subtotal * (order_discount_value / 100));
+            var order_discount = parseFloat(subtotal * (order_discount_value / 100));
 
-    localStorage.setItem("order-tax-rate-select", order_tax);
-    localStorage.setItem("order-discount-type", order_discount_type);
-    $("#discount").text(order_discount.toFixed({{$general_setting->decimal}}));
-    $('input[name="order_discount"]').val(order_discount);
-    $('input[name="order_discount_type"]').val(order_discount_type);
-    if(!currencyChange)
-        var shipping_cost = parseFloat($('input[name="shipping_cost"]').val());
-    else
-        var shipping_cost = parseFloat($('input[name="shipping_cost"]').val() * currency['exchange_rate']);
-    if (!shipping_cost)
-        shipping_cost = {{number_format(0, $general_setting->decimal, '.', '')}};
+        localStorage.setItem("order-tax-rate-select", order_tax);
+        localStorage.setItem("order-discount-type", order_discount_type);
+        $("#discount").text(order_discount.toFixed({{$general_setting->decimal}}));
+        $('input[name="order_discount"]').val(order_discount);
+        $('input[name="order_discount_type"]').val(order_discount_type);
+        if(!currencyChange)
+            var shipping_cost = parseFloat($('input[name="shipping_cost"]').val());
+        else
+            var shipping_cost = parseFloat($('input[name="shipping_cost"]').val() * currency['exchange_rate']);
+        if (!shipping_cost)
+            shipping_cost = {{number_format(0, $general_setting->decimal, '.', '')}};
 
-    item = ++item + '(' + total_qty + ')';
-    order_tax = (subtotal - order_discount) * (order_tax / 100);
-    var grand_total = (subtotal + order_tax + shipping_cost) - order_discount;
-    $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
+        item = ++item + '(' + total_qty + ')';
+        order_tax = (subtotal - order_discount) * (order_tax / 100);
+        var grand_total = (subtotal + order_tax + shipping_cost) - order_discount;
+        $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
 
-    couponDiscount();
-    if(!currencyChange)
-        var coupon_discount = parseFloat($('input[name="coupon_discount"]').val());
-    else
-        var coupon_discount = parseFloat($('input[name="coupon_discount"]').val() * currency['exchange_rate']);
-    if (!coupon_discount)
-        coupon_discount = {{number_format(0, $general_setting->decimal, '.', '')}};
-    grand_total -= coupon_discount;
+        couponDiscount();
+        if(!currencyChange)
+            var coupon_discount = parseFloat($('input[name="coupon_discount"]').val());
+        else
+            var coupon_discount = parseFloat($('input[name="coupon_discount"]').val() * currency['exchange_rate']);
+        if (!coupon_discount)
+            coupon_discount = {{number_format(0, $general_setting->decimal, '.', '')}};
+        grand_total -= coupon_discount;
 
-    $('#item').text(item);
-    $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
-    $('#subtotal').text(subtotal.toFixed({{$general_setting->decimal}}));
-    $('#tax').text(order_tax.toFixed({{$general_setting->decimal}}));
-    $('input[name="order_tax"]').val(order_tax.toFixed({{$general_setting->decimal}}));
-    $('#shipping-cost').text(shipping_cost.toFixed({{$general_setting->decimal}}));
-    $('input[name="shipping_cost"]').val(shipping_cost);
-    $('#grand-total').text(grand_total.toFixed({{$general_setting->decimal}}));
-    $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
-    currencyChange = false;
-}
-
-function hide() {
-    $(".card-element").hide();
-    $(".card-errors").hide();
-    $(".credit-card-fields").hide();
-    $(".cheque").hide();
-    $(".gift-card").hide();
-    $(".mobile_money_fields").hide();
-    
-    $('input[name="cheque_no"]').attr('required', false);
-}
-
-function giftCard() {
-    $(".gift-card").show();
-    $.ajax({
-        url: 'sales/get_gift_card',
-        type: "GET",
-        dataType: "json",
-        success:function(data) {
-            $('#add-payment select[name="gift_card_id_select"]').empty();
-            $.each(data, function(index) {
-                gift_card_amount[data[index]['id']] = data[index]['amount'];
-                gift_card_expense[data[index]['id']] = data[index]['expense'];
-                $('#add-payment select[name="gift_card_id_select"]').append('<option value="'+ data[index]['id'] +'">'+ data[index]['card_no'] +'</option>');
-            });
-            $('.selectpicker').selectpicker('refresh');
-            $('.selectpicker').selectpicker();
+        $('#item').text(item);
+        $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
+        $('#subtotal').text(subtotal.toFixed({{$general_setting->decimal}}));
+        $('#tax').text(order_tax.toFixed({{$general_setting->decimal}}));
+        $('input[name="order_tax"]').val(order_tax.toFixed({{$general_setting->decimal}}));
+        $('#shipping-cost').text(shipping_cost.toFixed({{$general_setting->decimal}}));
+        $('input[name="shipping_cost"]').val(shipping_cost);
+        $('#grand-total').text(grand_total.toFixed({{$general_setting->decimal}}));
+        $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
+        currencyChange = false;
+            // broadcast to customer display
+        if (customerDisplayWindow && !customerDisplayWindow.closed) {
+            broadcastCartUpdate();
         }
+    }
+
+    function hide() {
+        $(".card-element").hide();
+        $(".card-errors").hide();
+        $(".credit-card-fields").hide();
+        $(".cheque").hide();
+        $(".gift-card").hide();
+        $(".mobile_money_fields").hide();
+        
+        $('input[name="cheque_no"]').attr('required', false);
+    }
+
+    function giftCard() {
+        $(".gift-card").show();
+        $.ajax({
+            url: 'sales/get_gift_card',
+            type: "GET",
+            dataType: "json",
+            success:function(data) {
+                $('#add-payment select[name="gift_card_id_select"]').empty();
+                $.each(data, function(index) {
+                    gift_card_amount[data[index]['id']] = data[index]['amount'];
+                    gift_card_expense[data[index]['id']] = data[index]['expense'];
+                    $('#add-payment select[name="gift_card_id_select"]').append('<option value="'+ data[index]['id'] +'">'+ data[index]['card_no'] +'</option>');
+                });
+                $('.selectpicker').selectpicker('refresh');
+                $('.selectpicker').selectpicker();
+            }
+        });
+        $(".credit-card-fields").hide();
+        $(".card-element").hide();
+        $(".card-errors").hide();
+        $(".cheque").hide();
+        $('input[name="cheque_no"]').attr('required', false);
+    }
+
+    function mobile_money() {
+        $(".mobile_money_fields").show();
+        $(".gift-card").hide();
+        $(".credit-card-fields").hide();
+        $(".card-element").hide();
+        $(".card-errors").hide();
+        $(".cheque").hide();
+        $('input[name="cheque_no"]').attr('required', false);
+    }
+
+    function cheque() {
+        $(".cheque").show();
+        $('input[name="cheque_no"]').attr('required', true);
+        $(".credit-card-fields").hide();
+        $(".card-element").hide();
+        $(".card-errors").hide();
+        $(".gift-card").hide();
+    }
+
+    function creditCard() {
+        @if($lims_pos_setting_data && (strlen($lims_pos_setting_data->stripe_public_key)>0) && (strlen($lims_pos_setting_data->stripe_secret_key )>0))
+        $.getScript("{{ asset('vendor/stripe/checkout.js') }}");
+        $(".credit-card-fields").show();
+        $(".card-element").show();
+        $(".card-errors").show();
+        @endif
+        $(".cheque").hide();
+        $(".gift-card").hide();
+        $('input[name="cheque_no"]').attr('required', false);
+    }
+
+    function deposits() {
+        if($('input[name="paid_amount"]').val() > deposit[$('#customer_id').val()]){
+            alert('Amount exceeds customer deposit! Customer deposit : '+ deposit[$('#customer_id').val()]);
+        }
+        $('input[name="cheque_no"]').attr('required', false);
+        $('#add-payment select[name="gift_card_id_select"]').attr('required', false);
+    }
+
+    function pointCalculation() {
+        paid_amount = $('input[name=paid_amount]').val();
+        required_point = Math.ceil(paid_amount / reward_point_setting['per_point_amount']);
+        if(required_point > points[$('#customer_id').val()]) {
+          alert('Customer does not have sufficient points. Available points: '+points[$('#customer_id').val()]);
+        }
+        else {
+          $("input[name=used_points]").val(required_point);
+        }
+    }
+
+    function cancel(rownumber) {
+        while(rownumber >= 0) {
+            product_price.pop();
+            wholesale_price.pop();
+            product_discount.pop();
+            tax_rate.pop();
+            tax_name.pop();
+            tax_method.pop();
+            unit_name.pop();
+            unit_operator.pop();
+            unit_operation_value.pop();
+            $('table.order-list tbody tr:last').remove();
+            rownumber--;
+        }
+        $('input[name="shipping_cost"]').val('');
+        $('input[name="order_discount_value"]').val('');
+        $('select[name="order_tax_rate_select"]').val(0);
+        calculateTotal();
+    }
+
+    function confirmCancel() {
+        var audio = $("#mysoundclip2")[0];
+        audio.play();
+        if (confirm("Are you sure want to cancel?")) {
+            cancel($('table.order-list tbody tr:last').index());
+        }
+        return false;
+    }
+
+    function confirmDelete() {
+        if (confirm("Are you sure want to delete?")) {
+            return true;
+        }
+        return false;
+    }
+
+    $('#product-table').DataTable( {
+        "order": [[0, 'desc']],
+        'pageLength': product_row_number,
+         'language': {
+            'paginate': {
+                'previous': '<i class="fa fa-angle-left"></i>',
+                'next': '<i class="fa fa-angle-right"></i>'
+            }
+        },
+        dom: 'tp'
     });
-    $(".credit-card-fields").hide();
-    $(".card-element").hide();
-    $(".card-errors").hide();
-    $(".cheque").hide();
-    $('input[name="cheque_no"]').attr('required', false);
-}
-
-
-function mobile_money() {
-    $(".mobile_money_fields").show();
-    $(".gift-card").hide();
-    $(".credit-card-fields").hide();
-    $(".card-element").hide();
-    $(".card-errors").hide();
-    $(".cheque").hide();
-    $('input[name="cheque_no"]').attr('required', false);
-}
-
-function cheque() {
-    $(".cheque").show();
-    $('input[name="cheque_no"]').attr('required', true);
-    $(".credit-card-fields").hide();
-    $(".card-element").hide();
-    $(".card-errors").hide();
-    $(".gift-card").hide();
-}
-
-function creditCard() {
-    @if($lims_pos_setting_data && (strlen($lims_pos_setting_data->stripe_public_key)>0) && (strlen($lims_pos_setting_data->stripe_secret_key )>0))
-    $.getScript("{{ asset('vendor/stripe/checkout.js') }}");
-    $(".credit-card-fields").show();
-    $(".card-element").show();
-    $(".card-errors").show();
-    @endif
-    $(".cheque").hide();
-    $(".gift-card").hide();
-    $('input[name="cheque_no"]').attr('required', false);
-}
-
-function deposits() {
-    if($('input[name="paid_amount"]').val() > deposit[$('#customer_id').val()]){
-        alert('Amount exceeds customer deposit! Customer deposit : '+ deposit[$('#customer_id').val()]);
-    }
-    $('input[name="cheque_no"]').attr('required', false);
-    $('#add-payment select[name="gift_card_id_select"]').attr('required', false);
-}
-
-function pointCalculation() {
-    paid_amount = $('input[name=paid_amount]').val();
-    required_point = Math.ceil(paid_amount / reward_point_setting['per_point_amount']);
-    if(required_point > points[$('#customer_id').val()]) {
-      alert('Customer does not have sufficient points. Available points: '+points[$('#customer_id').val()]);
-    }
-    else {
-      $("input[name=used_points]").val(required_point);
-    }
-}
-
-function cancel(rownumber) {
-    while(rownumber >= 0) {
-        product_price.pop();
-        wholesale_price.pop();
-        product_discount.pop();
-        tax_rate.pop();
-        tax_name.pop();
-        tax_method.pop();
-        unit_name.pop();
-        unit_operator.pop();
-        unit_operation_value.pop();
-        $('table.order-list tbody tr:last').remove();
-        rownumber--;
-    }
-    $('input[name="shipping_cost"]').val('');
-    $('input[name="order_discount_value"]').val('');
-    $('select[name="order_tax_rate_select"]').val(0);
-    calculateTotal();
-}
-
-function confirmCancel() {
-    var audio = $("#mysoundclip2")[0];
-    audio.play();
-    if (confirm("Are you sure want to cancel?")) {
-        cancel($('table.order-list tbody tr:last').index());
-    }
-    return false;
-}
-
-function confirmDelete() {
-    if (confirm("Are you sure want to delete?")) {
-        return true;
-    }
-    return false;
-}
-
-
-
-
-$('#product-table').DataTable( {
-    "order": [[0, 'desc']],
-    'pageLength': product_row_number,
-     'language': {
-        'paginate': {
-            'previous': '<i class="fa fa-angle-left"></i>',
-            'next': '<i class="fa fa-angle-right"></i>'
-        }
-    },
-    dom: 'tp'
-});
 </script>
-    {!! ToastMagic::scripts() !!}
+{!! ToastMagic::scripts() !!}
 
 <script type="text/javascript" src="https://js.stripe.com/v3/"></script>
 @endpush
+

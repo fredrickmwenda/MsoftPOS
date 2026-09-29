@@ -121,11 +121,11 @@ Route::get('storage-link', function() {
 });
 
 
-// Route::get('pos/customer-display', function() {
-//     $general_setting = \App\GeneralSetting::latest()->first();
-//     $currency = \App\Currency::where('is_default', true)->first();
-//     return view('backend.pos.customer-display', compact('general_setting', 'currency'));
-// })->name('pos.customer-display');
+Route::get('/customer-display', function() {
+    $general_setting = \App\Models\GeneralSetting::latest()->first();
+    $currency = \App\Models\Currency::where('is_active', true)->first();
+    return view('backend.sale.customer-display', compact('general_setting', 'currency'));
+})->name('customer.display');
 
 
 Route::get('stock-count/products',[StockCountController::class, 'getProducts'])->name('stock-count.products');
@@ -503,7 +503,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     Route::resource('sales', SaleController::class);
 
 
-    Route::get('/customer-display', [SaleController::class, 'customerDisplay'])->name('sales.customerDisplay');
+    // Route::get('/customer-display', [SaleController::class, 'customerDisplay'])->name('sales.customerDisplay');
 
     Route::controller(HirePurchaseController::class)->group(function () {
         Route::prefix('hire-purchase')->group(function () {
@@ -845,7 +845,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
 
     // AJAX endpoints for creating templates and template items from modal
     Route::post('payroll-templates/store', [\App\Http\Controllers\PayrollTemplateController::class, 'store']);
-    Route::post('payroll-template-items/store', [\App\Http\Controllers\PayrollTemplateItemController::class, 'store']);
+
 
 
     Route::post('attendance/delete/{date}/{employee_id}', [AttendanceController::class, 'delete'])->name('attendances.delete');

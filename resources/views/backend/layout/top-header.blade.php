@@ -118,7 +118,7 @@
       :root {
         /* --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
         --primary-gradient: linear-gradient(135deg, #c4c6cf 0%, #299e42 100%);
-        --primary-color: #13bd60;
+        --primary-color: #0a382b;
         --secondary-color: #764ba2;
         --accent-color: #ffd700;
         --text-dark: #1a1a2e;
@@ -176,7 +176,7 @@
       /* Header Navigation Styling */
       nav.navbar {
         /* background: linear-gradient(to right, #ffffff 0%, #f8f9fa 100%); */
-        background: #13bd60!important;
+        background: #0a382b!important;
         border-bottom: 1px solid var(--border-color);
         box-shadow: var(--shadow-sm);
         padding: 12px 24px;

@@ -50,8 +50,8 @@
                 </div>
                 <div class="col-md-3 mt-3">
                     <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
-                        <div class="d-tc">
+                        <label class="control-label"><strong>{{trans('file.Choose Warehouse')}}</strong> &nbsp;</label>
+                        <div class="">
                             <input type="hidden" name="warehouse_id_hidden" value="{{$warehouse_id}}" />
                             <select id="warehouse_id" name="warehouse_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
                                 @foreach($lims_warehouse_list as $warehouse)
@@ -61,10 +61,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>Cashier</strong> &nbsp;</label>
-                        <div class="d-tc">
+                <div class="col-md-3 mt-3 ml-2">
+                    <div class="form-group">
+                        <label class=""><strong>Cashier</strong> &nbsp;</label>
+                        
                             <input type="hidden" name="biller_id_hidden" value="{{$biller_id ?? 0}}" />
                             <select id="biller_id" name="biller_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins">
                                 <option value="0">All Cashier</option>
@@ -72,11 +72,11 @@
                                 <option value="{{$biller->id}}">{{$biller->name}}</option>
                                 @endforeach
                             </select>
-                        </div>
+                        
                     </div>
                 </div>
                 <div class="col-md-2 mt-3">
-                    <div class="form-group">
+                    <div class="form-group" style="margin-top: 29px;">
                         <button class="btn btn-primary" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
@@ -220,7 +220,7 @@
                             <th>{{trans('file.grand total')}}</th>
                         </tr>
                     </thead>
-
+\
                     <tfoot class="tfoot active">
                         <tr>
                             <th></th>

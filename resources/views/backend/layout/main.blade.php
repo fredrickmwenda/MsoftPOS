@@ -77,295 +77,154 @@
 
   <body class="@if($theme == 'dark')dark-mode dripicons-brightness-low @endif  @if(Route::current()->getName() == 'sale.pos') pos-page @endif" onload="myFunction()">
     <div id="loader"></div>
-      <!-- Side Navbar --> 
-      <nav class="side-navbar" style="background-color: #ecf0f4 !important;">
-        <span class="brand-big mb-3 mt-2">
+      
+    <!-- Side Navbar --> 
+    <nav class="side-navbar">
+        <!-- Brand stays fixed at top -->
+        <div class="brand-big mb-0">
             @if($general_setting->site_logo)
-            <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a>
+                <a href="{{url('/')}}"><img src="{{asset('/images/msoft.png')}}" style="width:125px; height:45px;"></a>
             @else
-            <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
+                <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
             @endif
-        </span>
-        @include('backend.layout.sidebar')
-      </nav>
+        </div>
+
+        <!-- Only the menu scrolls -->
+        <div class="sidebar-scroll">
+            @include('backend.layout.sidebar')
+        </div>
+    </nav>
 
     <div class="page">
         <!-- navbar-->
       @if(Route::current()->getName() != 'sale.pos')
       <header >
-        <nav class="navbar navbar-main" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+        <nav class="navbar navbar-main" style="border-radius: 0px !important;  background: linear-gradient(to right, #028c65, #f5f8fe) !important;">
           <button class="menu-btn" type="button" aria-label="Toggle menu" id="toggle-btn">
             <span class="navbar-toggler-iconx"><i class="fa fa-bars"></i></span>
           </button>
           <a class="navbar-brand" href="#"><h1 class="navbar-brand-title">{{ $general_setting->site_title }}</h1></a>
 
 
-           <ul class="nav-menu list-unstyled d-flex flex-md-row align-items-md-center">
-            <!-- <div class="dropdown">
-              <a class="btn-pos btn-sm" type="button" data-toggle="dropdown" aria-expanded="false">
-                <i class="dripicons-plus"></i>
-              </a>
-              <ul class="dropdown-menu">
-                <?php
-                    $category_permission_active = $role_has_permissions_list->where('name', 'category')->first();
-                ?>
-                @if($category_permission_active)
-                <li class="dropdown-item"><a data-toggle="modal" data-target="#category-modal">{{__('file.Add Category')}}</a></li>
-                @endif
-                <?php
-                    $add_permission_active = $role_has_permissions_list->where('name', 'products-add')->first();
-                ?>
-                @if($add_permission_active)
-                <li class="dropdown-item"><a href="{{route('products.create')}}">{{__('file.add_product')}}</a></li>
-                @endif
-                <?php
-                $add_permission_active = $role_has_permissions_list->where('name', 'purchases-add')->first();
-                ?>
-                @if($add_permission_active)
-                <li class="dropdown-item"><a href="{{route('purchases.create')}}">{{trans('file.Add Purchase')}}</a></li>
-                @endif
-                <?php
-                $sale_add_permission_active = $role_has_permissions_list->where('name', 'sales-add')->first();
-                ?>
-                @if($sale_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('sales.create')}}">{{trans('file.Add Sale')}}</a></li>
-                @endif
-                <?php
-                $expense_add_permission_active = $role_has_permissions_list->where('name', 'expenses-add')->first();
-                ?>
-                @if($expense_add_permission_active)
-                <li class="dropdown-item"><a data-toggle="modal" data-target="#expense-modal"> {{trans('file.Add Expense')}}</a></li>
-                @endif
-                <?php
-                $quotation_add_permission_active = $role_has_permissions_list->where('name', 'quotes-add')->first();
-                ?>
-                @if($quotation_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('quotations.create')}}">{{trans('file.Add Quotation')}}</a></li>
-                @endif
-                <?php
-                $transfer_add_permission_active = $role_has_permissions_list->where('name', 'transfers-add')->first();
-                ?>
-                @if($transfer_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('transfers.create')}}">{{trans('file.Add Transfer')}}</a></li>
-                @endif
-                <?php
-                $return_add_permission_active = $role_has_permissions_list->where('name', 'returns-add')->first();
-                ?>
-                @if($return_add_permission_active)
-                <li class="dropdown-item"><a href="#" data-toggle="modal" data-target="#add-sale-return"> {{trans('file.Add Return')}}</a></li>
-                @endif
-                <?php
-                $purchase_return_add_permission_active = $role_has_permissions_list->where('name', 'purchase-return-add')->first();
-                ?>
-                @if($purchase_return_add_permission_active)
-                <li class="dropdown-item"><a href="#" data-toggle="modal" data-target="#add-purchase-return"> {{trans('file.Add Purchase Return')}}</a></li>
-                @endif
-                <?php
-                    $user_add_permission_active = $role_has_permissions_list->where('name', 'users-add')->first();
-                ?>
-                @if($user_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('user.create')}}">{{trans('file.Add User')}}</a></li>
-                @endif
-                <?php
-                    $customer_add_permission_active = $role_has_permissions_list->where('name', 'customers-add')->first();
-                ?>
-                @if($customer_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('customer.create')}}">{{trans('file.Add Customer')}}</a></li>
-                @endif
-                <?php
-                    $biller_add_permission_active = $role_has_permissions_list->where('name', 'billers-add')->first();
-                ?>
-                @if($biller_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('biller.create')}}">{{trans('file.Add Biller')}}</a></li>
-                @endif
-                <?php
-                    $supplier_add_permission_active = $role_has_permissions_list->where('name', 'suppliers-add')->first();
-                ?>
-                @if($supplier_add_permission_active)
-                <li class="dropdown-item"><a href="{{route('supplier.create')}}">{{trans('file.Add Supplier')}}</a></li>
-                @endif
-              </ul>
-            </div>-->
-            <?php
-                $empty_database_permission_active = $role_has_permissions_list->where('name', 'empty_database')->first();
+          <ul class="nav-menu list-unstyled d-flex flex-md-row align-items-md-center">
+              <?php
+                  $product_qty_alert_active      = $role_has_permissions_list->where('name', 'product-qty-alert')->first();
+                  $general_setting_permission_active = $role_has_permissions_list->where('name', 'general_setting')->first();
+                  $empty_database_permission_active = $role_has_permissions_list->where('name', 'empty_database')->first();
+              ?>
 
-                $sale_add_permission_active = $role_has_permissions_list->where('name', 'sales-add')->first();
+              <li class="nav-item">
+                  <a id="btnFullscreen" data-toggle="tooltip" title="{{ trans('file.Full Screen') }}">
+                      <i class="dripicons-expand"></i>
+                  </a>
+              </li>
 
-                $product_qty_alert_active = $role_has_permissions_list->where('name', 'product-qty-alert')->first();
+              @if($product_qty_alert_active && ($alert_product + $dso_alert_product_no + \Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count()) > 0)
+                  <li class="nav-item" id="notification-icon">
+                      <a rel="nofollow" data-toggle="tooltip" title="{{ __('Notifications') }}" class="nav-link dropdown-item">
+                          <i class="dripicons-bell"></i>
+                          <span class="badge badge-danger notification-number">
+                              {{ $alert_product + $dso_alert_product_no + \Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count() }}
+                          </span>
+                      </a>
+                      <ul class="right-sidebar">
+                          <li class="notifications">
+                              <a href="{{ route('report.qtyAlert') }}" class="btn btn-link">
+                                  {{ $alert_product }} product exceeds alert quantity
+                              </a>
+                          </li>
+                          @if($dso_alert_product_no)
+                              <li class="notifications">
+                                  <a href="{{ route('report.dailySaleObjective') }}" class="btn btn-link">
+                                      {{ $dso_alert_product_no }} product could not fulfill daily sale objective
+                                  </a>
+                              </li>
+                          @endif
+                          @foreach(\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d')) as $notification)
+                              <li class="notifications">
+                                  @if($notification->data['document_name'])
+                                      <a target="_blank" href="{{ url('public/documents/notification', $notification->data['document_name']) }}" class="btn btn-link">
+                                          {{ $notification->data['message'] }}
+                                      </a>
+                                  @else
+                                      <a href="#" class="btn btn-link">{{ $notification->data['message'] }}</a>
+                                  @endif
+                              </li>
+                          @endforeach
+                          <li class="divider"></li>
+                          <li class="notifications mark-all-read">
+                              <a href="{{ route('notifications.markAsRead') }}" id="mark-notifications-read" class="btn btn-link">
+                                  {{ __('Mark all as read') }}
+                              </a>
+                          </li>
+                      </ul>
+                  </li>
+              @endif
 
-                $general_setting_permission_active = $role_has_permissions_list->where('name', 'general_setting')->first();
-            ?>
-           {{-- @if($sale_add_permission_active)
-            <li class="nav-item"><a class="btn-pos btn-sm " href="{{route('sale.pos')}}" style="color:#fff !important;"><i class="dripicons-shopping-bag"></i><span class="text-white"> POS</span></a></li>
-            @endif
-            --}}
-            {{--<li class="nav-item"><a id="switch-theme" data-toggle="tooltip" title="{{trans('file.Switch Theme')}}"><i class="dripicons-brightness-max"></i></a></li>--}}
-            <li class="nav-item"><a id="btnFullscreen" data-toggle="tooltip" title="{{trans('file.Full Screen')}}"><i class="dripicons-expand"></i></a></li>
-           @if(!Auth::user()->roles->contains(fn($r) => $r->id <= 2)){{'d-none'}}
-               {{-- <li class="nav-item"><a href="{{route('cashRegister.index')}}" data-toggle="tooltip" title="{{trans('file.Cash Register List')}}"><i class="dripicons-archive"></i></a></li>--}}
-            @endif
+              {{-- Language switcher --}}
+              <li class="nav-item">
+                  <a rel="nofollow" title="{{ trans('file.language') }}" data-toggle="tooltip" class="nav-link dropdown-item">
+                      <i class="dripicons-web"></i>
+                  </a>
+                  <ul class="right-sidebar">
+                      <li><a href="{{ url('language_switch/en') }}"    class="btn btn-link">English</a></li>
+                      <li><a href="{{ url('language_switch/es') }}"    class="btn btn-link">Español</a></li>
+                      <li><a href="{{ url('language_switch/ar') }}"    class="btn btn-link">عربى</a></li>
+                      <li><a href="{{ url('language_switch/id') }}"    class="btn btn-link">Bahasa</a></li>
+                      <li><a href="{{ url('language_switch/ms') }}"    class="btn btn-link">Malay</a></li>
+                      <li><a href="{{ url('language_switch/s_chinese') }}" class="btn btn-link">中国人</a></li>
+                      <li><a href="{{ url('language_switch/t_chinese') }}" class="btn btn-link">中國人</a></li>
+                      <li><a href="{{ url('language_switch/pt_BR') }}" class="btn btn-link">Portuguese</a></li>
+                      <li><a href="{{ url('language_switch/fr') }}"     class="btn btn-link">Français</a></li>
+                      <li><a href="{{ url('language_switch/de') }}"    class="btn btn-link">Deutsche</a></li>
+                      <li><a href="{{ url('language_switch/hi') }}"    class="btn btn-link">हिंदी</a></li>
+                      <li><a href="{{ url('language_switch/vi') }}"    class="btn btn-link">Tiếng Việt</a></li>
+                      <li><a href="{{ url('language_switch/ru') }}"    class="btn btn-link">русский</a></li>
+                      <li><a href="{{ url('language_switch/bg') }}"    class="btn btn-link">български</a></li>
+                      <li><a href="{{ url('language_switch/tr') }}"    class="btn btn-link">Türk</a></li>
+                      <li><a href="{{ url('language_switch/it') }}"    class="btn btn-link">Italiano</a></li>
+                      <li><a href="{{ url('language_switch/nl') }}"    class="btn btn-link">Nederlands</a></li>
+                      <li><a href="{{ url('language_switch/lao') }}"   class="btn btn-link">Lao</a></li>
+                      <li><a href="{{ url('language_switch/swahili') }}" class="btn btn-link">Swahili</a></li>
+                  </ul>
+              </li>
+
+              {{-- User menu --}}
+              <li class="nav-item">
+                  <a rel="nofollow" data-toggle="tooltip" class="nav-link dropdown-item">
+                      <i class="dripicons-user"></i>
+                      <span>{{ ucfirst(Auth::user()->name) }}</span>
+                      <i class="fa fa-angle-down"></i>
+                  </a>
+                  <ul class="right-sidebar">
+                      <li><a href="{{ route('user.profile', ['id' => Auth::id()]) }}"><i class="dripicons-user"></i> {{ trans('file.profile') }}</a></li>
+                      @if($general_setting_permission_active)
+                          <li><a href="{{ route('setting.general') }}"><i class="dripicons-gear"></i> {{ trans('file.settings') }}</a></li>
+                      @endif
+                      <li><a href="{{ url('my-transactions/'.date('Y').'/'.date('m')) }}"><i class="dripicons-swap"></i> {{ trans('file.My Transaction') }}</a></li>
+                      @if(!Auth::user()->roles->contains(fn($r) => $r->id == 5))
+                          <li><a href="{{ url('holidays/my-holiday/'.date('Y').'/'.date('m')) }}"><i class="dripicons-vibrate"></i> {{ trans('file.My Holiday') }}</a></li>
+                      @endif
+                      @if($empty_database_permission_active)
+                          <li><a onclick="return confirm('Are you sure want to delete? If you do this all of your data will be lost.')" href="{{ route('setting.emptyDatabase') }}"><i class="dripicons-stack"></i> {{ trans('file.Empty Database') }}</a></li>
+                      @endif
+                      <li>
+                          <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                              <i class="dripicons-power"></i> {{ trans('file.logout') }}
+                          </a>
+                          <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">@csrf</form>
+                      </li>
+                  </ul>
+              </li>
+          </ul>
+
+
+   
             
-            @if($product_qty_alert_active && ($alert_product + $dso_alert_product_no + \Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count() ) > 0)
-                <li class="nav-item" id="notification-icon">
-                    <a rel="nofollow" data-toggle="tooltip" title="{{__('Notifications')}}" class="nav-link dropdown-item"><i class="dripicons-bell"></i><span class="badge badge-danger notification-number">{{$alert_product + $dso_alert_product_no + \Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count()}}</span>
-                    </a>
-                    <ul class="right-sidebar">
-                        <li class="notifications">
-                            <a href="{{route('report.qtyAlert')}}" class="btn btn-link"> {{$alert_product}} product exceeds alert quantity</a>
-                        </li>
-                        @if($dso_alert_product_no)
-                        <li class="notifications">
-                            <a href="{{route('report.dailySaleObjective')}}" class="btn btn-link"> {{$dso_alert_product_no}} product could not fulfill daily sale objective</a>
-                        </li>
-                        @endif
-                        @foreach(\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d')) as $key => $notification)
-                            <li class="notifications">
-                                @if($notification->data['document_name'])
-                                <a target="_blank" href="{{url('public/documents/notification', $notification->data['document_name'])}}" class="btn btn-link">{{ $notification->data['message'] }}</a>
-                                @else
-                                <a href="#" class="btn btn-link">{{ $notification->data['message'] }}</a>
-                                @endif
-                            </li>
-                        @endforeach
-
-                        {{-- ✅ Divider + Mark all as read --}}
-                        <li class="divider"></li>
-                        <li class="notifications mark-all-read">
-                            <a href="{{ route('notifications.markAsRead') }}" id="mark-notifications-read" class="btn btn-link">
-                                {{ __('Mark all as read') }}
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            @endif
-
-            @if(\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count() > 0)
-                <li class="nav-item" id="notification-icon">
-                    <a rel="nofollow" data-toggle="tooltip" title="{{__('Notifications')}}" class="nav-link dropdown-item"><i class="dripicons-bell"></i><span class="badge badge-danger notification-number">{{\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d'))->count()}}</span>
-                    </a>
-                    <ul class="right-sidebar">
-                        @foreach(\Auth::user()->unreadNotifications->where('data.reminder_date', date('Y-m-d')) as $key => $notification)
-                            <li class="notifications">
-                                @if($notification->data['document_name'])
-                                <a target="_blank" href="{{url('public/documents/notification', $notification->data['document_name'])}}" class="btn btn-link">{{ $notification->data['message'] }}</a>
-                                @else
-                                <a href="#" class="btn btn-link">{{ $notification->data['message'] }}</a>
-                                @endif
-                            </li>
-                        @endforeach
+   
 
 
-                        {{-- ✅ Divider + Mark all as read --}}
-                        <li class="divider"></li>
-                        <li class="notifications mark-all-read">
-                            <a href="javascript:void(0)" id="mark-notifications-read" class="btn btn-link">
-                                {{ __('Mark all as read') }}
-                            </a>
-                        </li>
-                    </ul>
-
-                </li>
-            @endif
-            <li class="nav-item">
-                    <a rel="nofollow" title="{{trans('file.language')}}" data-toggle="tooltip" class="nav-link dropdown-item"><i class="dripicons-web"></i></a>
-                    <ul class="right-sidebar">
-                        <li>
-                        <a href="{{ url('language_switch/en') }}" class="btn btn-link"> English</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/es') }}" class="btn btn-link"> Español</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/ar') }}" class="btn btn-link"> عربى</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/id') }}" class="btn btn-link"> Bahasa</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/ms') }}" class="btn btn-link"> Malay</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/s_chinese') }}" class="btn btn-link">中国人</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/t_chinese') }}" class="btn btn-link">中國人</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/pt_BR') }}" class="btn btn-link"> Portuguese</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/fr') }}" class="btn btn-link"> Français</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/de') }}" class="btn btn-link"> Deutsche</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/hi') }}" class="btn btn-link"> हिंदी</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/vi') }}" class="btn btn-link"> Tiếng Việt</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/ru') }}" class="btn btn-link"> русский</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/bg') }}" class="btn btn-link"> български</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/tr') }}" class="btn btn-link"> Türk</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/it') }}" class="btn btn-link"> Italiano</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/nl') }}" class="btn btn-link"> Nederlands</a>
-                        </li>
-                        <li>
-                        <a href="{{ url('language_switch/lao') }}" class="btn btn-link"> Lao</a>
-                        </li>
-                        <li>
-                          <a href="{{ url('language_switch/swahili') }}" class="btn btn-link"> Swahili</a>
-                        </li>
-                    </ul>
-            </li>
-            <li class="nav-item">
-                <a rel="nofollow" data-toggle="tooltip" class="nav-link dropdown-item"><i class="dripicons-user"></i> <span>{{ucfirst(Auth::user()->name)}}</span> <i class="fa fa-angle-down"></i>
-                </a>
-                <ul class="right-sidebar">
-                    <li>
-                    <a href="{{route('user.profile', ['id' => Auth::id()])}}"><i class="dripicons-user"></i> {{trans('file.profile')}}</a>
-                    </li>
-                    @if($general_setting_permission_active)
-                    <li>
-                    <a href="{{route('setting.general')}}"><i class="dripicons-gear"></i> {{trans('file.settings')}}</a>
-                    </li>
-                    @endif
-                    <li>
-                    <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
-                    </li>
-                    @if(!Auth::user()->roles->contains(fn($r) => $r->id == 5))
-                    <li>
-                    <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>
-                    </li>
-                    @endif
-                    @if($empty_database_permission_active)
-                    <li>
-                    <a onclick="return confirm('Are you sure want to delete? If you do this all of your data will be lost.')" href="{{route('setting.emptyDatabase')}}"><i class="dripicons-stack"></i> {{trans('file.Empty Database')}}</a>
-                    </li>
-                    @endif
-                    <li>
-                    <a href="{{ route('logout') }}"
-                        onclick="event.preventDefault();
-                                        document.getElementById('logout-form').submit();"><i class="dripicons-power"></i>
-                        {{trans('file.logout')}}
-                    </a>
-                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                        @csrf
-                    </form>
-                    </li>
-                </ul>
-            </li>
-            </ul>
+          
         </nav>
       </header>
       @endif

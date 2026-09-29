@@ -120,7 +120,7 @@
         .cart-item .item-price {
             font-size: 1.25rem;
             font-weight: 700;
-            color: #13bd60;
+            color: #0a382b;
             min-width: 120px;
             text-align: right;
         }
@@ -147,7 +147,7 @@
             color: #fff;
         }
         .totals-row.grand .amount {
-            color: #13bd60;
+            color: #0a382b;
             font-size: 2.5rem;
         }
 
@@ -198,7 +198,7 @@
         .change-amount {
             font-size: 4rem;
             font-weight: 800;
-            color: #13bd60;
+            color: #0a382b;
         }
 
         /* Thank You State */
@@ -213,7 +213,7 @@
         #thankyou-state h1 {
             font-size: 4rem;
             font-weight: 800;
-            color: #13bd60;
+            color: #0a382b;
             margin-bottom: 1rem;
         }
         #thankyou-state p {
@@ -358,16 +358,14 @@
             return parseFloat(amount).toFixed(decimalPlaces) + ' ' + currencyCode;
         }
 
+ 
+
         function showState(state) {
             currentState = state;
-            document.querySelectorAll('#idle-state, #cart-state, #payment-state, #thankyou-state').forEach(el => {
-                el.style.display = 'none';
-            });
-            document.getElementById(state + '-state').style.display = 
-                (state === 'cart') ? 'flex' : 'block';
-            if (state === 'cart') {
-                document.getElementById('cart-state').style.display = 'flex';
-            }
+            document.querySelectorAll('#idle-state, #cart-state, #payment-state, #thankyou-state')
+                .forEach(el => el.style.display = 'none');
+            const el = document.getElementById(state + '-state');
+            if (el) el.style.display = 'flex';
         }
 
         function updateConnectionStatus(connected) {

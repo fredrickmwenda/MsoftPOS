@@ -97,13 +97,13 @@ class WhatsappController extends Controller
         }
 
         // Supplier
-        $suppliers = DB::table('suppliers')->whereNotNull('wa_number')->select('name', 'wa_number as phone')->get();
+        $suppliers = DB::table('suppliers')->whereNotNull('phone_number')->select('name', 'phone_number as phone')->get();
         if ($suppliers->count()) {
             $receivers['Suppliers'] = $suppliers;
         }
 
         // Customer
-        $customers = DB::table('customers')->whereNotNull('wa_number')->select('name', 'wa_number as phone')->get();
+        $customers = DB::table('customers')->whereNotNull('phone_number')->select('name', 'phone_number as phone')->get();
         if ($customers->count()) {
             $receivers['Customers'] = $customers;
         }

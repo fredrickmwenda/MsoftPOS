@@ -21,7 +21,7 @@ use Clickatell\Rest;
 use Clickatell\ClickatellException;
 
 class SettingController extends Controller
-{
+{ 
     use \App\Traits\CacheForget;
     use \App\Traits\TenantInfo;
 

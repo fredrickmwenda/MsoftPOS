@@ -985,6 +985,21 @@ return [
 	'Total Sales Amount To' => 'Total Sales Amount To',
 	'Commission Percent' => 'Commission Percent',
 	'Update Sale Agent' => 'Update Sale Agent',
+	'Add Designation' => 'Add Designation',
+	'Designation' => 'Designation',
+	'Type designation name' => 'Type designation name',
+	'Close' => 'Close',
+	'Save Template' => 'Save Template',
+	'send_whatsapp_message' => 'Send Whatsapp Number',
+	'receiver' => 'Receiver',
+	'template' => 'Template',
+	'attachment' => 'Attachment',
+	'image' => 'Image',
+	'document' => 'Document',
+	'send' => 'Send',
+	'no_template_type_message' => 'No Template Type Message',
+	'type_your_message' => 'Type Your Message',
+	'message' => 'Message',
 
 
 

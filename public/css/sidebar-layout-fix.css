@@ -1,13 +1,11 @@
 /**
- * Sidebar layout fix: keep sidebar in a fixed-width column; main content to the right.
- * Load this after custom-default.css so these rules take effect.
+ * Sidebar layout fix: fixed brand, single scrollbar, and menu styles.
  */
 
 /* =========================================================
-   BASE SIDEBAR LAYOUT
+   BASE SIDEBAR LAYOUT (Brand + Flexbox)
    ========================================================= */
 
-/* Sidebar: fixed column on the left only - never full width */
 nav.side-navbar {
   position: fixed !important;
   top: 0 !important;
@@ -16,18 +14,17 @@ nav.side-navbar {
   max-width: 230px !important;
   height: 100vh !important;
   max-height: 100vh !important;
-  overflow: hidden !important;
+  overflow: hidden !important; /* Nav itself doesn't scroll, inner menu does */
   display: flex !important;
   flex-direction: column !important;
   z-index: 100 !important;
   box-sizing: border-box !important;
   transition: width 0.2s ease, opacity 0.2s ease !important;
-  /* Keep light sidebar; avoid full-width gradient from layout styles */
   background-color: #ecf0f4 !important;
   background-image: none !important;
 }
 
-/* Collapsed state: sidebar hidden so menu button can show/hide it */
+/* Collapsed state */
 nav.side-navbar.shrink {
   width: 0 !important;
   max-width: 0 !important;
@@ -37,39 +34,43 @@ nav.side-navbar.shrink {
   pointer-events: none !important;
 }
 
-/* Brand/logo at top - do not shrink */
+/* Brand area: pinned to top, doesn't scroll */
 nav.side-navbar .brand-big {
-  flex-shrink: 0 !important;
+  flex: 0 0 auto !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 15px 18px !important;
+  box-sizing: border-box !important;
+  background-color: #ecf0f4 !important;
+  border-bottom: 1px solid #dce3eb !important;
+  z-index: 2;
 }
 
-/* Sidebar menu list takes remaining space and scrolls inside the column */
-nav.side-navbar #side-main-menu,
-nav.side-navbar .side-menu,
-nav.side-navbar > ul {
+/* Wrapper for the menu: acts as flex container, no scrolling! */
+nav.side-navbar .sidebar-scroll {
+  flex: 1 1 auto !important;
+  min-height: 0 !important; /* Critical for flexbox */
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important; /* Prevent double scroll */
+}
+
+/* The actual menu list takes remaining space and scrolls */
+nav.side-navbar #side-main-menu {
   flex: 1 1 auto !important;
   min-height: 0 !important;
+  height: 100% !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
   width: 100% !important;
   max-width: 100% !important;
-}
-
-/* Submenus stay inside sidebar - no breakout */
-nav.side-navbar .collapse,
-nav.side-navbar .collapse.show,
-nav.side-navbar .collapsing {
-  position: relative !important;
-  left: auto !important;
-  right: auto !important;
-  width: auto !important;
-  max-width: 100% !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* =========================================================
    MAIN CONTENT OFFSET
    ========================================================= */
 
-/* Main content: offset by sidebar width on desktop so it's visible to the right */
 @media (min-width: 1200px) {
   .page {
     position: relative !important;
@@ -79,6 +80,10 @@ nav.side-navbar .collapsing {
     z-index: 500 !important;
     min-height: 100vh !important;
   }
+  nav.side-navbar.shrink ~ .page {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
 }
 
 .page {
@@ -87,7 +92,6 @@ nav.side-navbar .collapsing {
   min-height: 100vh !important;
 }
 
-/* When sidebar is collapsed (shrink) or on smaller screens, content full width */
 .page.active,
 .page.active-sm,
 .pos-page .page {
@@ -95,13 +99,12 @@ nav.side-navbar .collapsing {
   width: 100% !important;
 }
 
-/* Header must always be on top */
 nav.navbar {
   z-index: 1000 !important;
 }
 
 /* =========================================================
-   TABLET SIDEBAR AS OVERLAY DRAWER
+   TABLET & MOBILE SIDEBAR AS OVERLAY DRAWER
    ========================================================= */
 
 @media (max-width: 1199px) {
@@ -122,10 +125,6 @@ nav.navbar {
   }
 }
 
-/* =========================================================
-   MOBILE SIDEBAR MENU VISIBILITY FIX
-   ========================================================= */
-
 @media (max-width: 768px) {
   nav.side-navbar { 
     width: 280px !important;
@@ -134,15 +133,260 @@ nav.navbar {
     z-index: 1050 !important;
     -webkit-overflow-scrolling: touch;
   }
-  
   nav.side-navbar.shrink {
     width: 0 !important;
     max-width: 0 !important;
   }
-  
   .page {
     margin-left: 0 !important;
     width: 100% !important;
   }
 }
 
+/* =========================================================
+   SIDEBAR MENU VISUAL STYLES (Moved from inline <style>)
+   ========================================================= */
+
+#side-main-menu {
+  background: #ffffff;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  position: relative;
+  border-right: 1px solid #e0e0e0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
+}
+
+#side-main-menu li {
+  margin: 0;
+  border: none;
+}
+
+#side-main-menu > li > a {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  color: #1a1a2e;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  border-left: 4px solid transparent;
+}
+
+#side-main-menu > li > a::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(102, 126, 234, 0.08);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+#side-main-menu > li > a:hover {
+  border-left-color: #0a382b;
+  padding-left: 24px;
+  color: #016b4d;
+}
+
+#side-main-menu > li > a:hover::before {
+  opacity: 1;
+}
+
+#side-main-menu > li.active > a,
+#side-main-menu > li > a.active {
+  background: rgba(102, 126, 234, 0.12);
+  border-left-color: #033124;
+  color: #000a07;
+  font-weight: 600;
+}
+
+#side-main-menu i {
+  color: #028c65!important;
+  font-size: 18px;
+  margin-right: 14px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+#side-main-menu > li > a:hover i {
+  transform: translateX(4px);
+}
+
+#side-main-menu span {
+  flex: 1;
+  text-transform: capitalize;
+  letter-spacing: 0.3px;
+}
+
+/* Dropdown Arrow Indicator */
+#side-main-menu > li > a[data-toggle='collapse']::after {
+  content: '';
+  position: absolute;
+  right: 20px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
+}
+
+#side-main-menu > li > a[aria-expanded='true']::after {
+  transform: rotate(45deg);
+}
+
+/* Submenu Styling */
+#side-main-menu .collapse {
+  background: #f8f9fa;
+  padding: 8px 0;
+  margin: 0;
+  list-style: none;
+  border-left: 2px solid #e0e0e0;
+  overflow: visible; /* Let parent handle scroll */
+  transition: all 0.3s ease;
+}
+
+#side-main-menu .collapse.show {
+  /* max-height removed so all items show */
+  padding: 8px 0;
+}
+
+#side-main-menu .collapse li {
+  margin: 0;
+}
+
+#side-main-menu .collapse li a {
+  display: block;
+  padding: 12px 20px 12px 50px;
+  color: #555555;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: all 0.2s ease;
+  position: relative;
+  border: none;
+}
+
+#side-main-menu .collapse li a::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 0;
+  background: #0a382b;
+  transition: height 0.3s ease;
+}
+
+#side-main-menu .collapse li a:hover {
+  background: #f0f1f7;
+  padding-left: 54px;
+  color: #0a382b;
+  font-weight: 500;
+}
+
+#side-main-menu .collapse li a:hover::before {
+  height: 24px;
+}
+
+#side-main-menu .collapse li a.active {
+  background: #e8ecf9;
+  color: #0a382b;
+  font-weight: 600;
+  padding-left: 54px;
+  border-left: 3px solid #0a382b;
+}
+
+#side-main-menu .collapse li a.active::before {
+  height: 24px;
+}
+
+/* Nested Collapse */
+#side-main-menu .collapse .collapse {
+  background: #f0f1f7;
+  border-left: 2px solid #d0d0e0;
+}
+
+#side-main-menu .collapse .collapse li a {
+  padding-left: 70px;
+  font-size: 13px;
+  color: #666666;
+}
+
+#side-main-menu .collapse .collapse li a:hover {
+  padding-left: 74px;
+  background: #e8ecf9;
+}
+
+#side-main-menu .collapse .collapse li a.active {
+  padding-left: 74px;
+}
+
+/* Scrollbar Styling for the main menu */
+#side-main-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+#side-main-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#side-main-menu::-webkit-scrollbar-thumb {
+  background: #d0d0d0;
+  border-radius: 3px;
+}
+
+#side-main-menu::-webkit-scrollbar-thumb:hover {
+  background: #999999;
+}
+
+/* Mobile Responsive Menu Adjustments */
+@media (max-width: 768px) {
+  #side-main-menu > li > a {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+
+  #side-main-menu .collapse li a {
+    padding: 10px 16px 10px 44px;
+  }
+
+  #side-main-menu > li > a:hover {
+    padding-left: 20px;
+  }
+}
+
+/* Scrollbar Styling for the main menu */
+#side-main-menu {
+    /* Firefox scrollbar color (thumb track) */
+    scrollbar-color: #028c65 transparent;
+    scrollbar-width: thin;
+}
+
+#side-main-menu::-webkit-scrollbar {
+    width: 8px; /* Slightly wider so black is visible */
+}
+
+#side-main-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#side-main-menu::-webkit-scrollbar-thumb {
+    background: #028c65; /* Black scrollbar */
+    border-radius: 4px;
+}
+
+#side-main-menu::-webkit-scrollbar-thumb:hover {
+    background: #333333; /* Dark grey on hover */
+}

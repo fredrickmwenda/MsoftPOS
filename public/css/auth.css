@@ -1,6 +1,6 @@
 .login-page .logo span,
 .register-page .logo span {
-    color: #13bd60;
+    color: #0a382b;
 }
 
 .login-page a.forgot-pass,
@@ -8,7 +8,7 @@
 .register-page a.forgot-pass,
 .register-page a.signup {
     font-size: 0.8em;
-    color: #13bd60;
+    color: #0a382b;
 }
 
 .login-page,
@@ -209,18 +209,18 @@ input.input-material~label.error {
 }
 
 input.input-material:focus {
-    border-color: #13bd60;
+    border-color: #0a382b;
     outline: none;
 }
 
 input.input-material~label.active {
     font-size: 0.8em;
     top: -10px;
-    color: #13bd60;
+    color: #0a382b;
 }
 
 input.form-control-custom:checked+label::before {
-    background: #13bd60 !important;
+    background: #0a382b !important;
 }
 
 .btn {
@@ -241,9 +241,9 @@ input.form-control-custom:checked+label::before {
 
 
 .btn-primary {
-    color: color-yiq(#13bd60);
-    background-color: #13bd60;
-    border-color: #13bd60;
+    color: color-yiq(#0a382b);
+    background-color: #0a382b;
+    border-color: #0a382b;
 }
 
 .btn-primary:hover {

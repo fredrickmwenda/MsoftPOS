@@ -5,19 +5,28 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PayrollItem extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'payroll_id', 'payroll_template_item_id', 'name', 'type', 'amount_type', 'amount', 'taxable', 'description', 'meta'
+        'payroll_id',
+        'name',
+        'type',
+        'amount_type',
+        'amount',
+        'taxable',
+        'description',
+        'meta',
+        'source',           // 'template' | 'manual'
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount'  => 'decimal:2',
         'taxable' => 'boolean',
-        'meta' => 'array'
+        'meta'    => 'array',
     ];
 
     public function payroll(): BelongsTo
@@ -25,8 +34,8 @@ class PayrollItem extends Model
         return $this->belongsTo(Payroll::class);
     }
 
-    public function templateItem(): BelongsTo
+    public function metas(): HasMany
     {
-        return $this->belongsTo(PayrollTemplateItem::class, 'payroll_template_item_id');
+        return $this->hasMany(PayrollItemMeta::class);
     }
 }

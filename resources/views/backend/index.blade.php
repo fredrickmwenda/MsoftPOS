@@ -3,7 +3,7 @@
 <style>
     /* Modern Color Scheme */
     :root {
-        --primary: #2ecc71;
+        --primary: #028c65;
         --primary-dark: #27ae60;
         --primary-light: #a3e4b5;
         --secondary: #62cff4;
@@ -474,7 +474,7 @@
 
 <div class="ml-5 mr-5">
 <!-- Quick Actions Row -->
-<div class="row mb-4 quick-actions-widgets">
+<div class="row mb-4 quick-actions-widgets mt-2">
     <div class="col-md-4 animate" style="animation-delay: 0.1s">
         <div class="action-card">
             <img src="{{asset('/images/action.jpg')}}" alt="Quick Actions">

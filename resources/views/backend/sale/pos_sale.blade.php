@@ -95,7 +95,7 @@
     @include('backend.layout.sidebar')
 </nav>
 <header>
-    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #13bd60, #f5f8fe) !important;">
+    <nav class="navbar" style="border-radius: 0px !important;  background: linear-gradient(to right, #0a382b, #f5f8fe) !important;">
         <a id="toggle-btn" href="#" class="menu-btn"><i class="fa fa-bars"> </i></a>
 
         <div class="navbar-header">
