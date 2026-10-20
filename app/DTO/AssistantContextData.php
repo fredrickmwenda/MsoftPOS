@@ -2,15 +2,15 @@
 
 namespace App\DTO;
 
-final readonly class AssistantContextData
+final class AssistantContextData
 {
     use ValidatesJsonSafety;
 
     public function __construct(
         //public ?string $tenantId = null,
-        public ?int $userId = null,
-        public array $businessContext = [],
-        public array $systemContext = []
+        public readonly ?int $userId = null,
+        public readonly array $businessContext = [],
+        public readonly array $systemContext = []
     ) {
         self::ensureJsonPayloadSafe($this->toArray());
     }

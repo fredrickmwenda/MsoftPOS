@@ -4,33 +4,22 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Overtime extends Model
 {
     use HasFactory;
-    protected $table = "overtimes";
+
     protected $fillable = [
-        'employee_id',
-        'date',
-        'hours',
-        'rate',
-        'amount',
-        'status'
+        'employee_id', 'salary_template_id', 'year', 'month',
+        'hours', 'rate', 'amount', 'date', 'note',
     ];
 
-    // Relation to Employee
-    public function employee()
-    {
-        return $this->belongsTo(Employee::class);
-    }
+    protected $casts = [
+        'hours' => 'decimal:2', 'rate' => 'decimal:2',
+        'amount' => 'decimal:2', 'date' => 'date',
+    ];
 
-    // Calculate amount automatically when setting hours or rate
-    public static function boot()
-    {
-        parent::boot();
-
-        static::saving(function($overtime) {
-            $overtime->amount = $overtime->hours * $overtime->rate;
-        });
-    }
+    public function employee() { return $this->belongsTo(Employee::class); }
+    public function template() { return $this->belongsTo(SalaryTemplate::class, 'salary_template_id'); }
 }

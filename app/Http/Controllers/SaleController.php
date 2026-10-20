@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
-use App\Models\Warehouse; 
+use App\Models\Warehouse;
 use App\Models\Biller;
 use App\Models\Brand;
 use App\Models\Category;
@@ -42,7 +42,7 @@ use App\Models\CustomField;
 use App\Models\Table;
 use App\Models\Courier;
 use Illuminate\Support\Facades\DB;        // ✅ Capital I
-use Illuminate\Support\Facades\Cache; 
+use Illuminate\Support\Facades\Cache;
 use App\Models\GeneralSetting;
 use App\Models\MailSetting;
 use Stripe\Stripe;
@@ -97,7 +97,7 @@ class SaleController extends Controller
 
     public function index(Request $request)
     {
- 
+
         if(Auth::user()->hasPermissionTo('sales-index')) {
             $all_permission = Auth::user()->getAllPermissions();
 
@@ -141,7 +141,7 @@ class SaleController extends Controller
 
             // Handle percentage filter (show only top X% of sales by value)
             // Priority: User input > Session > Admin default settings
-     
+
 
             // Only users with sale-percentage-filter permission may use the filter
 
@@ -166,7 +166,7 @@ class SaleController extends Controller
                 $field_name[] = str_replace(" ", "_", strtolower($fieldName));
             }
 
-            
+
             return view('backend.sale.index', compact('starting_date', 'ending_date', 'warehouse_id', 'sale_status', 'payment_status', 'lims_gift_card_list', 'lims_pos_setting_data', 'lims_reward_point_setting_data', 'lims_account_list', 'lims_warehouse_list', 'all_permission','options', 'numberOfInvoice', 'custom_fields', 'field_name', 'lims_courier_list'));
         }
         else
@@ -248,7 +248,7 @@ public function saleData(Request $request)
     if ($payment_status) {
         $baseQuery = $baseQuery->where('payment_status', $payment_status);
     }
-    
+
     // 👈 NEW: Apply sale_source filter to base query
     if ($sale_source !== 'all') {
         $baseQuery = $baseQuery->where('sale_source', $sale_source);
@@ -362,7 +362,7 @@ public function saleData(Request $request)
         if ($payment_status) {
             $q = $q->where('sales.payment_status', $payment_status);
         }
-        
+
         // 👈 NEW: Apply sale_source filter to search query
         if ($sale_source !== 'all') {
             $q = $q->where('sales.sale_source', $sale_source);
@@ -580,15 +580,15 @@ public function saleData(Request $request)
 }
 
     public function location_update(Request $request,$location_id){
-    
+
       DB::connection('sitesql')->table('locations')->where('id',$location_id)->update([
             'name'=>$request->name,
             'updated_at'=>now()
           ]);
-       return back()->with('message', 'Location Updated successfully'); 
+       return back()->with('message', 'Location Updated successfully');
     }
-    
-    
+
+
      public function shipping_update(Request $request,$shipping_id){
         $result = implode(',', $request->locations);
          DB::connection('sitesql')->table('shippings')->where('id',$shipping_id)->update([
@@ -598,10 +598,10 @@ public function saleData(Request $request)
             'store_id'=>2,
             'updated_at'=>now()
           ]);
-       return back()->with('message', 'Shipping Updated successfully'); 
+       return back()->with('message', 'Shipping Updated successfully');
     }
-    
-      
+
+
     public function shipping_post(Request $request){
         $result = implode(',', $request->locations);
          DB::connection('sitesql')->table('shippings')->insertGetId([
@@ -613,20 +613,20 @@ public function saleData(Request $request)
             'store_id'=>2,
             'updated_at'=>now()
           ]);
-       return back()->with('message', 'Location Updated successfully'); 
+       return back()->with('message', 'Location Updated successfully');
     }
-    
+
     public function location_delete($location_id){
-    
+
       DB::connection('sitesql')->table('locations')->where('id',$location_id)->delete();
-       return back()->with('message', 'Location Deleted successfully'); 
+       return back()->with('message', 'Location Deleted successfully');
     }
-    
-    public function shipping_delete($shipping_id){ 
+
+    public function shipping_delete($shipping_id){
       DB::connection('sitesql')->table('shippings')->where('id',$shipping_id)->delete();
-       return back()->with('message', 'Shipping Deleted successfully'); 
+       return back()->with('message', 'Shipping Deleted successfully');
     }
-    
+
     public function location_add(Request $request){
        DB::connection('sitesql')->table('locations')->insertGetId([
             'name'=>$request->name,
@@ -635,8 +635,8 @@ public function saleData(Request $request)
             'store_id'=>2,
             'updated_at'=>now()
           ]);
-       return back()->with('message', 'Location Updated successfully'); 
-    
+       return back()->with('message', 'Location Updated successfully');
+
     }
 
     public function shippings2(){
@@ -702,12 +702,11 @@ public function saleData(Request $request)
     }
 
 
-   
 
-        public function store(Request $request)
+
+    public function store(Request $request)
     {
         $data = $request->all();
-        logger()->info('Sale Store Request Data: ' . json_encode($data) );
 
         // Ensure sale_status defaults to 1 (Completed) if not explicitly sent (fixes POS missing status)
         if (!isset($data['sale_status']) || empty($data['sale_status'])) {
@@ -723,7 +722,7 @@ public function saleData(Request $request)
         }
 
         $data['user_id'] = Auth::id();
-        
+
         $cash_register_data = CashRegister::where([
             ['user_id', $data['user_id']],
             ['warehouse_id', $data['warehouse_id']],
@@ -740,18 +739,18 @@ public function saleData(Request $request)
         else{
             $data['created_at'] = date("Y-m-d H:i:s");
         }
-           
+
         if($data['pos']) {
             if(!isset($data['reference_no'])){
                 $data['reference_no'] = 'posr-' . date("Ymd") . '-'. date("his");
             }
-                
+
             $balance = $data['grand_total'] - $data['paid_amount'];
             if($balance > 0 || $balance < 0){
                 $data['payment_status'] = 2;
             }
-            else{                
-                $data['payment_status'] = 4;   
+            else{
+                $data['payment_status'] = 4;
             }
             if ($data['draft']) {
                 if (!empty($data['sale_id']) && Sale::where('id', $data['sale_id'])->exists()) {
@@ -763,7 +762,7 @@ public function saleData(Request $request)
         else {
             if(!isset($data['reference_no'])){
                 $data['reference_no'] = 'sr-' . date("Ymd") . '-'. date("his");
-            }             
+            }
         }
 
         $document = $request->document;
@@ -808,7 +807,7 @@ public function saleData(Request $request)
                 $data['queue'] = 1;
             }
         }
-        
+
         //inserting data to sales table
         if (empty($data['customer_id']) && !empty($data['customer_id_hidden'])) {
             $data['customer_id'] = $data['customer_id_hidden'];
@@ -833,10 +832,10 @@ public function saleData(Request $request)
         if(count($custom_field_data)){
             DB::table('sales')->where('id', $lims_sale_data->id)->update($custom_field_data);
         }
-            
+
         $lims_customer_data = Customer::find($data['customer_id']);
         $lims_reward_point_setting_data = RewardPointSetting::latest()->first();
-        
+
         //checking if customer gets some points or not
         if($lims_reward_point_setting_data && $lims_reward_point_setting_data->is_active &&  $data['grand_total'] >= $lims_reward_point_setting_data->minimum_amount) {
             $point = (int)($data['grand_total'] / $lims_reward_point_setting_data->per_point_amount);
@@ -875,7 +874,7 @@ public function saleData(Request $request)
             $lims_product_data = Product::where('id', $id)->first();
             $product_sale['variant_id'] = null;
             $product_sale['product_batch_id'] = null;
-            
+
             if($lims_product_data->type == 'combo' && $data['sale_status'] == 1){
                 $product_list = explode(",", $lims_product_data->product_list);
                 $variant_list = explode(",", $lims_product_data->variant_list);
@@ -914,7 +913,7 @@ public function saleData(Request $request)
 
                     $child_data->qty -= $qty[$i] * $qty_list[$key];
                     $child_data->save();
-                    
+
                     if($child_warehouse_data) {
                         $child_warehouse_data->qty -= $qty[$i] * $qty_list[$key];
                         $child_warehouse_data->save();
@@ -930,7 +929,7 @@ public function saleData(Request $request)
                 $lims_sale_unit_data = Unit::where('unit_name', $sale_unit[$i])->first();
                 $sale_unit_id = $lims_sale_unit_data ? $lims_sale_unit_data->id : 0;
             }
-            
+
             if($lims_product_data->is_variant) {
                 $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')->FindExactProductWithCode($id, $product_code[$i])->first();
                 $product_sale['variant_id'] = $lims_product_variant_data ? $lims_product_variant_data->variant_id : null;
@@ -939,7 +938,7 @@ public function saleData(Request $request)
                 $product_sale['product_batch_id'] = $product_batch_id[$i];
             }
 
-            // Loose check for sale_status to allow string "1" 
+            // Loose check for sale_status to allow string "1"
             if ($data['sale_status'] == 1 || $data['sale_status'] == '1') {
                 // Default: assume no conversion
                 $quantity = $qty[$i];
@@ -984,14 +983,14 @@ public function saleData(Request $request)
                     $lims_product_warehouse_data->save();
                 }
             }
-            
+
             if($product_sale['variant_id']) {
                 $variant_data = Variant::select('name')->find($product_sale['variant_id']);
                 $mail_data['products'][$i] = $lims_product_data->name . ' ['. $variant_data->name .']';
             }
             else
                 $mail_data['products'][$i] = $lims_product_data->name;
-            
+
             //deduct imei number if available
             if($imei_number[$i]) {
                 $imei_numbers = explode(",", $imei_number[$i]);
@@ -1028,7 +1027,7 @@ public function saleData(Request $request)
             $product_sale['total'] = $mail_data['total'][$i] = $total[$i];
             logger()->info('Product Sale Data: ' . json_encode($product_sale) );
             Product_Sale::create($product_sale);
-            
+
         }
 
         //Error checer
@@ -1039,7 +1038,7 @@ public function saleData(Request $request)
 
         logger()->info('nessage is: ' . $message );
 
-         //inserting data to payments table why is the 
+         //inserting data to payments table why is the
         if($data['payment_status'] == 3 || $data['payment_status'] == 4 || ($data['payment_status'] == 2 && $data['pos'] && $data['paid_amount'] > 0)) {
             logger()->info('Preparing to process payments...' );
             $payment_methods = [];
@@ -1082,12 +1081,12 @@ public function saleData(Request $request)
 
             // Initialize a manual index counter
             $paymentIndex = 0;
-            
+
             // Process all payment methods
             foreach ($payment_methods as $payment) {
                 $lims_payment_data = new Payment();
                 $lims_payment_data->user_id = Auth::id();
-                    
+
                 // Map payment method names
                 switch ($payment['paid_by_id']) {
                     case 1: $paying_method = 'Cash'; break;
@@ -1109,11 +1108,11 @@ public function saleData(Request $request)
                     $lims_payment_data->cash_register_id = $cash_register_data->id;
                     $lims_account_data = Account::where('is_default', true)->first();
                     $lims_payment_data->account_id = $lims_account_data->id;
-        
+
                     $lims_payment_data->sale_id = $lims_sale_data->id;
                     $data['payment_reference'] = 'spr-'.date("Ymd").'-'.date("his");
                     $lims_payment_data->payment_reference = $data['payment_reference'];
-                    
+
                     // ✅ Set change only for the first payment (safe for both single/multiple)
                     $lims_payment_data->change = ($paymentIndex === 0) ? $total_change : 0;
 
@@ -1130,7 +1129,7 @@ public function saleData(Request $request)
                     $data['payment_id'] = $lims_payment_data->id;
                     $lims_pos_setting_data = PosSetting::latest()->first();
 
-                    if($paying_method == 'Credit Card' && (strlen($lims_pos_setting_data->stripe_public_key)>0) 
+                    if($paying_method == 'Credit Card' && (strlen($lims_pos_setting_data->stripe_public_key)>0)
                         && (strlen($lims_pos_setting_data->stripe_secret_key )>0)){
 
                         Stripe::setApiKey($lims_pos_setting_data->stripe_secret_key);
@@ -1241,9 +1240,9 @@ public function saleData(Request $request)
                         $lims_customer_data->save();
                     }
                 }
-            }            
+            }
             $lims_sale_data->paid_amount = $total_paid;
-            $lims_sale_data->save(); 
+            $lims_sale_data->save();
         }
 
             // Loop through and save each additional cost
@@ -1268,7 +1267,25 @@ public function saleData(Request $request)
             $lims_sale_data->save();
         }
 
-        
+
+        try {
+            $accountingService = app(\App\Services\AccountingService::class);
+            $res = $accountingService->recordSale($lims_sale_data, 'sale_created');
+            if (!$res->success) {
+                throw new \App\Exceptions\AccountingException($res->error);
+            }
+            if (\Schema::hasColumn($lims_sale_data->getTable(), 'accounting_status')) {
+                $lims_sale_data->accounting_status = 'posted';
+                $lims_sale_data->save();
+            }
+        } catch (\App\Exceptions\AccountingException $e) {
+            \Log::error('Accounting error on Sale Store: ' . $e->getMessage());
+            if (\Schema::hasColumn($lims_sale_data->getTable(), 'accounting_status')) {
+                $lims_sale_data->accounting_status = 'failed';
+                $lims_sale_data->save();
+            }
+        }
+
         logger()->info('Payments processed successfully.' );
         // Handle hire purchase if enabled
         if(($data['is_hire_purchase'] ?? 0) == 1) {
@@ -1281,7 +1298,7 @@ public function saleData(Request $request)
                 $lims_sale_data->delete();
                 return redirect()->back()->withErrors($validation['errors']);
             }
-            
+
             try {
                 // Create installment records
                 $hirePurchaseService->createInstallments($lims_sale_data, $data['hire_purchase_start_date'] ?? null);
@@ -1304,10 +1321,10 @@ public function saleData(Request $request)
         }
     }
 
-    //create a show empty function 
+    //create a show empty function
     public function show()
     {
-        
+
     }
 
 
@@ -1604,17 +1621,17 @@ public function saleData(Request $request)
         }
 
         $product_data = [
-            $product_code, 
-            $product_name, 
-            $product_qty, 
-            $product_type, 
-            $product_id, 
-            $product_list, 
-            $qty_list, 
-            $product_price,  
-            $batch_no, 
-            $product_batch_id, 
-            $expired_date, 
+            $product_code,
+            $product_name,
+            $product_qty,
+            $product_type,
+            $product_id,
+            $product_list,
+            $qty_list,
+            $product_price,
+            $batch_no,
+            $product_batch_id,
+            $expired_date,
             $is_embeded,
             $product_shelf,
         ];
@@ -1729,7 +1746,7 @@ public function saleData(Request $request)
     }
 
 
- 
+
 
     /**
      * Get user permissions with caching
@@ -1829,10 +1846,10 @@ public function saleData(Request $request)
         foreach ($lims_product_list_with_variant as $product) {
             $images = explode(",", $product->image);
             $product->base_image = ($images[0] ?? null) ?: 'zummXD2dvAtI.png';
-            
+
             $lims_product_variant_data = $product->variant()->orderBy('position')->get();
             $main_name = $product->name;
-            
+
             foreach ($lims_product_variant_data as $variant) {
                 $product->name = $main_name . ' [' . $variant->name . ']';
                 $product->code = $variant->pivot['item_code'];
@@ -1844,7 +1861,7 @@ public function saleData(Request $request)
         $lims_pos_setting_data = Cache::remember('pos_setting', 60*60*24*30, function () {
             return PosSetting::latest()->select('stripe_public_key','product_number','payment_options','customer_id','warehouse_id','biller_id')->first();
         });
-        
+
         logger()->info('POS Setting Data: ' . json_encode($lims_pos_setting_data));
 
         $options = [];
@@ -1863,7 +1880,7 @@ public function saleData(Request $request)
                 ->orderBy('id', 'desc')
                 ->take(10)
                 ->get();
-            
+
             $recent_draft = Sale::select('id','reference_no','customer_id','grand_total','created_at')
                 ->with('customer:id,name')
                 ->where([['sale_status', 3], ['user_id', Auth::id()]])
@@ -1877,7 +1894,7 @@ public function saleData(Request $request)
                 ->orderBy('id', 'desc')
                 ->take(10)
                 ->get();
-            
+
             $recent_draft = Sale::select('id','reference_no','customer_id','grand_total','created_at')
                 ->with('customer:id,name')
                 ->where('sale_status', 3)
@@ -1932,7 +1949,7 @@ public function saleData(Request $request)
 
         // Get cached permissions (already multi-role aware)
         $permissions = $this->getUserPermissions();
-        
+
         // Get all dashboard data (cached)
         $dashboardData = $this->getPosDashboardData();
 
@@ -2065,14 +2082,14 @@ public function saleData(Request $request)
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
             $lims_tax_list = Tax::where('is_active', true)->get();
             $lims_sale_data = Sale::find($id);
-            
+
 
             $lims_product_sale_data = Product_Sale::where('sale_id', $lims_sale_data->id)->get();
             // check the total_qty of sale is the same as the amount of  $lims_product_sale_data showcased as Illuminate\Database\Eloquent\Collection {#3273 â–¼ // app/Http/Controllers/SaleController.php:1264
-  
+
           if($lims_sale_data->total_qty != $lims_product_sale_data->count()){
             //dd('not same');
-              // if not the same, we need to recalculate the qty of each product in the sale calculate the 
+              // if not the same, we need to recalculate the qty of each product in the sale calculate the
               $product_sale_grouped = $lims_product_sale_data->groupBy('product_id');
               $new_lims_product_sale_data = collect();
               foreach($product_sale_grouped as $product_id => $product_sales){
@@ -2086,10 +2103,10 @@ public function saleData(Request $request)
               }
               $lims_product_sale_data = $new_lims_product_sale_data;
           }
-               
-            
+
+
            // dd($lims_sale_data);
-          
+
             $lims_product_list = Product::where([
                                     ['featured', 1],
                                     ['is_active', true]
@@ -2128,7 +2145,7 @@ public function saleData(Request $request)
                 $recent_sale = Sale::select('id','reference_no','customer_id','grand_total','created_at')->where('sale_status', 1)->orderBy('id', 'desc')->take(10)->get();
                 $recent_draft = Sale::select('id','reference_no','customer_id','grand_total','created_at')->where('sale_status', 3)->orderBy('id', 'desc')->take(10)->get();
             }
-            
+
             // Build deposit and points arrays for all customers
             $deposit = [];
             $points = [];
@@ -2136,23 +2153,23 @@ public function saleData(Request $request)
                 $deposit[$customer->id] = $customer->deposit - $customer->expense;
                 $points[$customer->id] = $customer->points;
             }
-            
+
             //dd all values returned in compact
             //dd(compact('currency_list', 'lims_biller_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_tax_list', 'lims_sale_data','lims_product_sale_data', 'lims_pos_setting_data', 'lims_brand_list', 'lims_category_list', 'lims_coupon_list', 'lims_product_list', 'product_number', 'lims_customer_group_all', 'lims_reward_point_setting_data', 'options', 'custom_fields', 'recent_sale', 'recent_draft', 'role', 'all_permission'));
             return view('backend.sale.create_sale',compact('currency_list', 'lims_biller_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_tax_list', 'lims_sale_data','lims_product_sale_data', 'lims_pos_setting_data', 'lims_brand_list', 'lims_category_list', 'lims_coupon_list', 'lims_product_list', 'product_number', 'lims_customer_group_all', 'lims_reward_point_setting_data', 'options', 'custom_fields', 'recent_sale', 'recent_draft', 'role', 'all_permission', 'deposit', 'points'));
         }
         else
-           
+
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
     public function getProductByFilter($category_id, $brand_id)
     {
         $data = [];
-        
+
         // Build base query with eager loading to avoid N+1 queries
         $query = Product::with('variant');
-        
+
         if(($category_id != 0) && ($brand_id != 0)){
             $query = $query->join('categories', 'products.category_id', '=', 'categories.id')
                             ->where([
@@ -2184,7 +2201,7 @@ public function saleData(Request $request)
         else {
             $query = $query->where('is_active', true)->select('products.id', 'products.name', 'products.code', 'products.image', 'products.is_variant');
         }
-        
+
         $lims_product_list = $query->get();
 
         $index = 0;
@@ -2250,7 +2267,7 @@ public function saleData(Request $request)
          return $lims_customer_group_data->percentage;
     }
 
-    
+
     public function limsProductSearch(Request $request)
     {
         $todayDate = date('Y-m-d');
@@ -2279,7 +2296,7 @@ public function saleData(Request $request)
         }
 
         $product_variant_id = null;
-        
+
         // Get all discounts for this customer
         $all_discount = DB::table('discount_plan_customers')
                         ->join('discount_plans', 'discount_plans.id', '=', 'discount_plan_customers.discount_plan_id')
@@ -2318,7 +2335,7 @@ public function saleData(Request $request)
                 ])
                 ->select('products.*', 'product_variants.id as product_variant_id', 'product_variants.item_code', 'product_variants.additional_price')
                 ->first();
-            
+
             if ($lims_product_data) {
                 $product_variant_id = $lims_product_data->product_variant_id;
                 $lims_product_data->price += $lims_product_data->additional_price;
@@ -2346,7 +2363,7 @@ public function saleData(Request $request)
         // Build product response array
         $product = [];
         $product[] = $lims_product_data->name;
-        
+
         if (isset($lims_product_data->product_variant_id) && $lims_product_data->product_variant_id) {
             $product[] = $lims_product_data->item_code;
         } else {
@@ -2359,10 +2376,10 @@ public function saleData(Request $request)
             $product_list = explode(",", $discount->product_list);
             $days = explode(",", $discount->days);
 
-            if (($discount->applicable_for == 'All' || in_array($lims_product_data->id, $product_list)) && 
-                ($todayDate >= $discount->valid_from && $todayDate <= $discount->valid_till && 
+            if (($discount->applicable_for == 'All' || in_array($lims_product_data->id, $product_list)) &&
+                ($todayDate >= $discount->valid_from && $todayDate <= $discount->valid_till &&
                 in_array(date('D'), $days) && $qty >= $discount->minimum_qty && $qty <= $discount->maximum_qty)) {
-                
+
                 if ($discount->type == 'flat') {
                     $product[] = $lims_product_data->price - $discount->value;
                 } elseif ($discount->type == 'percentage') {
@@ -2388,7 +2405,7 @@ public function saleData(Request $request)
             $product[] = 0;
             $product[] = 'No Tax';
         }
-        
+
         $product[] = $lims_product_data->tax_method;
 
         // Unit information
@@ -2521,7 +2538,7 @@ public function saleData(Request $request)
 
     public function saleByCsv()
     {
-        
+
         if(Auth::user()->hasPermissionTo('sales-add')){
             $lims_customer_list = Customer::where('is_active', true)->get();
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
@@ -2829,7 +2846,7 @@ public function saleData(Request $request)
                         $old_product_qty = $old_product_qty / $lims_sale_unit_data->operation_value;
                     }
                 }
-                
+
                 if($product_sale_data->variant_id) {
                     $lims_product_variant_data = ProductVariant::select('id', 'qty')->FindExactProduct($product_sale_data->product_id, $product_sale_data->variant_id)->first();
                     $lims_product_warehouse_data = Product_Warehouse::FindProductWithVariant($product_sale_data->product_id, $product_sale_data->variant_id, $lims_sale_data->warehouse_id)
@@ -2854,7 +2871,7 @@ public function saleData(Request $request)
                 else
                     $lims_product_warehouse_data = Product_Warehouse::FindProductWithoutVariant($product_sale_data->product_id, $lims_sale_data->warehouse_id)
                     ->first();
-                    
+
                 $lims_product_data->qty += $old_product_qty;
                 if(isset($lims_product_warehouse_data) && $lims_product_warehouse_data) {
                     $lims_product_warehouse_data->qty += $old_product_qty;
@@ -2879,7 +2896,7 @@ public function saleData(Request $request)
             elseif( !(in_array($old_product_id[$key], $product_id)) )
                 $product_sale_data->delete();
         }
-        
+
         // Loop through new products
         foreach ($product_id as $key => $pro_id) {
             $lims_product_data = Product::find($pro_id);
@@ -2924,7 +2941,7 @@ public function saleData(Request $request)
                     $child_warehouse_data->save();
                 }
             }
-            
+
             // Separate Unit Resolution
             $sale_unit_id = 0;
             $lims_sale_unit_data = null;
@@ -2976,7 +2993,7 @@ public function saleData(Request $request)
 
                 $lims_product_data->qty -= $new_product_qty;
                 $lims_product_data->save();
-                
+
                 if(isset($lims_product_warehouse_data) && $lims_product_warehouse_data) {
                     $lims_product_warehouse_data->qty -= $new_product_qty;
                     $lims_product_warehouse_data->save();
@@ -3103,6 +3120,30 @@ public function saleData(Request $request)
             }
         }
 
+        try {
+            $accountingService = app(\App\Services\AccountingService::class);
+            $revRes = $accountingService->reverseTransaction(get_class($lims_sale_data), $lims_sale_data->id);
+            if (!$revRes->success) {
+                throw new \App\Exceptions\AccountingException($revRes->error);
+            }
+
+            $res = $accountingService->recordSale($lims_sale_data, 'sale_updated');
+            if (!$res->success) {
+                throw new \App\Exceptions\AccountingException($res->error);
+            }
+
+            if (\Schema::hasColumn($lims_sale_data->getTable(), 'accounting_status')) {
+                $lims_sale_data->accounting_status = 'posted';
+                $lims_sale_data->save();
+            }
+        } catch (\App\Exceptions\AccountingException $e) {
+            \Log::error('Accounting error on Sale Update: ' . $e->getMessage());
+            if (\Schema::hasColumn($lims_sale_data->getTable(), 'accounting_status')) {
+                $lims_sale_data->accounting_status = 'failed';
+                $lims_sale_data->save();
+            }
+        }
+
         return redirect('sales')->with('message', $message);
     }
 
@@ -3115,10 +3156,10 @@ public function saleData(Request $request)
     public function genInvoice($id)
     {
         $lims_sale_data = Sale::find($id);
-      
+
         $lims_product_sale_data = Product_Sale::where('sale_id', $id)->get();
-        
-     
+
+
         // dd($lims_product_sale_data);
         if(cache()->has('biller_list'))
         {
@@ -3186,7 +3227,8 @@ public function saleData(Request $request)
         if(is_null($lims_sale_data->exchange_rate))
         {
             $numberInWords = $numberTransformer->toWords($lims_sale_data->grand_total);
-            $currency_code = cache()->get('currency')->code;
+            $currency_use = DB::table('currencies')->select('code')->where('is_active', 1)->first();
+            $currency_code = $currency_use->code;
         } else {
             $numberInWords = $numberTransformer->toWords($lims_sale_data->grand_total);
             $sale_currency = DB::table('currencies')->select('code')->where('id',$lims_sale_data->currency_id)->first();
@@ -3300,6 +3342,18 @@ public function saleData(Request $request)
                 $lims_sale_data->save();
             }
         }
+
+
+        $accountingService = app(\App\Services\AccountingService::class);
+        $result = $accountingService->recordPayment($lims_payment_data);
+        if (!$result->success) {
+            \Log::error('Accounting failed for Sale Payment', ['payment_id' => $lims_payment_data->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($lims_payment_data->getTable(), 'accounting_status')) {
+                $lims_payment_data->accounting_status = 'failed';
+                $lims_payment_data->save();
+            }
+        }
+
 
         // === Continue with GiftCard, CreditCard, Paypal, etc. like you already have ===
 
@@ -3546,6 +3600,18 @@ public function saleData(Request $request)
         $lims_payment_data->change = $data['edit_paying_amount'] - $data['edit_amount'];
         $lims_payment_data->payment_note = $data['edit_payment_note'];
         $lims_payment_data->save();
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($lims_payment_data), $lims_payment_data->id, '_reversed');
+        $result = $accountingService->recordPayment($lims_payment_data, 'payment_updated');
+        if (!$result->success) {
+            \Log::error('Accounting failed for Sale Payment Update', ['payment_id' => $lims_payment_data->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($lims_payment_data->getTable(), 'accounting_status')) {
+                $lims_payment_data->accounting_status = 'failed';
+                $lims_payment_data->save();
+            }
+        }
+
+
         $message = 'Payment updated successfully';
 
 
@@ -3622,6 +3688,8 @@ public function saleData(Request $request)
             $lims_customer_data->points += $lims_payment_data->used_points;
             $lims_customer_data->save();
         }
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($lims_payment_data), $lims_payment_data->id, '_deleted');
         $lims_payment_data->delete();
         return redirect('sales')->with('not_permitted', 'Payment deleted successfully');
     }
@@ -3730,8 +3798,8 @@ public function saleData(Request $request)
     }
 
 
-  
-  
+
+
     public function deleteBySelection(Request $request)
     {
         $sale_id = $request['saleIdArray'];
@@ -3825,6 +3893,9 @@ public function saleData(Request $request)
             }
             $lims_payment_data = Payment::where('sale_id', $id)->get();
             foreach ($lims_payment_data as $payment) {
+
+                $accountingService = app(\App\Services\AccountingService::class);
+                $accountingService->reverseTransaction(get_class($payment), $payment->id, '_deleted');
                 if($payment->paying_method == 'Gift Card'){
                     $lims_payment_with_gift_card_data = PaymentWithGiftCard::where('payment_id', $payment->id)->first();
                     $lims_gift_card_data = GiftCard::find($lims_payment_with_gift_card_data->gift_card_id);
@@ -3862,13 +3933,32 @@ public function saleData(Request $request)
             $lims_sale_data->delete();
             $this->fileDelete('documents/sale/', $lims_sale_data->document);
 
+
+            DB::commit();
+
+            try {
+                $accountingService = app(\App\Services\AccountingService::class);
+                $revRes = $accountingService->reverseTransaction(\App\Models\Sale::class, $id, '_deleted');
+                if (!$revRes->success) {
+                    throw new \App\Exceptions\AccountingException($revRes->error);
+                }
+                $deletedSale = \App\Models\Sale::withTrashed()->find($id);
+                if ($deletedSale && \Schema::hasColumn($deletedSale->getTable(), 'accounting_status')) {
+                    $deletedSale->accounting_status = 'reversed';
+                    $deletedSale->save();
+                }
+            } catch (\App\Exceptions\AccountingException $e) {
+                \Log::error('Accounting error on Sale Destroy: ' . $e->getMessage());
+
+            }
+
         }
         return 'Sale deleted successfully!';
     }
- 
 
 
-    
+
+
     public function customerDisplay()
     {
         return view('backend.sale.display');
@@ -3975,6 +4065,8 @@ public function saleData(Request $request)
 
         $lims_payment_data = Payment::where('sale_id', $id)->get();
         foreach ($lims_payment_data as $payment) {
+            $accountingService = app(\App\Services\AccountingService::class);
+            $accountingService->reverseTransaction(get_class($payment), $payment->id, '_deleted');
             if($payment->paying_method == 'Gift Card'){
                 $lims_payment_with_gift_card_data = PaymentWithGiftCard::where('payment_id', $payment->id)->first();
                 $lims_gift_card_data = GiftCard::find($lims_payment_with_gift_card_data->gift_card_id);
@@ -4013,11 +4105,25 @@ public function saleData(Request $request)
         }
         $lims_sale_data->delete();
         $this->fileDelete('documents/sale/', $lims_sale_data->document);
+        try {
+            $accountingService = app(\App\Services\AccountingService::class);
+            $revRes = $accountingService->reverseTransaction(\App\Models\Sale::class, $id, '_deleted');
+            if (!$revRes->success) {
+                throw new \App\Exceptions\AccountingException($revRes->error);
+            }
+            $deletedSale = \App\Models\Sale::withTrashed()->find($id);
+            if ($deletedSale && \Schema::hasColumn($deletedSale->getTable(), 'accounting_status')) {
+                $deletedSale->accounting_status = 'reversed';
+                $deletedSale->save();
+            }
+        } catch (\App\Exceptions\AccountingException $e) {
+            \Log::error('Accounting error on Sale Destroy: ' . $e->getMessage());
+        }
 
         return Redirect::to($url)->with('not_permitted', $message);
     }
 
-  
+
     private function processGiftCardPayment($payment_data, $amount)
     {
         $gift_card_id = request('gift_card_id');
@@ -4078,7 +4184,7 @@ public function saleData(Request $request)
     private function sendPaymentEmail($customer, $sale, $paid_amount, $balance)
     {
         $mail_setting = MailSetting::latest()->first();
-        
+
         if ($customer->email && $mail_setting) {
             try {
                 $mail_data = [

@@ -4,19 +4,19 @@ namespace App\DTO;
 
 use InvalidArgumentException;
 
-final readonly class AssistantResponseData
+final class AssistantResponseData
 {
     use ValidatesJsonSafety;
 
     public function __construct(
-        public string $textSummary,
-        public string $responseType = 'text',
-        public array $cards = [],
-        public array $table = [],
-        public array $links = [],
-        public array $warnings = [],
-        public array $errors = [],
-        public array $metadata = []
+        public readonly string $textSummary,
+        public readonly string $responseType = 'text',
+        public readonly array $cards = [],
+        public readonly array $table = [],
+        public readonly array $links = [],
+        public readonly array $warnings = [],
+        public readonly array $errors = [],
+        public readonly array $metadata = []
     ) {
         $validResponseTypes = ['text', 'card', 'table', 'chart', 'error'];
         if (!in_array($this->responseType, $validResponseTypes, true)) {

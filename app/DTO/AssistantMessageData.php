@@ -4,15 +4,15 @@ namespace App\DTO;
 
 use InvalidArgumentException;
 
-final readonly class AssistantMessageData
+final class AssistantMessageData
 {
     use ValidatesJsonSafety;
 
     public function __construct(
-        public string $role,
-        public string $content,
-        public ?string $responseType = null,
-        public array $metadata = []
+        public readonly string $role,
+        public readonly string $content,
+        public readonly ?string $responseType = null,
+        public readonly array $metadata = []
     ) {
         $validRoles = ['system', 'user', 'assistant'];
         if (!in_array($this->role, $validRoles, true)) {

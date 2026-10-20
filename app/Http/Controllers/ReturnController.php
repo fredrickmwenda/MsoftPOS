@@ -32,12 +32,22 @@ class ReturnController extends Controller
     use \App\Traits\TenantInfo;
     use \App\Traits\MailInfo;
 
+    protected $accountingService;
 
     private function isStaff(){
         return Auth::user()->roles->contains(function ($role) {
             return $role->id > 2;
         });
     }
+
+
+
+
+    public function __construct(\App\Services\AccountingService $accountingService)
+    {
+        $this->accountingService = $accountingService;
+    }
+
 
     public function index(Request $request)
     {
@@ -246,7 +256,7 @@ class ReturnController extends Controller
 
     public function create(Request $request)
     {
-       
+
         if(Auth::user()->hasPermissionTo('returns-add')) {
             $lims_sale_data = Sale::where([
                 ['reference_no', $request->input('reference_no')],
@@ -446,14 +456,14 @@ class ReturnController extends Controller
     public function store(Request $request)
     {
         $data = $request->except('document');
-        
+
         // Calculate totals to ensure non-nullable fields are filled
         $data['item'] = count($data['product_id']);
         $data['total_qty'] = array_sum($data['qty']);
         $data['total_discount'] = array_sum($data['discount']);
         $data['total_tax'] = array_sum($data['tax']);
         $data['total_price'] = array_sum($data['subtotal']);
-        
+
         $order_tax_rate = isset($data['order_tax_rate']) ? (float)$data['order_tax_rate'] : 0;
         $data['order_tax'] = $data['total_price'] * ($order_tax_rate / 100);
         $data['grand_total'] = $data['total_price'] + $data['order_tax'];
@@ -467,7 +477,10 @@ class ReturnController extends Controller
         $data['biller_id'] = $lims_sale_data->biller_id;
         $data['currency_id'] = $lims_sale_data->currency_id;
         $data['exchange_rate'] = $lims_sale_data->exchange_rate;
-        
+        $refund = $request->refund ?? 0;
+        $hasRefund = $refund && $lims_sale_data->paid_amount > 0;
+
+
         $cash_register_data = CashRegister::where([
             ['user_id', $data['user_id']],
             ['warehouse_id', $data['warehouse_id']],
@@ -475,10 +488,10 @@ class ReturnController extends Controller
         ])->first();
         if($cash_register_data)
             $data['cash_register_id'] = $cash_register_data->id;
-            
+
         $lims_account_data = Account::where('is_default', true)->first();
         $data['account_id'] = $lims_account_data->id;
-        
+
         $document = $request->document;
         if ($document) {
             $v = Validator::make(
@@ -506,6 +519,45 @@ class ReturnController extends Controller
         }
 
         $lims_return_data = Returns::create($data);
+        if($hasRefund) {
+
+            $cash_register_data = CashRegister::where([
+                ['user_id', $data['user_id']],
+                ['warehouse_id', $data['warehouse_id']],
+                ['status', true]
+            ])->first();
+
+            if($cash_register_data)
+                $data['cash_register_id'] = $cash_register_data->id;
+
+            // REFUND PAYMENT LOGIC
+            $refund_amount = $request->refund_amount ?? $lims_sale_data->paid_amount;
+            $paying_method = $request->paying_method ?? 'Cash';
+
+            // create payment reference
+            $payment_reference = 'spr-' . date("Ymd") . '-' . date("his");
+
+            // create refund payment record
+            $payment_data = [
+                'payment_reference' => $payment_reference,
+                'sale_id' => $data['sale_id'],
+                'return_id' => $lims_return_data->id,
+                'cash_register_id' => $data['cash_register_id'] ?? null,
+                'user_id' => Auth::id(),
+                'account_id' => $data['account_id'],
+                'amount' => $refund_amount,
+                'paying_method' => $paying_method,
+                'created_at' => now(),
+                'updated_at' => now()
+            ];
+
+            $refundPayment = Payment::create($payment_data);
+            $result = $this->accountingService->recordPayment($refundPayment);
+            if (!$result->success) {
+                \Log::error('Accounting failed for Sale Return Refund', ['payment_id' => $refundPayment->id, 'error' => $result->error]);
+            }
+
+        }
         $lims_customer_data = Customer::find($data['customer_id']);
         //collecting male data
         $mail_data['email'] = $lims_customer_data->email;
@@ -633,34 +685,46 @@ class ReturnController extends Controller
 
             $mail_data['qty'][$key] = $qty[$key];
             $mail_data['total'][$key] = $total[$key];
-            
+
             // Using ?? 0 or ?? null to ensure no null values are passed to non-nullable DB columns
             ProductReturn::insert([
-                'return_id' => $lims_return_data->id, 
-                'product_id' => $pro_id, 
-                'product_batch_id' => $product_batch_id[$key] ?? null, 
-                'variant_id' => $variant_id, 
-                'imei_number' => $imei_number[$key] ?? null, 
-                'qty' => $qty[$key] ?? 0, 
-                'sale_unit_id' => $sale_unit_id ?? 0, 
-                'net_unit_price' => $net_unit_price[$key] ?? 0, 
-                'discount' => $discount[$key] ?? 0, 
-                'tax_rate' => $tax_rate[$key] ?? 0, 
-                'tax' => $tax[$key] ?? 0, 
-                'total' => $total[$key] ?? 0, 
-                'created_at' => \Carbon\Carbon::now(),  
+                'return_id' => $lims_return_data->id,
+                'product_id' => $pro_id,
+                'product_batch_id' => $product_batch_id[$key] ?? null,
+                'variant_id' => $variant_id,
+                'imei_number' => $imei_number[$key] ?? null,
+                'qty' => $qty[$key] ?? 0,
+                'sale_unit_id' => $sale_unit_id ?? 0,
+                'net_unit_price' => $net_unit_price[$key] ?? 0,
+                'discount' => $discount[$key] ?? 0,
+                'tax_rate' => $tax_rate[$key] ?? 0,
+                'tax' => $tax[$key] ?? 0,
+                'total' => $total[$key] ?? 0,
+                'created_at' => \Carbon\Carbon::now(),
                 'updated_at' => \Carbon\Carbon::now()
             ]);
-            
+
             $product_sale_data = Product_Sale::where([
                                     ['product_id', $pro_id],
                                     ['sale_id', $data['sale_id']]
                                 ])->select('id', 'return_qty')->first();
-                                
+
             if($product_sale_data) {
                 $product_sale_data->return_qty += $qty[$key];
                 $product_sale_data->save();
             }
+        }
+        try {
+            $res = $this->accountingService->recordSaleReturn($lims_return_data, 'sale_return_created');
+            if (!$res->success) {
+                throw new \App\Exceptions\AccountingException($res->error);
+            }
+            $lims_return_data->accounting_status = 'posted';
+            $lims_return_data->save();
+        } catch (\App\Exceptions\AccountingException $e) {
+            \Log::error('Accounting error on Sale Return Store: ' . $e->getMessage());
+            $lims_return_data->accounting_status = 'failed';
+            $lims_return_data->save();
         }
         $message = 'Return created successfully';
         if($data['change_sale_status'])
@@ -770,7 +834,7 @@ class ReturnController extends Controller
 
     public function edit($id)
     {
-        
+
         if(Auth::user()->hasPermissionTo('returns-edit')){
             $lims_customer_list = Customer::where('is_active',true)->get();
             $lims_warehouse_list = Warehouse::where('is_active',true)->get();
@@ -1062,6 +1126,23 @@ class ReturnController extends Controller
         $lims_customer_data = Customer::find($data['customer_id']);
         $mail_setting = MailSetting::latest()->first();
 
+        try {
+            $revRes = $this->accountingService->reverseTransaction(get_class($lims_return_data), $lims_return_data->id);
+            if (!$revRes->success && $revRes->error !== 'No entries to reverse') {
+                throw new \App\Exceptions\AccountingException($revRes->error);
+            }
+
+            $res = $this->accountingService->recordSaleReturn($lims_return_data, 'sale_return_updated');
+            if (!$res->success) {
+                throw new \App\Exceptions\AccountingException($res->error);
+            }
+            $lims_return_data->accounting_status = 'posted';
+            $lims_return_data->save();
+        } catch (\App\Exceptions\AccountingException $e) {
+            \Log::error('Accounting error on Sale Return Update: ' . $e->getMessage());
+            $lims_return_data->accounting_status = 'failed';
+            $lims_return_data->save();
+        }
 
         if(!$lims_customer_data->email && !$mail_setting) {
             $message = 'Return updated successfully. Please setup your <a href="setting/mail_setting">mail setting</a> to send mail.';
@@ -1089,8 +1170,18 @@ class ReturnController extends Controller
     public function deleteBySelection(Request $request)
     {
         $return_id = $request['returnIdArray'];
+        $refund_return_ids = Payment::whereIn('return_id', $return_ids)
+                            ->pluck('return_id')
+                            ->toArray();
         foreach ($return_id as $id) {
             $lims_return_data = Returns::find($id);
+
+            $refund = Payment::where('return_id', $lims_return_data->id)->latest()->first();
+
+            if (in_array($id, $refund_return_ids)) {
+                continue;
+            }
+
             $lims_product_return_data = ProductReturn::where('return_id', $id)->get();
 
             foreach ($lims_product_return_data as $key => $product_return_data) {
@@ -1173,6 +1264,26 @@ class ReturnController extends Controller
                 }
             }
             $lims_return_data->delete();
+            if($refund){
+                $refund->delete();
+            }
+
+            try {
+                $revRes = $this->accountingService->reverseTransaction(get_class($lims_return_data), $id, '_deleted');
+                if (!$revRes->success && $revRes->error !== 'No entries to reverse') {
+                    throw new \App\Exceptions\AccountingException($revRes->error);
+                }
+                if (Returns::where('id', $id)->exists() && \Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                    $lims_return_data->accounting_status = 'reversed';
+                    $lims_return_data->save();
+                }
+            } catch (\App\Exceptions\AccountingException $e) {
+                \Log::error('Accounting error on Sale Return Delete Selection: ' . $e->getMessage());
+                    if (Returns::where('id', $id)->exists() && \Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                        $lims_return_data->accounting_status = 'failed';
+                        $lims_return_data->save();
+                    }
+            }
             $this->fileDelete('documents/sale_return/', $lims_return_data->document);
 
         }
@@ -1281,6 +1392,22 @@ class ReturnController extends Controller
         }
         $lims_return_data->delete();
         $this->fileDelete('documents/sale_return/', $lims_return_data->document);
+        try {
+            $revRes = $this->accountingService->reverseTransaction(get_class($lims_return_data), $id, '_deleted');
+            if (!$revRes->success && $revRes->error !== 'No entries to reverse') {
+                throw new \App\Exceptions\AccountingException($revRes->error);
+            }
+            if (Returns::where('id', $id)->exists() && \Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                $lims_return_data->accounting_status = 'reversed';
+                $lims_return_data->save();
+            }
+        } catch (\App\Exceptions\AccountingException $e) {
+            \Log::error('Accounting error on Sale Return Destroy: ' . $e->getMessage());
+            if (Returns::where('id', $id)->exists() && \Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                $lims_return_data->accounting_status = 'failed';
+                $lims_return_data->save();
+            }
+        }
 
         return redirect('return-sale')->with('not_permitted', 'Data deleted successfully');;
     }

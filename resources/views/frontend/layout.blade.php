@@ -1,7 +1,7 @@
 @php
-    // Fetch the general settings safely. 
+    // Fetch the general settings safely.
     $setting = \App\Models\GeneralSetting::latest()->first();
-    
+
     // Helper to safely resolve public path for images (logos, favicons)
     // If the DB only stores the filename (e.g., 'logo.png'), it prepends 'logo/'
     $resolveAssetPath = function ($path, $defaultDir = 'logo') {
@@ -52,12 +52,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $siteTitle }} | Storefront</title>
-    
+
     <!-- Dynamic Favicon -->
     @if($siteFavicon)
         <link rel="icon" href="{{ asset($siteFavicon) }}" type="image/x-icon">
     @endif
-    
+
     <meta name="description" content="Modern ecommerce storefront powered by the JoexPOS inventory.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,7 +69,10 @@
     <div class="announcement-bar">
         <div class="container announcement-inner">
             <span>🚚 Free delivery in Accra on orders over GH₵1,000</span>
-            <span>Call or WhatsApp: <strong>{{ $phoneNumber }}</strong></span>
+            <div class="announcement-right">
+                <span>Call or WhatsApp: <strong>{{ $phoneNumber }}</strong></span>
+                @include('frontend.partials.social-links', ['context' => 'announcement'])
+            </div>
         </div>
     </div>
 
@@ -97,7 +100,7 @@
                 <a href="tel:{{ preg_replace('/[^0-9+]/', '', $phoneNumber) }}" class="help-link">
                     Need help? <strong>{{ $phoneNumber }}</strong>
                 </a>
-                
+
                 <!-- Authentication Logic for Customer -->
                 @auth('customer')
                     <a href="{{ route('customer.dashboard') }}" class="customer-link">My Account</a>
@@ -153,7 +156,7 @@
                             ->take(5)
                             ->get();
                     @endphp
-                    
+
                     @foreach($footerCategories as $category)
                         <li>
                             <a href="{{ route('shop.index') }}?category={{ \Illuminate\Support\Str::slug($category->name) }}">
@@ -170,7 +173,7 @@
                     @forelse($footerPolicies as $policy)
                     <li><a href="{{ route('policy.show', $policy) }}">{{ $policy->title }}</a></li>
 
-                    
+
                 @empty
                     {{-- No policies yet --}}
                 @endforelse
@@ -185,8 +188,9 @@
                     <li>Phone: {{ $phoneNumber }}</li>
                     <li>Email: {{ $emailAddress }}</li>
                 </ul>
-            </div>
 
+                @include('frontend.partials.social-links', ['context' => 'footer'])
+            </div>
 
         </div>
         <div class="container footer-bottom">

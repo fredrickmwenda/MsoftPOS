@@ -31,9 +31,7 @@
             @if($index_permission_active)
             <li id="product-list-menu"><a href="{{route('products.index')}}">{{__('file.product_list')}}</a></li>
             @endif
-            @if($product_history_active)
-            <li id="product-history-menu"><a href="{{route('products.history')}}">Product History</a></li>
-            @endif
+
             @if($print_barcode_active)
             <li id="printBarcode-menu"><a href="{{route('product.printBarcode')}}">{{__('file.print_barcode')}}</a></li>
             @endif
@@ -246,59 +244,116 @@
     @endif
 
     <!-- ══════════════════════════════════════════════════════════════════
-         12. HRMIS  (Expanded with Designation, Shift, Overtime, Leave, HRM Panel)
+         12. HRMIS  (Payroll threaded down → 5 sub-menus)
          ══════════════════════════════════════════════════════════════════ -->
     <?php
-        $department_active         = $role_has_permissions_list->where('name', 'department')->first();
-        $designation_active        = $role_has_permissions_list->where('name', 'designations')->first();
-        $index_employee_active     = $role_has_permissions_list->where('name', 'employees-index')->first();
-        $attendance_active         = $role_has_permissions_list->where('name', 'attendance')->first();
-        $payroll_active            = $role_has_permissions_list->where('name', 'payroll')->first();
-        $holiday_active            = $role_has_permissions_list->where('name', 'holiday')->first();
-        $shift_active              = $role_has_permissions_list->where('name', 'shift')->first();
-        $overtime_active           = $role_has_permissions_list->where('name', 'overtime')->first();
-        $leave_type_active         = $role_has_permissions_list->where('name', 'leave-type')->first();
-        $leave_active              = $role_has_permissions_list->where('name', 'leave')->first();
-        $hrm_panel_active          = $role_has_permissions_list->where('name', 'hrm-panel')->first();
+        $department_active     = $role_has_permissions_list->where('name', 'department')->first();
+        $designation_active    = $role_has_permissions_list->where('name', 'designations')->first();
+        $index_employee_active = $role_has_permissions_list->where('name', 'employees-index')->first();
+        $attendance_active     = $role_has_permissions_list->where('name', 'attendance')->first();
+        $payroll_active        = $role_has_permissions_list->where('name', 'payroll')->first();
+        $holiday_active        = $role_has_permissions_list->where('name', 'holiday')->first();
+        $shift_active          = $role_has_permissions_list->where('name', 'shift')->first();
+        $leave_type_active     = $role_has_permissions_list->where('name', 'leave-type')->first();
+        $leave_active          = $role_has_permissions_list->where('name', 'leave')->first();
+        $hrm_panel_active      = $role_has_permissions_list->where('name', 'hrm-panel')->first();
     ?>
-    @if($department_active || $designation_active || $index_employee_active || $attendance_active || $payroll_active || $holiday_active || $shift_active || $overtime_active || $leave_type_active || $leave_active || $hrm_panel_active)
-    <li class=""><a href="#hrm" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-user-group"></i><span>HRMIS</span></a>
-        <ul id="hrm" class="collapse list-unstyled">
-            @if($hrm_panel_active)
-            <li id="hrm-panel-menu"><a href="{{route('hrm-panel')}}">HRM Panel</a></li>
-            @endif
-            @if($department_active)
-            <li id="dept-menu"><a href="{{route('departments.index')}}">{{trans('file.Department')}}</a></li>
-            @endif
-            @if($designation_active)
-            <li id="designation-menu"><a href="{{route('designations.index')}}">Designations</a></li>
-            @endif
-            @if($index_employee_active)
-            <li id="employee-menu"><a href="{{route('employees.index')}}">{{trans('file.Employee')}}</a></li>
-            @endif
-            @if($attendance_active)
-            <li id="attendance-menu"><a href="{{route('attendance.index')}}">{{trans('file.Attendance')}}</a></li>
-            @endif
-            @if($payroll_active)
-            <li id="payroll-menu"><a href="{{route('payroll.index')}}">{{trans('file.Payroll')}}</a></li>
-            @endif
-            @if($shift_active)
-            <li id="shift-menu"><a href="{{route('shift.index')}}">Shifts</a></li>
-            @endif
-            @if($overtime_active)
-            <li id="overtime-menu"><a href="{{route('overtime.index')}}">Overtime</a></li>
-            @endif
-            @if($leave_type_active)
-            <li id="leave-type-menu"><a href="{{route('leave-type.index')}}">Leave Types</a></li>
-            @endif
-            @if($leave_active)
-            <li id="leave-menu"><a href="{{route('leave.index')}}">Leaves</a></li>
-            @endif
-            @if($holiday_active)
-            <li id="holiday-menu"><a href="{{route('holidays.index')}}">{{trans('file.Holiday')}}</a></li>
-            @endif
-        </ul>
-    </li>
+    @if($department_active || $designation_active || $index_employee_active || $attendance_active || $payroll_active || $holiday_active || $shift_active || $leave_type_active || $leave_active || $hrm_panel_active)
+
+        @php
+            /* Active if ANY of the 5 payroll sub-routes is hit */
+            $payrollSectionActive = request()->routeIs([
+                'salary-template.*',
+                'payroll.index', 'payroll.generate', 'payroll.generate-store',
+                'payroll-payment.*',
+                'overtime.*',
+            ]);
+        @endphp
+
+        <li class="{{ $payrollSectionActive ? 'active open' : '' }}">
+            <a href="#hrm" aria-expanded="{{ $payrollSectionActive ? 'true' : 'false' }}" data-toggle="collapse">
+                <i class="dripicons dripicons-user-group"></i><span>HRMIS</span>
+            </a>
+            <ul id="hrm" class="collapse list-unstyled {{ $payrollSectionActive ? 'show' : '' }}">
+
+                @if($department_active)
+                <li id="dept-menu"><a href="{{route('departments.index')}}">{{trans('file.Department')}}</a></li>
+                @endif
+
+                @if($designation_active)
+                <li id="designation-menu"><a href="{{route('designations.index')}}">Designations</a></li>
+                @endif
+
+                @if($index_employee_active)
+                <li id="employee-menu"><a href="{{route('employees.index')}}">{{trans('file.Employee')}}</a></li>
+                @endif
+
+                @if($attendance_active)
+                <li id="attendance-menu"><a href="{{route('attendance.index')}}">{{trans('file.Attendance')}}</a></li>
+                @endif
+
+                @if($shift_active)
+                <li id="shift-menu"><a href="{{route('shift.index')}}">Shifts</a></li>
+                @endif
+
+                {{-- ══════════════════════════════════════════════════════════
+                     PAYROLL — threaded down with 5 sub-menus
+                ═══════════════════════════════════════════════════════════════ --}}
+                @if($payroll_active)
+                <li id="payroll-menu" class="{{ $payrollSectionActive ? 'active open' : '' }}">
+                    <a href="#payroll" aria-expanded="{{ $payrollSectionActive ? 'true' : 'false' }}" data-toggle="collapse">
+                        {{trans('file.Payroll')}}
+                    </a>
+                    <ul id="payroll" class="collapse list-unstyled {{ $payrollSectionActive ? 'show' : '' }}">
+
+                        {{-- 1. Salary Template (monthly) --}}
+                        <li id="salary-template-menu"
+                            class="{{ request()->routeIs('salary-template.index') ? 'active' : '' }}">
+                            <a href="{{route('salary-template.index')}}">{{trans('file.Salary Template')}}</a>
+                        </li>
+
+                        {{-- 2. Hourly Template --}}
+                        <li id="hourly-template-menu"
+                            class="{{ request()->routeIs('salary-template.hourly') ? 'active' : '' }}">
+                            <a href="{{route('salary-template.hourly')}}">{{trans('file.Hourly Template')}}</a>
+                        </li>
+
+                        {{-- 3. Manage Salary --}}
+                        <li id="manage-salary-menu"
+                            class="{{ request()->routeIs('payroll.index', 'payroll.generate', 'payroll.generate-store') ? 'active' : '' }}">
+                            <a href="{{route('payroll.index')}}">{{trans('file.Manage Salary')}}</a>
+                        </li>
+
+                        {{-- 4. Make Payment --}}
+                        <li id="make-payment-menu"
+                            class="{{ request()->routeIs('payroll-payment.index') ? 'active' : '' }}">
+                            <a href="{{route('payroll-payment.index')}}">{{trans('file.Make Payment')}}</a>
+                        </li>
+
+                        {{-- 5. Overtime --}}
+                        <li id="overtime-menu"
+                            class="{{ request()->routeIs('overtime.index', 'overtime.store') ? 'active' : '' }}">
+                            <a href="{{route('overtime.index')}}">{{trans('file.Overtime')}}</a>
+                        </li>
+
+                    </ul>
+                </li>
+                @endif
+
+                @if($leave_type_active)
+                <li id="leave-type-menu"><a href="{{route('leave-type.index')}}">Leave Types</a></li>
+                @endif
+
+                @if($leave_active)
+                <li id="leave-menu"><a href="{{route('leave.index')}}">Leaves</a></li>
+                @endif
+
+                @if($holiday_active)
+                <li id="holiday-menu"><a href="{{route('holidays.index')}}">{{trans('file.Holiday')}}</a></li>
+                @endif
+
+            </ul>
+        </li>
     @endif
 
     <!-- ══════════════════════════════════════════════════════════════════
@@ -378,7 +433,7 @@
     @if($profit_loss_active || $best_seller_active || $warehouse_report_active || $warehouse_stock_report_active || $product_report_active || $daily_sale_active || $monthly_sale_active || $daily_purchase_active || $monthly_purchase_active || $purchase_report_active || $sale_report_active || $sale_report_chart_active || $payment_report_active || $product_expiry_report_active || $product_qty_alert_active || $dso_report_active || $user_report_active || $customer_report_active || $supplier_report_active || $due_report_active || $supplier_due_report_active || $stock_report_active)
     <li><a href="#reports" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-document-remove"></i><span>Reports</span></a>
         <ul id="reports" class="collapse list-unstyled">
-            <li><a href="{{route('report.dashboard')}}">Report Dashboard</a></li>    
+            <li><a href="{{route('report.dashboard')}}">Report Dashboard</a></li>
         </ul>
     </li>
     @endif
@@ -463,6 +518,7 @@
         $discount_plan_permission_active       = $role_has_permissions_list->where('name', 'discount_plan')->first();
         $discount_permission_active            = $role_has_permissions_list->where('name', 'discount')->first();
         $custom_field_permission_active        = $role_has_permissions_list->where('name', 'custom_field')->first();
+        $social_media_permission_active = $role_has_permissions_list->where('name', 'social-media')->first();
     ?>
     <li><a href="#setting" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-gear"></i><span>{{trans('file.settings')}}</span></a>
         <ul id="setting" class="collapse list-unstyled">
@@ -505,7 +561,10 @@
             @if($tax_permission_active)
             <li id="tax-menu"><a href="{{route('tax.index')}}">{{trans('file.Tax')}}</a></li>
             @endif
-            <li id="user-menu"><a href="{{route('user.profile', ['id' => Auth::id()])}}">{{trans('file.User Profile')}}</a></li
+            <li id="user-menu"><a href="{{route('user.profile', ['id' => Auth::id()])}}">{{trans('file.User Profile')}}</a></li>
+            @if($social_media_permission_active)
+            <li id="social-media-menu"><a href="{{route('social-media.index')}}">{{trans('file.Social Media')}}</a></li>
+            @endif
             @if($backup_database_permission_active)
             <li><a href="{{route('setting.backup')}}">{{trans('file.Backup Database')}}</a></li>
             @endif

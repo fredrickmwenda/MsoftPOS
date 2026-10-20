@@ -2,60 +2,96 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Overtime;
 use App\Models\Employee;
-use Illuminate\Support\Facades\Auth;
-use Spatie\Permission\Models\Role;
+use App\Models\Overtime;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class OvertimeController extends Controller
 {
     public function index()
     {
-            if (Auth::user()->hasPermissionTo('overtime')) {
-                $overtimes = Overtime::with('employee')->get();
-                $employees = Employee::all();
-                return view('backend.hrm.overtime.index', compact('overtimes', 'employees'));
-            } else {
-                return redirect()->back()->with('not_permitted', __('file.Sorry! You are not allowed to access this module'));
-            }
+        if (!auth()->user()->hasPermissionTo('payroll')) {
+            return redirect()->back()->with('not_permitted', 'Access denied');
+        }
+
+        // All active employees — rate comes from their assigned (monthly) template
+        $employees = Employee::where('is_active', true)
+            ->with('salaryTemplate')
+            ->orderBy('name')
+            ->get();
+
+        $overtimes = Overtime::with('employee')->orderBy('date', 'desc')->get();
+
+        return view('backend.hrm.payroll.overtime', compact('employees', 'overtimes'));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'hours' => 'required|numeric|min:0',
-            'rate' => 'required|numeric|min:0'
+            'date'        => 'required',
+            'hours'       => 'required|numeric|min:0.25',
+            'note'        => 'nullable|string|max:500',
         ]);
-        $data = $request->all();
-        $data['date'] =  date("Y-m-d", strtotime(str_replace("/", "-", $request->input('date'))));
-        Overtime::create($data);
-        return redirect()->back()->with('message', 'Overtime added successfully');
-    }
 
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'hours' => 'required|numeric|min:0',
-            'rate' => 'required|numeric|min:0',
-            'status' => 'required|in:pending,approved,rejected'
+        $employee = Employee::with('salaryTemplate')->findOrFail($validated['employee_id']);
+
+        // Rate = employee's assigned monthly template overtime_rate
+        $rate = (float) ($employee->salaryTemplate?->overtime_rate ?? 0);
+        if ($rate <= 0) {
+            return redirect()->back()
+                ->with('not_permitted', 'This employee has no overtime rate. Assign a monthly salary template first.')
+                ->withInput();
+        }
+
+        // Parse datetime — supports "d-m-Y h:i A" (picker) and "Y-m-d\TH:i" (native fallback)
+        $date = $this->parseDateTime($validated['date']);
+        if (!$date) {
+            return redirect()->back()->with('not_permitted', 'Invalid date format.')->withInput();
+        }
+
+        $hours = (float) $validated['hours'];
+
+        Overtime::create([
+            'employee_id'        => $employee->id,
+            'salary_template_id' => $employee->salary_template_id,
+            'year'               => $date->year,   // derived from date
+            'month'              => $date->month,  // derived from date
+            'hours'              => $hours,
+            'rate'               => $rate,
+            'amount'             => round($hours * $rate, 2),
+            'date'               => $date->format('Y-m-d H:i:s'),
+            'note'               => $validated['note'] ?? null,
         ]);
-        $data = $request->all();
-        $data['date'] =  date("Y-m-d", strtotime(str_replace("/", "-", $request->input('date'))));
-        $overtime = Overtime::findOrFail($id);
-        $overtime->update($data);
 
-        return redirect()->back()->with('message', 'Overtime updated successfully');
+        return redirect()->route('overtime.index')->with('message', 'Overtime record added successfully');
     }
 
     public function destroy($id)
     {
-        $overtime = Overtime::findOrFail($id);
-        $overtime->delete();
+        Overtime::findOrFail($id)->delete();
         return redirect()->back()->with('message', 'Overtime deleted successfully');
+    }
+
+    /* ---------------- Helper ---------------- */
+    private function parseDateTime(string $value): ?Carbon
+    {
+        $formats = ['d-m-Y h:i A', 'd-m-Y H:i', 'Y-m-d\TH:i', 'Y-m-d H:i:s', 'Y-m-d H:i'];
+
+        foreach ($formats as $format) {
+            try {
+                $parsed = Carbon::createFromFormat($format, $value);
+                if ($parsed !== false) return $parsed;
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

@@ -1,8 +1,13 @@
 @extends('backend.layout.main')
+
 @section('content')
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
+@if(session()->has('message'))
+  <div class="alert alert-success alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('message') }}</div>
+@endif
+
 <section class="forms">
     <div class="container-fluid">
         <div class="row">
@@ -62,260 +67,244 @@
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>                                
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{ __('file.payment_term') }}</label>
-                                        <div class="d-flex">
-                                            <input type="number"
-                                                id="pay_term_no"
-                                                name="pay_term_no"
-                                                class="form-control"
-                                                placeholder="e.g. 30">
-                                            <select name="pay_term_period" id="pay_term_period" class="form-control ml-2">
-                                                <option value="days">{{ __('file.Days') }}</option>
-                                                <option value="months">{{ __('file.Months') }}</option>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>{{ __('file.payment_term') }}</label>
+                                            <div class="d-flex">
+                                                <input type="number" id="pay_term_no" name="pay_term_no" class="form-control" placeholder="e.g. 30">
+                                                <select name="pay_term_period" id="pay_term_period" class="form-control ml-2">
+                                                    <option value="days">{{ __('file.Days') }}</option>
+                                                    <option value="months">{{ __('file.Months') }}</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>{{ __('file.due_date') }}</label>
+                                            <input type="hidden" name="due_date" id="due_date_hidden">
+                                            <input type="text" id="due_date" class="form-control date" placeholder="{{ __('file.Choose Date') }}" readonly>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>{{trans('file.Purchase Status')}}</label>
+                                            <select name="status" class="form-control">
+                                                <option value="1">{{trans('file.Recieved')}}</option>
+                                                <option value="2">{{trans('file.Partial')}}</option>
+                                                <option value="3">{{trans('file.Pending')}}</option>
+                                                <option value="4">{{trans('file.Ordered')}}</option>
                                             </select>
                                         </div>
                                     </div>
-                                </div>
 
-                           
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{ __('file.due_date') }}</label>
-                                        <input type="hidden" name="due_date" id="due_date_hidden">
-                                        <input type="text"
-                                            id="due_date"
-                                            class="form-control date"
-                                            placeholder="{{ __('file.Choose Date') }}"
-                                            readonly>
-                                    </div>
-                                </div>
-
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{trans('file.Purchase Status')}}</label>
-                                        <select name="status" class="form-control">
-                                            <option value="1">{{trans('file.Recieved')}}</option>
-                                            <option value="2">{{trans('file.Partial')}}</option>
-                                            <option value="3">{{trans('file.Pending')}}</option>
-                                            <option value="4">{{trans('file.Ordered')}}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{trans('file.Attach Document')}}</label> <i class="dripicons-question" data-toggle="tooltip" title="Only jpg, jpeg, png, gif, pdf, csv, docx, xlsx and txt file is supported"></i>
-                                        <input type="file" name="document" class="form-control" >
-                                        @if($errors->has('extension'))
-                                            <span>
-                                                <strong>{{ $errors->first('extension') }}</strong>
-                                            </span>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <label>{{trans('file.Currency')}} *</label>
-                                        <select name="currency_id" id="currency-id" class="form-control selectpicker" data-toggle="tooltip" title="">
-                                            @foreach($currency_list as $currency_data)
-                                            <option value="{{$currency_data->id}}" data-rate="{{$currency_data->exchange_rate}}" @if($currency_data->exchange_rate == 1){{'checked'}}@endif>{{$currency_data->code}}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div> 
-                                <div class="col-md-2">
-                                    <div class="form-group mb-0">
-                                        <label>{{trans('file.Exchange Rate')}} *</label>
-                                    </div>
-                                    <div class="form-group d-flex">
-                                        <input class="form-control" type="text" id="exchange_rate" name="exchange_rate" value="{{$currency->exchange_rate}}">
-                                        <div class="input-group-append">
-                                            <span class="input-group-text" data-toggle="tooltip" title="" data-original-title="currency exchange rate">i</span>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>{{trans('file.Attach Document')}}</label> <i class="dripicons-question" data-toggle="tooltip" title="Only jpg, jpeg, png, gif, pdf, csv, docx, xlsx and txt file is supported"></i>
+                                            <input type="file" name="document" class="form-control">
+                                            @if($errors->has('extension'))
+                                                <span><strong>{{ $errors->first('extension') }}</strong></span>
+                                            @endif
                                         </div>
                                     </div>
-                                </div>
-                                @foreach($custom_fields as $field)
-                                    @if(!$field->is_admin || $isAdmin)
-                                        <div class="{{'col-md-'.$field->grid_value}}">
-                                            <div class="form-group">
-                                                <label>{{$field->name}}</label>
-                                                @if($field->type == 'text')
-                                                    <input type="text" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control" @if($field->is_required){{'required'}}@endif>
-                                                @elseif($field->type == 'number')
-                                                    <input type="number" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control" @if($field->is_required){{'required'}}@endif>
-                                                @elseif($field->type == 'textarea')
-                                                    <textarea rows="5" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control" @if($field->is_required){{'required'}}@endif></textarea>
-                                                @elseif($field->type == 'checkbox')
-                                                    <br>
-                                                    <?php $option_values = explode(",", $field->option_value); ?>
-                                                    @foreach($option_values as $value)
-                                                        <label>
-                                                            <input type="checkbox" name="{{str_replace(' ', '_', strtolower($field->name))}}[]" value="{{$value}}" @if($value == $field->default_value){{'checked'}}@endif @if($field->is_required){{'required'}}@endif> {{$value}}
-                                                        </label>
-                                                        &nbsp;
-                                                    @endforeach
-                                                @elseif($field->type == 'radio_button')
-                                                    <br>
-                                                    <?php $option_values = explode(",", $field->option_value); ?>
-                                                    @foreach($option_values as $value)
-                                                        <label class="radio-inline">
-                                                            <input type="radio" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$value}}" @if($value == $field->default_value){{'checked'}}@endif @if($field->is_required){{'required'}}@endif> {{$value}}
-                                                        </label>
-                                                        &nbsp;
-                                                    @endforeach
-                                                @elseif($field->type == 'select')
-                                                    <?php $option_values = explode(",", $field->option_value); ?>
-                                                    <select class="form-control" name="{{str_replace(' ', '_', strtolower($field->name))}}" @if($field->is_required){{'required'}}@endif>
-                                                        @foreach($option_values as $value)
-                                                            <option value="{{$value}}" @if($value == $field->default_value){{'selected'}}@endif>{{$value}}</option>
-                                                        @endforeach
-                                                    </select>
-                                                @elseif($field->type == 'multi_select')
-                                                    <?php $option_values = explode(",", $field->option_value); ?>
-                                                    <select class="form-control" name="{{str_replace(' ', '_', strtolower($field->name))}}[]" @if($field->is_required){{'required'}}@endif multiple>
-                                                        @foreach($option_values as $value)
-                                                            <option value="{{$value}}" @if($value == $field->default_value){{'selected'}}@endif>{{$value}}</option>
-                                                        @endforeach
-                                                    </select>
-                                                @elseif($field->type == 'date_picker')
-                                                    <input type="text" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control date" @if($field->is_required){{'required'}}@endif>
-                                                @endif
+
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label>{{trans('file.Currency')}} *</label>
+                                            <select name="currency_id" id="currency-id" class="form-control selectpicker" data-toggle="tooltip" title="">
+                                                @foreach($currency_list as $currency_data)
+                                                <option value="{{$currency_data->id}}" data-rate="{{$currency_data->exchange_rate}}">{{$currency_data->code}}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-2">
+                                        <div class="form-group mb-0">
+                                            <label>{{trans('file.Exchange Rate')}} *</label>
+                                        </div>
+                                        <div class="form-group d-flex">
+                                            <input class="form-control" type="text" id="exchange_rate" name="exchange_rate" value="{{$currency->exchange_rate}}">
+                                            <div class="input-group-append">
+                                                <span class="input-group-text" data-toggle="tooltip" title="" data-original-title="currency exchange rate">i</span>
                                             </div>
                                         </div>
-                                    @endif
-                                @endforeach
-                                <div class="col-md-12 mt-3">
-                                    <label>{{trans('file.Select Product')}}</label>
-                                    <div id="product-search-warning" class="alert alert-warning py-2">
-                                        <i class="fa fa-exclamation-triangle"></i> 
-                                        <span id="warning-message">Please select a <strong>Warehouse</strong> and <strong>Supplier</strong> first to enable product search.</span>
                                     </div>
-                                    <div class="search-box input-group" id="product-search-box" style="display:none;">
-                                        <button class="btn btn-secondary"><i class="fa fa-barcode"></i></button>
-                                        <input type="text" name="product_code_name" id="lims_productcodeSearch" placeholder="Please type product code and select..." class="form-control" disabled />
+
+                                    @foreach($custom_fields as $field)
+                                        @if(!$field->is_admin || $isAdmin)
+                                            <div class="{{'col-md-'.$field->grid_value}}">
+                                                <div class="form-group">
+                                                    <label>{{$field->name}}</label>
+                                                    @if($field->type == 'text')
+                                                        <input type="text" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control" @if($field->is_required){{'required'}}@endif>
+                                                    @elseif($field->type == 'number')
+                                                        <input type="number" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control" @if($field->is_required){{'required'}}@endif>
+                                                    @elseif($field->type == 'textarea')
+                                                        <textarea rows="5" name="{{str_replace(' ', '_', strtolower($field->name))}}" class="form-control" @if($field->is_required){{'required'}}@endif>{{ $field->default_value }}</textarea>
+                                                    @elseif($field->type == 'checkbox')
+                                                        <br>
+                                                        <?php $option_values = explode(",", $field->option_value); ?>
+                                                        @foreach($option_values as $value)
+                                                            <label>
+                                                                <input type="checkbox" name="{{str_replace(' ', '_', strtolower($field->name))}}[]" value="{{$value}}" @if($value == $field->default_value){{'checked'}}@endif @if($field->is_required){{'required'}}@endif> {{$value}}
+                                                            </label>
+                                                            &nbsp;
+                                                        @endforeach
+                                                    @elseif($field->type == 'radio_button')
+                                                        <br>
+                                                        <?php $option_values = explode(",", $field->option_value); ?>
+                                                        @foreach($option_values as $value)
+                                                            <label class="radio-inline">
+                                                                <input type="radio" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$value}}" @if($value == $field->default_value){{'checked'}}@endif @if($field->is_required){{'required'}}@endif> {{$value}}
+                                                            </label>
+                                                            &nbsp;
+                                                        @endforeach
+                                                    @elseif($field->type == 'select')
+                                                        <?php $option_values = explode(",", $field->option_value); ?>
+                                                        <select class="form-control" name="{{str_replace(' ', '_', strtolower($field->name))}}" @if($field->is_required){{'required'}}@endif>
+                                                            @foreach($option_values as $value)
+                                                                <option value="{{$value}}" @if($value == $field->default_value){{'selected'}}@endif>{{$value}}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @elseif($field->type == 'multi_select')
+                                                        <?php $option_values = explode(",", $field->option_value); ?>
+                                                        <select class="form-control" name="{{str_replace(' ', '_', strtolower($field->name))}}[]" @if($field->is_required){{'required'}}@endif multiple>
+                                                            @foreach($option_values as $value)
+                                                                <option value="{{$value}}" @if($value == $field->default_value){{'selected'}}@endif>{{$value}}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @elseif($field->type == 'date_picker')
+                                                        <input type="text" name="{{str_replace(' ', '_', strtolower($field->name))}}" value="{{$field->default_value}}" class="form-control date" @if($field->is_required){{'required'}}@endif>
+                                                    @endif
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
+
+                                    <div class="col-md-12 mt-3">
+                                        <label>{{trans('file.Select Product')}}</label>
+                                        <div id="product-search-warning" class="alert alert-warning py-2">
+                                            <i class="fa fa-exclamation-triangle"></i>
+                                            <span id="warning-message">Please select a <strong>Warehouse</strong> and <strong>Supplier</strong> first to enable product search.</span>
+                                        </div>
+                                        <div class="search-box input-group" id="product-search-box" style="display:none;">
+                                            <button class="btn btn-secondary"><i class="fa fa-barcode"></i></button>
+                                            <input type="text" name="product_code_name" id="lims_productcodeSearch" placeholder="Please type product code and select..." class="form-control" disabled />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row mt-4">
-                                <div class="col-md-12">
-                                    <h5>{{trans('file.Order Table')}} *</h5>
-                                    <div class="table-responsive mt-3">
-                                        <table id="myTable" class="table table-hover order-list">
-                                            <thead>
-                                                <tr>
-                                                    <th>{{trans('file.name')}}</th>
-                                                    <th>{{trans('file.Code')}}</th>
-                                                    <th>{{trans('file.Quantity')}}</th>
-                                                    <th class="recieved-product-qty d-none">{{trans('file.Recieved')}}</th>
-                                                    <th>{{trans('file.Batch No')}}</th>
-                                                    <th>{{trans('file.Expired Date')}}</th>
-                                                    <th>Net Unit Cost</th>
-                                                    <th>{{trans('file.Product Price')}}</th>
-                                                    <th>{{trans('file.Discount')}}</th>
-                                                    <th>{{trans('file.Tax')}}</th>
-                                                    <th>Tax Amount</th>
-                                                    <th>{{trans('file.Subtotal')}}</th>
+
+                                <div class="row mt-4">
+                                    <div class="col-md-12">
+                                        <h5>{{trans('file.Order Table')}} *</h5>
+                                        <div class="table-responsive mt-3">
+                                            <table id="myTable" class="table table-hover order-list">
+                                                <thead>
+                                                    <tr>
+                                                        <th>{{trans('file.name')}}</th>
+                                                        <th>{{trans('file.Code')}}</th>
+                                                        <th>{{trans('file.Quantity')}}</th>
+                                                        <th class="recieved-product-qty d-none">{{trans('file.Recieved')}}</th>
+                                                        <th>{{trans('file.Batch No')}}</th>
+                                                        <th>{{trans('file.Expired Date')}}</th>
+                                                        <th>Net Unit Cost</th>
+                                                        <th>{{trans('file.Product Price')}}</th>
+                                                        <th>{{trans('file.Discount')}}</th>
+                                                        <th>{{trans('file.Tax')}}</th>
+                                                        <th>Tax Amount</th>
+                                                        <th>{{trans('file.Subtotal')}}</th>
+                                                        <th><i class="dripicons-trash"></i></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                </tbody>
+                                                <tfoot class="tfoot active">
+                                                    <th colspan="2">{{trans('file.Total')}}</th>
+                                                    <th id="total-qty">0</th>
+                                                    <th class="recieved-product-qty d-none"></th>
+                                                    <th></th>
+                                                    <th></th>
+                                                    <th></th>
+                                                    <th></th>
+                                                    <th id="total-discount">{{number_format(0, $general_setting->decimal, '.', '')}}</th>
+                                                    <th></th>
+                                                    <th id="total-tax">{{number_format(0, $general_setting->decimal, '.', '')}}</th>
+                                                    <th id="total">{{number_format(0, $general_setting->decimal, '.', '')}}</th>
                                                     <th><i class="dripicons-trash"></i></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                            </tbody>
-                                            <tfoot class="tfoot active">
-                                                <th colspan="2">{{trans('file.Total')}}</th>
-                                                <th id="total-qty">0</th>
-                                                <th class="recieved-product-qty d-none"></th>
-                                                <th></th>
-                                                <th></th>
-                                                <th></th>
-                                                <th></th>
-                                                <th id="total-discount">{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                                                <th></th>
-                                                <th id="total-tax">{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                                                <th id="total">{{number_format(0, $general_setting->decimal, '.', '')}}</th>
-                                                <th><i class="dripicons-trash"></i></th>
-                                            </tfoot>
-                                        </table>
+                                                </tfoot>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <input type="hidden" name="total_qty" />
+
+                                <div class="row">
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_qty" /></div></div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <input type="hidden" name="total_discount" />
+                                            <input type="hidden" name="order_tax_names" />
+                                            <input type="hidden" name="order_tax_ids" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_tax" /></div></div>
+                                    <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_cost" /></div></div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <input type="hidden" name="item" />
+                                            <input type="hidden" name="order_tax" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <input type="hidden" name="grand_total" />
+                                            <input type="hidden" name="paid_amount" value="{{number_format(0, $general_setting->decimal, '.', '')}}" />
+                                            <input type="hidden" name="payment_status" value="1" />
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <input type="hidden" name="total_discount" />
-                                        <input type="hidden" name="order_tax_names" />
-                                        <input type="hidden" name="order_tax_ids" />
+
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label>{{trans('file.Order Tax')}}</label>
+                                            <select class="form-control selectpicker" name="order_tax_rate[]" multiple data-live-search="true" title="Select Order Taxes" data-actions-box="true">
+                                                @foreach($lims_tax_list as $tax)
+                                                <option value="{{$tax->id}}">{{$tax->name}} ({{$tax->rate}}%)</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label><strong>{{trans('file.Discount')}}</strong></label>
+                                            <input type="number" name="order_discount" class="form-control" step="any" />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label><strong>{{trans('file.Shipping Cost')}}</strong></label>
+                                            <input type="number" name="shipping_cost" class="form-control" step="any" />
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <input type="hidden" name="total_tax" />
+
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label>{{trans('file.Note')}}</label>
+                                            <textarea rows="5" class="form-control" name="note"></textarea>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <input type="hidden" name="total_cost" />
-                                    </div>
+
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-primary" id="submit-btn">{{trans('file.submit')}}</button>
                                 </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <input type="hidden" name="item" />
-                                        <input type="hidden" name="order_tax" />
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <div class="form-group">
-                                        <input type="hidden" name="grand_total" />
-                                        <input type="hidden" name="paid_amount" value="{{number_format(0, $general_setting->decimal, '.', '')}}" />
-                                        <input type="hidden" name="payment_status" value="1" />
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-3">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>{{trans('file.Order Tax')}}</label>
-                                        <select class="form-control selectpicker" name="order_tax_rate[]" multiple data-live-search="true" title="Select Order Taxes" data-actions-box="true">
-                                            @foreach($lims_tax_list as $tax)
-                                            <option value="{{$tax->id}}">{{$tax->name}} ({{$tax->rate}}%)</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>
-                                            <strong>{{trans('file.Discount')}}</strong>
-                                        </label>
-                                        <input type="number" name="order_discount" class="form-control" step="any" />
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>
-                                            <strong>{{trans('file.Shipping Cost')}}</strong>
-                                        </label>
-                                        <input type="number" name="shipping_cost" class="form-control" step="any" />
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-12">
-                                    <div class="form-group">
-                                        <label>{{trans('file.Note')}}</label>
-                                        <textarea rows="5" class="form-control" name="note"></textarea>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <button type="submit" class="btn btn-primary" id="submit-btn">{{trans('file.submit')}}</button>
-                            </div>
                             </div>
                         </div>
                         {!! Form::close() !!}
@@ -324,28 +313,19 @@
             </div>
         </div>
     </div>
+
     <div class="container-fluid">
         <table class="table table-bordered table-condensed totals">
-            <td><strong>{{trans('file.Items')}}</strong>
-                <span class="pull-right" id="item">{{number_format(0, $general_setting->decimal, '.', '')}}</span>
-            </td>
-            <td><strong>{{trans('file.Total')}}</strong>
-                <span class="pull-right" id="subtotal">{{number_format(0, $general_setting->decimal, '.', '')}}</span>
-            </td>
-            <td><strong>{{trans('file.Order Tax')}}</strong>
-                <span class="pull-right" id="order_tax">{{number_format(0, $general_setting->decimal, '.', '')}}</span>
-            </td>
-            <td><strong>{{trans('file.Order Discount')}}</strong>
-                <span class="pull-right" id="order_discount">{{number_format(0, $general_setting->decimal, '.', '')}}</span>
-            </td>
-            <td><strong>{{trans('file.Shipping Cost')}}</strong>
-                <span class="pull-right" id="shipping_cost">{{number_format(0, $general_setting->decimal, '.', '')}}</span>
-            </td>
-            <td><strong>{{trans('file.grand total')}}</strong>
-                <span class="pull-right" id="grand_total">{{number_format(0, $general_setting->decimal, '.', '')}}</span>
-            </td>
+            <td><strong>{{trans('file.Items')}}</strong><span class="pull-right" id="item">{{number_format(0, $general_setting->decimal, '.', '')}}</span></td>
+            <td><strong>{{trans('file.Total')}}</strong><span class="pull-right" id="subtotal">{{number_format(0, $general_setting->decimal, '.', '')}}</span></td>
+            <td><strong>{{trans('file.Order Tax')}}</strong><span class="pull-right" id="order_tax">{{number_format(0, $general_setting->decimal, '.', '')}}</span></td>
+            <td><strong>{{trans('file.Order Discount')}}</strong><span class="pull-right" id="order_discount">{{number_format(0, $general_setting->decimal, '.', '')}}</span></td>
+            <td><strong>{{trans('file.Shipping Cost')}}</strong><span class="pull-right" id="shipping_cost">{{number_format(0, $general_setting->decimal, '.', '')}}</span></td>
+            <td><strong>{{trans('file.grand total')}}</strong><span class="pull-right" id="grand_total">{{number_format(0, $general_setting->decimal, '.', '')}}</span></td>
         </table>
     </div>
+
+    <!-- Edit Product Modal -->
     <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
         <div role="document" class="modal-dialog">
             <div class="modal-content">
@@ -368,18 +348,6 @@
                                 <label>Unit Cost</label>
                                 <input type="number" name="edit_unit_cost" class="form-control" step="any">
                             </div>
-                            <?php
-                            $tax_name_all = [];
-                            $tax_rate_all = [];
-
-                            $tax_name_all[0] = 'No Tax';
-                            $tax_rate_all[0] = 0;
-
-                            foreach($lims_tax_list as $tax) {
-                                $tax_name_all[$tax->id] = $tax->name; // index BY ID
-                                $tax_rate_all[$tax->id] = $tax->rate; // index BY ID
-                            }
-                            ?>
                             <div class="col-md-4 form-group">
                                 <label>{{trans('file.Tax Rate')}}</label>
                                 <select name="edit_tax_rate[]" class="form-control selectpicker" multiple data-live-search="true" title="Select Taxes" data-actions-box="true">
@@ -390,8 +358,7 @@
                             </div>
                             <div class="col-md-4 form-group">
                                 <label>{{trans('file.Product Unit')}}</label>
-                                <select name="edit_unit" class="form-control selectpicker">
-                                </select>
+                                <select name="edit_unit" class="form-control selectpicker"></select>
                             </div>
                         </div>
                         <button type="button" name="update_btn" class="btn btn-primary">{{trans('file.update')}}</button>
@@ -449,7 +416,6 @@
                                 <label>VAT Number</label>
                                 <input type="text" name="vat_number" class="form-control">
                             </div>
-
                         </div>
                         <div class="text-right">
                             <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
@@ -461,71 +427,54 @@
         </div>
     </div>
 </section>
-
 @endsection
 
 @push('styles')
 <style>
-    .bootstrap-select .btn {
-        white-space: normal;
-    }
-    .bootstrap-select .filter-option-inner-inner {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
+    .bootstrap-select .btn { white-space: normal; }
+    .bootstrap-select .filter-option-inner-inner { overflow: hidden; text-overflow: ellipsis; }
     table.order-list th:nth-child(10),
-    table.order-list td:nth-child(10) {
-        max-width: 200px;
-        word-wrap: break-word;
-    }
-    .net-unit-cost-input {
-        width: 100px;
-        text-align: right;
-    }
+    table.order-list td:nth-child(10) { max-width: 200px; word-wrap: break-word; }
+    .net-unit-cost-input { width: 100px; text-align: right; }
 </style>
 @endpush
 
-
-
 @push('scripts')
 <script>
-    $(document).ready(function() {
-    // Initialize tooltip
-    $('[data-toggle="tooltip"]').tooltip();
+    $(document).ready(function () {
+        $('[data-toggle="tooltip"]').tooltip();
 
-    // Generate Bill Number on click
-    $('#generateBillNo').on('click', function() {
-        // Generate random 10-digit number
-        let randomNum = Math.floor(1000000000 + Math.random() * 9000000000);
-        let billNumber = 'BNO-' + randomNum;
-        
-        // Set the value in the input
-        $('#bill_no').val(billNumber);
-    });
+        $('#generateBillNo').on('click', function () {
+            var randomNum = Math.floor(1000000000 + Math.random() * 9000000000);
+            $('#bill_no').val('BNO-' + randomNum);
+        });
     });
 </script>
+
 <script type="text/javascript">
-    $("ul#purchase").siblings('a').attr('aria-expanded','true');
+    $("ul#purchase").siblings('a').attr('aria-expanded', 'true');
     $("ul#purchase").addClass("show");
     $("ul#purchase #purchase-create-menu").addClass("active");
 
-    // array data depend on warehouse
+    /* =====================================================
+       GLOBAL STATE
+    ===================================================== */
+    var decimal = {{ $general_setting->decimal }};
+
     var product_code = [];
     var product_name = [];
     var product_qty = [];
 
-    // array data with selection
     var product_cost = [];
     var product_discount = [];
-    var tax_rate = []; // Will store comma-separated tax IDs
-    var tax_name = []; // Will store comma-separated tax names
+    var tax_rate = [];        // comma-separated tax IDs per row
+    var tax_name = [];        // comma-separated tax names per row
     var tax_method = [];
     var unit_name = [];
     var unit_operator = [];
     var unit_operation_value = [];
     var is_imei = [];
 
-    // temporary array
     var temp_unit_name = [];
     var temp_unit_operator = [];
     var temp_unit_operation_value = [];
@@ -533,28 +482,32 @@
     var rowindex;
     var customer_group_rate;
     var row_product_cost;
+
     var currency = <?php echo json_encode($currency) ?>;
     var exchangeRate = 1;
     var currencyChange = false;
 
-    // PHP-injected tax list indexed by tax ID
-    var tax_rate_all = <?php echo json_encode($tax_rate_all) ?>;
-    var tax_name_all = <?php echo json_encode($tax_name_all) ?>;
+    /* Tax lookup maps built straight from the tax list (id-keyed) */
+    var tax_rate_all = { 0: 0 };
+    var tax_name_all = { 0: 'No Tax' };
+    @foreach($lims_tax_list as $t)
+    tax_rate_all[{{ $t->id }}] = {{ $t->rate }};
+    tax_name_all[{{ $t->id }}] = "{{ addslashes($t->name) }}";
+    @endforeach
 
+    /* =====================================================
+       INIT
+    ===================================================== */
     $('#currency-id').val(currency['id']);
-    $('.selectpicker').selectpicker({
-        style: 'btn-link',
-    });
-
+    $('.selectpicker').selectpicker({ style: 'btn-link' });
     $('.selectpicker').selectpicker('refresh');
 
-    $('#currency-id').change(function(){
+    $('#currency-id').change(function () {
         var rate = $(this).find(':selected').data('rate');
-        var currency_id = $(this).val();
         $('#exchange_rate').val(rate);
         exchangeRate = rate;
         currencyChange = true;
-        $("table.order-list tbody .qty").each(function(index) {
+        $("table.order-list tbody .qty").each(function (index) {
             rowindex = index;
             checkQuantity($(this).val(), true);
         });
@@ -562,35 +515,31 @@
 
     $('[data-toggle="tooltip"]').tooltip();
 
-    $('select[name="status"]').on('change', function() {
-        if($('select[name="status"]').val() == 2){
+    $('select[name="status"]').on('change', function () {
+        var status = $('select[name="status"]').val();
+        if (status == 2) {
             $(".recieved-product-qty").removeClass("d-none");
-            $(".qty").each(function() {
+            $(".qty").each(function () {
                 rowindex = $(this).closest('tr').index();
                 $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.recieved').val($(this).val());
             });
-
         }
-        else if(($('select[name="status"]').val() == 3) || ($('select[name="status"]').val() == 4)) {
+        else if (status == 3 || status == 4) {
             $(".recieved-product-qty").addClass("d-none");
-            $(".recieved").each(function() {
-                $(this).val(0);
-            });
+            $(".recieved").each(function () { $(this).val(0); });
         }
         else {
             $(".recieved-product-qty").addClass("d-none");
-            $(".qty").each(function() {
+            $(".qty").each(function () {
                 rowindex = $(this).closest('tr').index();
                 $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.recieved').val($(this).val());
             });
         }
     });
 
-    // =============================================
-    // WAREHOUSE + SUPPLIER DEPENDENT PRODUCT SEARCH
-    // =============================================
-
-    // Dynamic product list based on warehouse
+    /* =====================================================
+       WAREHOUSE + SUPPLIER DEPENDENT PRODUCT SEARCH
+    ===================================================== */
     var lims_product_code = [];
 
     function checkWarehouseSupplier() {
@@ -625,52 +574,43 @@
     }
 
     function loadWarehouseProducts() {
-    var warehouse_id = $('select[name="warehouse_id"]').val();
-    if (!warehouse_id) {
-        lims_product_code = [];
-        return;
+        var warehouse_id = $('select[name="warehouse_id"]').val();
+        if (!warehouse_id) { lims_product_code = []; return; }
+
+        $.ajax({
+            type: 'GET',
+            url: '{{ route("warehouse.products") }}',
+            data: { warehouse_id: warehouse_id },
+            async: false,
+            success: function (data) { lims_product_code = data; },
+            error: function () { lims_product_code = []; }
+        });
     }
 
-    $.ajax({
-        type: 'GET',
-        url: '{{ route("warehouse.products") }}', // <-- Use the new route
-        data: { warehouse_id: warehouse_id },
-        async: false,
-        success: function(data) {
-            lims_product_code = data;
-        },
-        error: function() {
-            lims_product_code = [];
-        }
-    });
-    }
+    $(document).ready(function () { checkWarehouseSupplier(); });
 
-    // Run on document ready
-    $(document).ready(function() {
+    $('select[name="warehouse_id"]').on('changed.bs.select', function () {
         checkWarehouseSupplier();
-    });
-
-    // Listen for changes on warehouse and supplier selects
-    $('select[name="warehouse_id"]').on('changed.bs.select', function() {
-        checkWarehouseSupplier();
-        // Clear current order table if warehouse changed
         if ($('table.order-list tbody tr').length > 0) {
             if (!confirm('Changing the warehouse will clear the current order table. Continue?')) {
                 return;
             }
             $('table.order-list tbody').empty();
+            product_cost = []; product_discount = []; tax_rate = []; tax_name = [];
+            tax_method = []; unit_name = []; unit_operator = []; unit_operation_value = [];
+            is_imei = [];
             calculateTotal();
         }
     });
 
-    $('select[name="supplier_id"]').on('changed.bs.select', function() {
+    $('select[name="supplier_id"]').on('changed.bs.select', function () {
         checkWarehouseSupplier();
     });
 
-    // =============================================
-    // ADD SUPPLIER VIA AJAX
-    // =============================================
-    $('#addSupplierForm').on('submit', function(e) {
+    /* =====================================================
+       ADD SUPPLIER VIA AJAX
+    ===================================================== */
+    $('#addSupplierForm').on('submit', function (e) {
         e.preventDefault();
         var formData = $(this).serialize();
 
@@ -678,8 +618,7 @@
             type: 'POST',
             url: '{{ url("suppliers/quick-store") }}',
             data: formData,
-            success: function(response) {
-                // Append the new supplier to the dropdown
+            success: function (response) {
                 var newOption = '<option value="' + response.id + '">' + response.name + ' (' + (response.company_name || '') + ')</option>';
                 $('select[name="supplier_id"]').append(newOption);
                 $('select[name="supplier_id"]').val(response.id);
@@ -687,17 +626,14 @@
 
                 $('#addSupplierModal').modal('hide');
                 $('#addSupplierForm')[0].reset();
-
-                // Re-check if product search can be enabled
                 checkWarehouseSupplier();
 
                 alert('Supplier "' + response.name + '" added successfully!');
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 var errors = xhr.responseJSON;
                 if (errors && errors.errors) {
-                    var errorMessages = Object.values(errors.errors).join('\n');
-                    alert('Validation Error:\n' + errorMessages);
+                    alert('Validation Error:\n' + Object.values(errors.errors).join('\n'));
                 } else {
                     alert('Error creating supplier. Please try again.');
                 }
@@ -705,49 +641,62 @@
         });
     });
 
+    /* =====================================================
+       AUTOCOMPLETE
+    ===================================================== */
     var lims_productcodeSearch = $('#lims_productcodeSearch');
- 
+
     lims_productcodeSearch.autocomplete({
-        source: function(request, response) {
+        source: function (request, response) {
             var matcher = new RegExp(".?" + $.ui.autocomplete.escapeRegex(request.term), "i");
-            response($.grep(lims_product_code, function(item) {
+            response($.grep(lims_product_code, function (item) {
                 return matcher.test(item);
             }));
         },
-        response: function(event, ui) {
+        response: function (event, ui) {
             if (ui.content.length == 1) {
                 var data = ui.content[0].value;
-                $(this).autocomplete( "close" );
+                $(this).autocomplete("close");
                 productSearch(data);
-            };
+            }
         },
-        select: function(event, ui) {
+        select: function (event, ui) {
             var data = ui.item.value;
             productSearch(data);
         }
     });
 
-    $('body').on('focus',".expired-date", function() {
+    $('body').on('focus', ".expired-date", function () {
         $(this).datepicker({
             format: "yyyy-mm-dd",
-            startDate: "<?php echo date("Y-m-d", strtotime('+ 1 days')) ?>",
+            startDate: "<?php echo date('Y-m-d', strtotime('+ 1 days')) ?>",
             autoclose: true,
             todayHighlight: true
         });
     });
 
-    //Change quantity
-    $("#myTable").on('input', '.qty', function() {
+    /* =====================================================
+       QUANTITY CHANGE
+    ===================================================== */
+    $("#myTable").on('input', '.qty', function () {
         rowindex = $(this).closest('tr').index();
-        if($(this).val() < 1 && $(this).val() != '') {
+        if ($(this).val() < 1 && $(this).val() != '') {
             $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(1);
             alert("Quantity can't be less than 1");
         }
         updateRowValues(rowindex);
     });
 
-    // Delete product
-    $("table.order-list tbody").on("click", ".ibtnDel", function(event) {
+    /* Keep recieved synced for status 1 & 2 */
+    $("#myTable").on('input', '.recieved', function () {
+        rowindex = $(this).closest('tr').index();
+        updateRowValues(rowindex);
+    });
+
+    /* =====================================================
+       DELETE PRODUCT ROW
+    ===================================================== */
+    $("table.order-list tbody").on("click", ".ibtnDel", function (event) {
         rowindex = $(this).closest('tr').index();
         product_cost.splice(rowindex, 1);
         product_discount.splice(rowindex, 1);
@@ -762,50 +711,53 @@
         calculateTotal();
     });
 
-    // Edit product
-    $("table.order-list").on("click", ".edit-product", function() {
+    /* =====================================================
+       EDIT PRODUCT (MODAL)
+    ===================================================== */
+    $("table.order-list").on("click", ".edit-product", function () {
         rowindex = $(this).closest('tr').index();
         $(".imei-section").remove();
-        if(is_imei[rowindex]) {
+        if (is_imei[rowindex]) {
             var imeiNumbers = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val();
-            htmlText = '<div class="col-md-12 form-group imei-section"><label>IMEI or Serial Numbers</label><input type="text" name="imei_numbers" value="'+imeiNumbers+'" class="form-control imei_number" placeholder="Type imei or serial numbers and separate them by comma. Example:1001,2001" step="any"></div>';
+            htmlText = '<div class="col-md-12 form-group imei-section"><label>IMEI or Serial Numbers</label><input type="text" name="imei_numbers" value="' + (imeiNumbers || '') + '" class="form-control imei_number" placeholder="Type imei or serial numbers and separate them by comma. Example:1001,2001" step="any"></div>';
             $("#editModal .modal-element").append(htmlText);
         }
 
         var row_product_name = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(1)').text();
         var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)').text();
-        $('#modal-header').text(row_product_name + '(' + row_product_code + ')');
+        $('#modal-header').text(row_product_name + ' (' + row_product_code + ')');
 
         var qty = $(this).closest('tr').find('.qty').val();
         $('input[name="edit_qty"]').val(qty);
 
         var current_discount = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.discount-value').val();
-        var unit_discount = parseFloat(current_discount) / parseFloat(qty);
-        $('input[name="edit_discount"]').val(unit_discount.toFixed({{$general_setting->decimal}}));
+        var unit_discount = parseFloat(current_discount) / (parseFloat(qty) || 1);
+        $('input[name="edit_discount"]').val(unit_discount.toFixed(decimal));
 
         var net_unit_cost = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net-unit-cost-input').val();
         $('input[name="edit_unit_cost"]').val(net_unit_cost);
 
-        // Handle multiple taxes in edit modal
         var currentTaxIds = tax_rate[rowindex] ? tax_rate[rowindex].split(',') : [];
         $('select[name="edit_tax_rate[]"]').val(currentTaxIds);
 
-        temp_unit_name = (unit_name[rowindex]).split(',');
+        temp_unit_name = (unit_name[rowindex] || '').split(',');
         temp_unit_name.pop();
-        temp_unit_operator = (unit_operator[rowindex]).split(',');
+        temp_unit_operator = (unit_operator[rowindex] || '').split(',');
         temp_unit_operator.pop();
-        temp_unit_operation_value = (unit_operation_value[rowindex]).split(',');
+        temp_unit_operation_value = (unit_operation_value[rowindex] || '').split(',');
         temp_unit_operation_value.pop();
-        
+
         $('select[name="edit_unit"]').empty();
-        $.each(temp_unit_name, function(key, value) {
+        $.each(temp_unit_name, function (key, value) {
             $('select[name="edit_unit"]').append('<option value="' + key + '">' + value + '</option>');
         });
         $('.selectpicker').selectpicker('refresh');
     });
 
-    // Update product
-    $('button[name="update_btn"]').on("click", function() {
+    /* =====================================================
+       UPDATE PRODUCT (MODAL CONFIRM)
+    ===================================================== */
+    $('button[name="update_btn"]').on("click", function () {
         if (is_imei[rowindex]) {
             var imeiNumbers = $("#editModal input[name=imei_numbers]").val();
             $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')')
@@ -827,35 +779,12 @@
             alert("Quantity can't be less than 1");
         }
 
-        var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(","));
-        var row_unit_operation_value = parseFloat(
-            unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(","))
-        );
-
-        // Get multiple selected taxes
-        var selectedTaxes = $('select[name="edit_tax_rate[]"]').val() || [];
-        
-        // Store tax IDs as comma-separated string
-        tax_rate[rowindex] = selectedTaxes.join(',');
-        
-        // Store tax names
-        var selectedTaxNames = [];
-        selectedTaxes.forEach(function(taxId) {
-            selectedTaxNames.push(tax_name_all[taxId] || '');
-        });
-        tax_name[rowindex] = selectedTaxNames.join(',');
-
-        // Update product cost
-        product_cost[rowindex] = edit_unit_cost;
-        product_discount[rowindex] = edit_discount;
-
+        // Selected unit from the modal (position within the row's unit list)
         var position = $('select[name="edit_unit"]').val();
         var temp_operator = temp_unit_operator[position];
         var temp_operation_value = temp_unit_operation_value[position];
 
-        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')')
-            .find('.purchase-unit').val(temp_unit_name[position]);
-
+        // Move the selected unit to the front of the row's unit list
         temp_unit_name.splice(position, 1);
         temp_unit_operator.splice(position, 1);
         temp_unit_operation_value.splice(position, 1);
@@ -868,55 +797,75 @@
         unit_operator[rowindex] = temp_unit_operator.toString() + ',';
         unit_operation_value[rowindex] = temp_unit_operation_value.toString() + ',';
 
-        // Update row qty and recieved from modal so stock receives correct quantity
+        // Multiple taxes from the modal
+        var selectedTaxes = $('select[name="edit_tax_rate[]"]').val() || [];
+        tax_rate[rowindex] = selectedTaxes.join(',');
+        var selectedTaxNames = [];
+        selectedTaxes.forEach(function (taxId) {
+            selectedTaxNames.push(tax_name_all[taxId] || '');
+        });
+        tax_name[rowindex] = selectedTaxNames.join(',');
+
+        product_cost[rowindex] = edit_unit_cost;
+        product_discount[rowindex] = edit_discount;
+
+        // Set the row's unit select to the chosen unit NAME (values ARE names)
+        var $unitSelect = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.purchase-unit');
+        if ($unitSelect.length) $unitSelect.val(temp_unit_name[0]);
+
+        // Sync qty + recieved so the server stocks the correct quantity
         $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(edit_qty);
         if ($('select[name="status"]').val() == '1' || $('select[name="status"]').val() == '2') {
             $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.recieved').val(edit_qty);
         }
 
-        // Update the row display
         updateRowValues(rowindex);
-        
         $('#editModal').modal('hide');
     });
 
-    // Handle net unit cost change
-    $("table.order-list").on('input', '.net-unit-cost-input', function() {
+    /* =====================================================
+       INLINE COST / DISCOUNT EDITS
+    ===================================================== */
+    $("table.order-list").on('input', '.net-unit-cost-input', function () {
         rowindex = $(this).closest('tr').index();
-        var new_cost = parseFloat($(this).val()) || 0;
-        product_cost[rowindex] = new_cost;
+        product_cost[rowindex] = parseFloat($(this).val()) || 0;
         updateRowValues(rowindex);
     });
 
-    // Handle discount change
-    $("table.order-list").on('input', '.discount-input', function() {
+    $("table.order-list").on('input', '.discount-input', function () {
         rowindex = $(this).closest('tr').index();
-        var new_discount = parseFloat($(this).val()) || 0;
-        product_discount[rowindex] = new_discount;
+        product_discount[rowindex] = parseFloat($(this).val()) || 0;
         updateRowValues(rowindex);
     });
 
+    /* =====================================================
+       PRODUCT SEARCH → BUILD ROW
+       Controller indices: 0 name, 1 code, 2 price, 3 tax rate,
+       4 tax name, 5 tax method, 6 unit names, 7 operators,
+       8 op values, 9 PRODUCT ID, 10 variant id, 13 is_imei
+    ===================================================== */
     function productSearch(data) {
-        // Extract the code between "Code: " and the closing "]"
         var code_match = data.match(/Code:\s*([^\]]+)\]/);
-        var product_code = code_match ? code_match[1].trim() : data.split(" ")[0];
+        var searchedCode = code_match ? code_match[1].trim() : String(data).split(" ")[0];
 
-        if (!product_code) {
+        if (!searchedCode) {
             alert('Please insert product code!');
             return;
         }
 
+        // Duplicate check: if the code is already in the table, bump qty instead of adding a row
+        var duplicateIndex = -1;
         var pre_qty = 0;
-        $(".product-code").each(function(i) {
-            if ($(this).val() == product_code) {
-                rowindex = i;
-                pre_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
+        $(".product-code").each(function (i) {
+            if ($(this).val() == searchedCode) {
+                duplicateIndex = i;
+                pre_qty = $('table.order-list tbody tr:nth-child(' + (i + 1) + ') .qty').val();
             }
         });
 
-        // For purchases we send: code?qty  (no customer_id in the middle)
-        var ajaxData = product_code + '?' + (parseFloat(pre_qty) + 1);
-        
+        // Purchase-style payload: code?qty
+        var ajaxData = searchedCode + '?' + (parseFloat(pre_qty) + 1);
+
         $.ajax({
             type: 'GET',
             url: 'lims_product_search',
@@ -924,397 +873,294 @@
                 data: ajaxData,
                 warehouse_id: $('select[name="warehouse_id"]').val()
             },
-            success: function(data) {
-                var flag = 1;
-                $(".product-code").each(function(i) {
-                    if ($(this).val() == data[1]) {
-                        rowindex = i;
-                        var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) + 1;
-                        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                        if($('select[name="status"]').val() == 1 || $('select[name="status"]').val() == 2) {
-                            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .recieved').val(qty);
-                        }
-                        updateRowValues(rowindex);
-                        flag = 0;
-                    }
-                });
-                
-                $("input[name='product_code_name']").val('');
-                
-                if(flag){
-                    var newRow = $("<tr>");
-                    var cols = '';
-                    temp_unit_name = (data[7]).split(',');
-                    
-                    cols += '<td>' + data[0] + '<button type="button" class="edit-product btn btn-link" data-toggle="modal" data-target="#editModal"> <i class="dripicons-document-edit"></i></button></td>';
-                    cols += '<td>' + data[1] + '</td>';
-                    cols += '<td><input type="number" class="form-control qty" name="qty[]" value="1" step="any" required/></td>';
-                    
-                    if($('select[name="status"]').val() == 1)
-                        cols += '<td class="recieved-product-qty d-none"><input type="number" class="form-control recieved" name="recieved[]" value="1" step="any"/></td>';
-                    else if($('select[name="status"]').val() == 2)
-                        cols += '<td class="recieved-product-qty"><input type="number" class="form-control recieved" name="recieved[]" value="1" step="any"/></td>';
-                    else
-                        cols += '<td class="recieved-product-qty d-none"><input type="number" class="form-control recieved" name="recieved[]" value="0" step="any"/></td>';
-                    
-                    if(data[10]) {
-                        cols += '<td><input type="text" class="form-control batch-no" name="batch_no[]" /></td>';
-                        cols += '<td><input type="text" class="form-control expired-date" name="expired_date[]" /></td>';
-                    }
-                    else {
-                        cols += '<td><input type="text" class="form-control batch-no" name="batch_no[]" disabled/></td>';
-                        cols += '<td><input type="text" class="form-control expired-date" name="expired_date[]" disabled/></td>';
-                    }
-
-                    // Editable Net Unit Cost
-                    cols += '<td><input type="number" class="form-control net-unit-cost-input" name="net_unit_cost_display[]" value="' + parseFloat(data[2]).toFixed({{$general_setting->decimal}}) + '" step="any" required/></td>';
-                    
-                    // Product Price (read-only for reference)
-                    cols += '<td>' + parseFloat(data[3]).toFixed({{$general_setting->decimal}}) + '</td>';
-                    
-                    // Discount input
-                    cols += '<td><input type="number" class="form-control discount-input" name="discount_display[]" value="0" step="any" style="width: 80px;"/></td>';
-                    
-                    // Tax display (names)
-                    cols += '<td class="tax-names-display"></td>';
-                    
-                    // Tax amount
-                    cols += '<td class="tax-amount">0.00</td>';
-                    
-                    // Subtotal
-                    cols += '<td class="sub-total">' + parseFloat(data[2]).toFixed({{$general_setting->decimal}}) + '</td>';
-                    
-                    cols += '<td><button type="button" class="ibtnDel btn btn-md btn-danger">{{ trans("file.delete") }}</button></td>';
-
-                    // Hidden fields
-                    cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
-                    cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[10] + '"/>';
-                    cols += '<input type="hidden" class="purchase-unit" name="purchase_unit[]" value="' + temp_unit_name[0] + '"/>';
-                    cols += '<input type="hidden" class="net-unit-cost" name="net_unit_cost[]" value="' + data[2] + '"/>';
-                    cols += '<input type="hidden" class="discount-value" name="discount[]" value="0"/>';
-                    cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + (data[4] || '') + '"/>';
-                    cols += '<input type="hidden" class="tax-names" name="tax_names[]" value="' + (data[5] || '') + '"/>';
-                    cols += '<input type="hidden" class="tax-value" name="tax[]" value="0"/>';
-                    cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" value="' + data[2] + '"/>';
-                    cols += '<input type="hidden" class="imei-number" name="imei_number[]" />';
-                    cols += '<input type="hidden" class="tax-method" value="' + data[6] + '" />';
-
-                    newRow.append(cols);
-                    $("table.order-list tbody").prepend(newRow);
-
-                    rowindex = newRow.index();
-
-                    // Store product data in arrays
-                    product_cost.splice(rowindex, 0, parseFloat(data[2]));
-                    product_discount.splice(rowindex, 0, 0);
-                    
-                    // Store tax IDs and names
-                    tax_rate.splice(rowindex, 0, data[4] || '');
-                    tax_name.splice(rowindex, 0, data[5] || '');
-                    
-                    tax_method.splice(rowindex, 0, data[6]);
-                    unit_name.splice(rowindex, 0, data[7]);
-                    unit_operator.splice(rowindex, 0, data[8]);
-                    unit_operation_value.splice(rowindex, 0, data[9]);
-                    is_imei.splice(rowindex, 0, data[12]);
-                    
-                    // Calculate and display initial values
-                    updateRowValues(rowindex);
-                    
-                    if(data[11]) {
-                        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
-                    }
+            success: function (response) {
+                if (!response || response.error) {
+                    alert(response && response.error ? response.error : 'Product could not be loaded.');
+                    return;
                 }
+                var d = response;
+
+                if (!d[9]) {
+                    alert('Product data is incomplete (missing product id). Please re-add the product.');
+                    return;
+                }
+
+                // Existing row → just increase its quantity
+                if (duplicateIndex > -1) {
+                    var $q = $('table.order-list tbody tr:nth-child(' + (duplicateIndex + 1) + ') .qty');
+                    $q.val(parseFloat($q.val()) + 1);
+                    updateRowValues(duplicateIndex);
+                    return;
+                }
+
+                var i = $('table.order-list tbody tr').length; // new row index
+
+                // Parallel arrays
+                product_cost.push(d[2]);
+                product_discount.push(0);
+                tax_method.push(d[5]);
+                unit_name.push(d[6]);
+                unit_operator.push(d[7]);
+                unit_operation_value.push(d[8]);
+                is_imei.push(d[13] == 1 ? 1 : 0);
+
+                // Resolve tax IDs for this row (uses exact tax id if the controller sends it,
+                // otherwise matches by rate against the tax list)
+                var taxIds = [];
+                if (d[17] !== undefined && d[17] !== null && d[17] !== '' && d[17] != 0) {
+                    taxIds.push(String(d[17]));
+                } else if (parseFloat(d[3]) > 0) {
+                    $.each(tax_rate_all, function (id, rate) {
+                        if (id != 0 && parseFloat(rate) == parseFloat(d[3])) taxIds.push(String(id));
+                    });
+                }
+                tax_rate.push(taxIds.join(','));
+
+                var taxNames = [];
+                $.each(taxIds, function (k, id) { taxNames.push(tax_name_all[id] || ''); });
+                if (!taxNames.length) taxNames.push(d[4] || 'No Tax');
+                tax_name.push(taxNames.join(','));
+
+                // Unit select — VALUE IS THE UNIT NAME (what Unit::where('unit_name',...) expects)
+                var uNames = d[6].split(',');  uNames.pop();
+                var uOps   = d[7].split(',');  uOps.pop();
+                var uVals  = d[8].split(',');  uVals.pop();
+
+                var unitOptions = '';
+                for (var u = 0; u < uNames.length; u++) {
+                    unitOptions += '<option value="' + uNames[u] + '"'
+                                 + ' data-operator="' + uOps[u] + '"'
+                                 + ' data-value="' + uVals[u] + '">'
+                                 + uNames[u] + '</option>';
+                }
+
+                var imeiField = is_imei[i]
+                    ? '<input type="text" name="imei_number[]" class="form-control imei-number mt-1" placeholder="IMEI / Serial">'
+                    : '';
+
+                var status = $('select[name="status"]').val();
+                var defaultRecieved = (status == 3 || status == 4) ? 0 : 1;
+
+                var row =
+                '<tr>' +
+                    '<td>' +
+                        '<input type="hidden" name="product_id[]" class="product-id" value="' + d[9] + '">' +
+                        '<input type="hidden" class="product-variant-id" value="' + (d[10] == null ? '' : d[10]) + '">' +
+                        '<input type="hidden" name="tax_rate[]" class="tax-rate-input" value="' + taxIds.join(',') + '">' +
+                        '<input type="hidden" name="tax_names[]" class="tax-names-input" value="' + taxNames.join(',') + '">' +
+                        '<select name="purchase_unit[]" class="purchase-unit d-none">' + unitOptions + '</select>' +
+                        d[0] + imeiField +
+                        ' <button type="button" class="btn btn-link edit-product"><i class="dripicons-document-edit"></i></button>' +
+                    '</td>' +
+                    '<td><input type="hidden" name="product_code[]" class="product-code" value="' + d[1] + '">' + d[1] + '</td>' +
+                    '<td><input type="number" name="qty[]" class="form-control qty" step="any" min="1" value="1"></td>' +
+                    '<td class="recieved-product-qty d-none"><input type="number" name="recieved[]" class="form-control recieved" step="any" value="' + defaultRecieved + '"></td>' +
+                    '<td><input type="text" name="batch_no[]" class="form-control batch-no"></td>' +
+                    '<td><input type="text" name="expired_date[]" class="form-control expired-date" readonly></td>' +
+                    '<td><input type="number" name="net_unit_cost[]" class="form-control net-unit-cost-input" step="any" value="' + d[2] + '"></td>' +
+                    '<td><span class="product-price-text">' + parseFloat(d[2]).toFixed(decimal) + '</span></td>' +
+                    '<td><input type="number" name="discount[]" class="form-control discount-input" step="any" value="0">' +
+                         '<input type="hidden" class="discount-value" value="0"></td>' +
+                    '<td class="tax-name-display">No Tax</td>' +
+                    '<td><span class="tax-amount-text">0.00</span><input type="hidden" name="tax[]" class="tax-amount-input" value="0"></td>' +
+                    '<td><span class="subtotal-text">0.00</span><input type="hidden" name="subtotal[]" class="subtotal-input" value="0"></td>' +
+                    '<td><button type="button" class="btn btn-danger btn-sm ibtnDel">Delete</button></td>' +
+                '</tr>';
+
+                $('table.order-list tbody').append(row);
+                updateRowValues(i);
+            },
+            error: function (xhr) {
+                var msg = 'Product not found in the selected warehouse.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.error) msg = xhr.responseJSON.error;
+                alert(msg);
             }
         });
+    }
+
+    /* =====================================================
+       ROW CALCULATIONS
+    ===================================================== */
+    function checkQuantity(qty, recalc) {
+        if (recalc) updateRowValues(rowindex);
     }
 
     function updateRowValues(rowindex) {
-        var row = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-        var qty = parseFloat(row.find('.qty').val()) || 0;
-        var net_unit_cost = parseFloat(row.find('.net-unit-cost-input').val()) || 0;
-        var discount_per_unit = parseFloat(row.find('.discount-input').val()) || 0;
-        var total_discount = discount_per_unit * qty;
+        var $row = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
+        if (!$row.length) return;
 
-        // Keep received in sync with qty when status is Received (1) or Partial (2) so stock is updated correctly
-        var status = $('select[name="status"]').val();
-        if (status == '1' || status == '2') {
-            row.find('.recieved').val(qty);
-        }
+        var qty          = parseFloat($row.find('.qty').val()) || 0;
+        var unitCost     = parseFloat(product_cost[rowindex]) || 0;
+        var unitDiscount = parseFloat(product_discount[rowindex]) || 0;
 
-        // Update hidden discount value
-        row.find('.discount-value').val(total_discount.toFixed({{$general_setting->decimal}}));
-        
-        // Calculate total tax percentage from multiple taxes
-        var tax_ids = tax_rate[rowindex] ? tax_rate[rowindex].split(',') : [];
-        var total_tax_percentage = 0;
-        
-        tax_ids.forEach(function(tax_id) {
-            total_tax_percentage += parseFloat(tax_rate_all[tax_id] || 0);
+        $row.find('.net-unit-cost-input').val(unitCost);
+        $row.find('.discount-input').val(unitDiscount);
+        $row.find('.discount-value').val((unitDiscount * qty).toFixed(2));
+
+        // Taxes: tax_rate[rowindex] holds comma-separated tax IDs
+        var taxIds  = (tax_rate[rowindex] || '') ? String(tax_rate[rowindex]).split(',') : [];
+        var taxRate = 0, taxNames = [];
+        $.each(taxIds, function (k, id) {
+            taxRate += parseFloat(tax_rate_all[id]) || 0;
+            taxNames.push(tax_name_all[id] || '');
         });
-        
-        // Update tax names display
-        row.find('.tax-names-display').text(tax_name[rowindex] || 'No Tax');
-        
-        // Calculate values based on tax method
-        var net_unit_cost_after_discount = net_unit_cost - discount_per_unit;
-        var subtotal_without_tax = net_unit_cost_after_discount * qty;
-        var tax_amount = 0;
-        var subtotal = 0;
-        
-        if (tax_method[rowindex] == '1') { // Exclusive tax
-            tax_amount = subtotal_without_tax * (total_tax_percentage / 100);
-            subtotal = subtotal_without_tax + tax_amount;
-        } else { // Inclusive tax
-            subtotal = subtotal_without_tax;
-            tax_amount = subtotal - (subtotal / (1 + (total_tax_percentage / 100)));
+        if (!taxNames.length) taxNames.push('No Tax');
+
+        var netAmount = (unitCost - unitDiscount) * qty;
+        var taxAmount = 0, lineTotal = netAmount;
+
+        if (taxRate > 0) {
+            if (tax_method[rowindex] == 2) {
+                taxAmount = netAmount - (netAmount * 100 / (100 + taxRate)); // tax inclusive
+            } else {
+                taxAmount = netAmount * (taxRate / 100);                     // tax exclusive
+                lineTotal = netAmount + taxAmount;
+            }
         }
-        
-        // Update display values
-        row.find('.tax-amount').text(tax_amount.toFixed({{$general_setting->decimal}}));
-        row.find('.tax-value').val(tax_amount.toFixed({{$general_setting->decimal}}));
-        
-        row.find('.sub-total').text(subtotal.toFixed({{$general_setting->decimal}}));
-        row.find('.subtotal-value').val(subtotal.toFixed({{$general_setting->decimal}}));
-        
-        // Update hidden net unit cost
-        row.find('.net-unit-cost').val(net_unit_cost.toFixed({{$general_setting->decimal}}));
-        
-        // Update arrays
-        product_cost[rowindex] = net_unit_cost;
-        product_discount[rowindex] = discount_per_unit;
-        
-        // Calculate totals
+
+        $row.find('.tax-name-display').text(taxNames.join(', '));
+        $row.find('.tax-amount-input').val(taxAmount.toFixed(2));
+        $row.find('.tax-amount-text').text(taxAmount.toFixed(decimal));
+        $row.find('.subtotal-input').val(lineTotal.toFixed(2));
+        $row.find('.subtotal-text').text(lineTotal.toFixed(decimal));
+
+        // Keep recieved consistent with the purchase status
+        var status = $('select[name="status"]').val();
+        if (status == 1)                       $row.find('.recieved').val(qty);
+        else if (status == 3 || status == 4)   $row.find('.recieved').val(0);
+
         calculateTotal();
     }
 
-    function checkQuantity(purchase_qty, flag) {
-        $('#editModal').modal('hide');
-        var row = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-        row.find('.qty').val(purchase_qty);
-        
-        var status = $('select[name="status"]').val();
-        if(status == '1' || status == '2' )
-            row.find('.recieved').val(purchase_qty);
-        else
-            row.find('.recieved').val(0);
-            
-        if(flag) {
-            // Handle currency change
-            var original_cost = parseFloat(row.find('.net-unit-cost').val()) || 0;
-            product_cost[rowindex] = original_cost * exchangeRate;
-            row.find('.net-unit-cost-input').val(product_cost[rowindex].toFixed({{$general_setting->decimal}}));
-        }
-        
-        updateRowValues(rowindex);
-    }
-
     function calculateTotal() {
-        var total_qty = 0,
-            total_discount = 0,
-            total_tax = 0,
-            total = 0;
+        var totalQty = 0, totalDiscount = 0, totalTax = 0, totalCost = 0, items = 0;
 
-        // Calculate quantity
-        $(".qty").each(function() {
-            total_qty += parseFloat($(this).val()) || 0;
+        $('table.order-list tbody tr').each(function (i) {
+            var qty = parseFloat($(this).find('.qty').val()) || 0;
+            totalQty      += qty;
+            items++;
+            totalDiscount += (parseFloat(product_discount[i]) || 0) * qty;
+            totalTax      += parseFloat($(this).find('.tax-amount-input').val()) || 0;
+            totalCost     += parseFloat($(this).find('.subtotal-input').val()) || 0;
         });
-        $("#total-qty").text(total_qty);
-        $('input[name="total_qty"]').val(total_qty);
 
-        // Calculate discount
-        $(".discount-value").each(function() {
-            total_discount += parseFloat($(this).val()) || 0;
+        var selectedOrderTaxes = $('select[name="order_tax_rate[]"]').val() || [];
+        var orderTaxRate = 0;
+        $.each(selectedOrderTaxes, function (k, id) {
+            orderTaxRate += parseFloat(tax_rate_all[id]) || 0;
         });
-        $("#total-discount").text(total_discount.toFixed({{$general_setting->decimal}}));
-        $('input[name="total_discount"]').val(total_discount.toFixed({{$general_setting->decimal}}));
+        var orderDiscount = parseFloat($('input[name="order_discount"]').val()) || 0;
+        var shipping      = parseFloat($('input[name="shipping_cost"]').val()) || 0;
+        var orderTax      = ((totalCost - totalDiscount) * orderTaxRate / 100);
+        var grandTotal    = totalCost - totalDiscount + orderTax + shipping;
 
-        // Calculate tax
-        $(".tax-value").each(function() {
-            total_tax += parseFloat($(this).val()) || 0;
-        });
-        $("#total-tax").text(total_tax.toFixed({{$general_setting->decimal}}));
-        $('input[name="total_tax"]').val(total_tax.toFixed({{$general_setting->decimal}}));
+        $('#total-qty').text(totalQty);
+        $('#total-discount').text(totalDiscount.toFixed(decimal));
+        $('#total-tax').text(totalTax.toFixed(decimal));
+        $('#total').text(totalCost.toFixed(decimal));
 
-        // Calculate subtotal
-        $(".subtotal-value").each(function() {
-            total += parseFloat($(this).val()) || 0;
-        });
-        $("#total").text(total.toFixed({{$general_setting->decimal}}));
-        $('input[name="total_cost"]').val(total.toFixed({{$general_setting->decimal}}));
+        $('input[name="total_qty"]').val(totalQty);
+        $('input[name="total_discount"]').val(totalDiscount.toFixed(2));
+        $('input[name="total_tax"]').val(totalTax.toFixed(2));
+        $('input[name="total_cost"]').val(totalCost.toFixed(2));
+        $('input[name="item"]').val(items);
+        $('input[name="order_tax"]').val(orderTax.toFixed(2));
+        $('input[name="grand_total"]').val(grandTotal.toFixed(2));
 
-        // Calculate grand total
-        calculateGrandTotal();
+        $('#item').text(items + ' (' + totalQty + ')');
+        $('#subtotal').text(totalCost.toFixed(decimal));
+        $('#order_tax').text(orderTax.toFixed(decimal));
+        $('#order_discount').text(orderDiscount.toFixed(decimal));
+        $('#shipping_cost').text(shipping.toFixed(decimal));
+        $('#grand_total').text(grandTotal.toFixed(decimal));
     }
 
-    function calculateGrandTotal() {
-        var item = $('table.order-list tbody tr').length;
-        var total_qty = parseFloat($('#total-qty').text()) || 0;
-        var subtotal = parseFloat($('#total').text()) || 0;
-        
-        // Handle multiple order taxes
-        var selected_order_taxes = $('select[name="order_tax_rate[]"]').val() || [];
-        var total_order_tax_percentage = 0;
-        var order_tax_names = [];
-        var order_tax_ids = [];
-        
-        selected_order_taxes.forEach(function(tax_id) {
-            var tax_option = $('select[name="order_tax_rate[]"] option[value="' + tax_id + '"]');
-            var tax_text = tax_option.text();
-            var tax_name = tax_text.split('(')[0].trim();
-            var tax_rate = parseFloat(tax_text.match(/\(([^)]+)\)/)[1].replace('%', ''));
-            
-            order_tax_names.push(tax_name);
-            order_tax_ids.push(tax_id);
-            total_order_tax_percentage += tax_rate;
+    // Live recalculation for order-level fields
+    $('input[name="order_discount"], input[name="shipping_cost"]').on('input', calculateTotal);
+    $(document).on('changed.bs.select', 'select[name="order_tax_rate[]"]', calculateTotal);
+
+    /* =====================================================
+       SUBMIT — SAFETY NETS
+    ===================================================== */
+    $('#purchase-form').on('submit', function (e) {
+        var $submitBtn = $('#submit-btn');
+        var bad = function (v) { return !v || v === '' || v === 'undefined' || v === 'null'; };
+
+        /* NET 1: remove only TRUE ghosts — no product id AND no product code */
+        $('table.order-list tbody tr').each(function () {
+            var $tr = $(this);
+            var pid = ($tr.find('input[name="product_id[]"]').val() || '').trim();
+            var pcode = ($tr.find('.product-code').val() || '').trim();
+            if (bad(pid) && bad(pcode)) $tr.remove();
         });
-        
-        // Store order tax names and IDs as hidden inputs
-        $('input[name="order_tax_names"]').val(order_tax_names.join(','));
-        $('input[name="order_tax_ids"]').val(order_tax_ids.join(','));
 
-        // Order discount
-        var order_discount = parseFloat($('input[name="order_discount"]').val()) || 0;
-        if(currencyChange)
-            order_discount *= exchangeRate;
-
-        // Shipping cost
-        var shipping_cost = parseFloat($('input[name="shipping_cost"]').val()) || 0;
-        if(currencyChange)
-            shipping_cost *= exchangeRate;
-
-        // Calculate order-level tax
-        var order_tax = ((subtotal - order_discount) * total_order_tax_percentage) / 100;
-        var grand_total = (subtotal + order_tax + shipping_cost) - order_discount;
-
-        // Update DOM
-        $('#item').text(item + ' (' + total_qty + ')');
-        $('input[name="item"]').val(item);
-
-        $('#subtotal').text(subtotal.toFixed({{$general_setting->decimal}}));
-        $('#order_tax').text(order_tax.toFixed({{$general_setting->decimal}}));
-        $('input[name="order_tax"]').val(order_tax.toFixed({{$general_setting->decimal}}));
-
-        $('#order_discount').text(order_discount.toFixed({{$general_setting->decimal}}));
-        $('input[name="order_discount"]').val(order_discount.toFixed({{$general_setting->decimal}}));
-
-        $('#shipping_cost').text(shipping_cost.toFixed({{$general_setting->decimal}}));
-        $('input[name="shipping_cost"]').val(shipping_cost.toFixed({{$general_setting->decimal}}));
-
-        $('#grand_total').text(grand_total.toFixed({{$general_setting->decimal}}));
-        $('input[name="grand_total"]').val(grand_total.toFixed({{$general_setting->decimal}}));
-
-        currencyChange = false;
-    }
-
-    $('input[name="order_discount"]').on("input", function() {
-        calculateGrandTotal();
-    });
-
-    $('input[name="shipping_cost"]').on("input", function() {
-        calculateGrandTotal();
-    });
-
-    $('select[name="order_tax_rate[]"]').on("change", function() {
-        calculateGrandTotal();
-    });
-
-    $(window).keydown(function(e){
-        if (e.which == 13) {
-            var $targ = $(e.target);
-            if (!$targ.is("textarea") && !$targ.is(":button,:submit")) {
-                var focusNext = false;
-                $(this).find(":input:visible:not([disabled],[readonly]), a").each(function(){
-                    if (this === e.target) {
-                        focusNext = true;
-                    }
-                    else if (focusNext){
-                        $(this).focus();
-                        return false;
-                    }
-                });
-                return false;
+        /* NET 1b: row has a code but no id → block with a clear message (a real product!) */
+        var broken = null;
+        $('table.order-list tbody tr').each(function () {
+            if (broken) return false;
+            var $tr = $(this);
+            var pid = ($tr.find('input[name="product_id[]"]').val() || '').trim();
+            var pcode = ($tr.find('.product-code').val() || '').trim();
+            if (!bad(pcode) && bad(pid)) {
+                broken = 'Row with product "' + pcode + '" is missing its product ID. Delete that row and add the product again.';
             }
-        }
-    });
+        });
+        if (broken) { alert(broken); e.preventDefault(); return; }
 
-    function calculateDueDate() {
-        var purchaseDate = $('input[name="created_at"]').val();
-        var termNo       = parseInt($('#pay_term_no').val());
-        var termPeriod   = $('#pay_term_period').val();
-
-        if (!purchaseDate || !termNo) return;
-
-        // Purchase date parse করুন একই format অনুযায়ী
-        var parts = purchaseDate.split(/[-\/]/);
-        var date;
-
-        if (dateFormat.startsWith('Y')) {
-            // Y-m-d or Y/m/d
-            date = new Date(parts[0], parts[1] - 1, parts[2]);
-        } else if (dateFormat.startsWith('m')) {
-            // m/d/Y or m-d-Y
-            date = new Date(parts[2], parts[0] - 1, parts[1]);
-        } else {
-            // d/m/Y or d-m-Y
-            date = new Date(parts[2], parts[1] - 1, parts[0]);
-        }
-
-        if (termPeriod === 'days') {
-            date.setDate(date.getDate() + termNo);
-        } else {
-            date.setMonth(date.getMonth() + termNo);
-        }
-
-        $('#due_date').val(formatDateByFormat(date, dateFormat));
-        $('#due_date_hidden').val(formatDateByFormat(date, 'Y-m-d'));
-    }
-
-    $('#pay_term_no, #pay_term_period').on('change input', function () {
-        calculateDueDate();
-    });
-
-    $('input[name="created_at"]').on('change', function () {
-        calculateDueDate();
-    });
-
-    $('#purchase-form').on('submit',function(e){
-        var rownumber = $('table.order-list tbody tr:last').index();
-        if (rownumber < 0) {
-            alert("Please insert product to order table!")
+        /* Empty-table check (after ghost cleanup) */
+        if ($('table.order-list tbody tr').length === 0) {
+            alert("Please insert product to order table!");
             e.preventDefault();
+            return;
         }
-        else if($('select[name="status"]').val() != 1) {
-            flag = 0;
-            $(".qty").each(function() {
-                rowindex = $(this).closest('tr').index();
-                quantity =  $(this).val();
-                recieved = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.recieved').val();
 
-                if(quantity != recieved){
-                    flag = 1;
-                    return false;
-                }
+        /* NET 2: repair unit option values still carrying operators */
+        $('select[name="purchase_unit[]"]').each(function () {
+            var $sel = $(this);
+            if (!$sel.find('option').length) return;
+            $sel.find('option').each(function () {
+                var v = $(this).val();
+                if (v === '*' || v === '/' || v === '') $(this).val($(this).text().trim());
             });
-            if(!flag){
+            var current = $sel.val();
+            if (current === '*' || current === '/' || current === null || current === '') {
+                var firstName = $sel.find('option:first').text().trim();
+                if (firstName) $sel.val(firstName);
+            }
+        });
+
+        /* NET 3: header fields */
+        if (!$('select[name="warehouse_id"]').val()) { alert('Please select a Warehouse!'); e.preventDefault(); return; }
+        if (!$('select[name="supplier_id"]').val())  { alert('Please select a Supplier!');  e.preventDefault(); return; }
+
+        /* NET 4: sanitize quantities */
+        $(".qty").each(function () {
+            var v = parseFloat($(this).val());
+            if ($(this).val() === '' || isNaN(v) || v < 1) $(this).val(1);
+        });
+
+        /* Original status/recieved validation */
+        if ($('select[name="status"]').val() != 1) {
+            var flag = 0;
+            $(".qty").each(function () {
+                var ri = $(this).closest('tr').index();
+                var quantity = $(this).val();
+                var recieved = $('table.order-list tbody tr:nth-child(' + (ri + 1) + ')').find('.recieved').val();
+                if (quantity != recieved) { flag = 1; return false; }
+            });
+            if (!flag) {
                 alert('Quantity and Recieved value is same! Please Change Purchase Status or Recieved value');
                 e.preventDefault();
+                return;
             }
-            else
-                $(".batch-no, .expired-date").prop('disabled', false);
+            $(".batch-no, .expired-date").prop('disabled', false);
         }
         else {
             $(".batch-no, .expired-date").prop('disabled', false);
-            $("#submit-btn").prop('disabled', true);
         }
-    });
-</script>
 
-<script type="text/javascript" src="https://js.stripe.com/v3/"></script>
-<script>
- $(document).ready(function() {
-    // Initialize all selectpicker elements
-    $('.selectpicker').selectpicker();
-});
+        /* NET 5: double-submit lock (last — never locks on a blocked submit) */
+        $submitBtn.prop('disabled', true);
+    });
 </script>
 @endpush

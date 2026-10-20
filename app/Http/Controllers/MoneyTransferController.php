@@ -13,8 +13,8 @@ class MoneyTransferController extends Controller
 {
     public function index()
     {
-        
-    
+
+
         if(Auth::user()->hasPermissionTo('money-transfer')){
             $lims_money_transfer_all = MoneyTransfer::get();
             $lims_account_list = Account::where('is_active', true)->get();
@@ -33,7 +33,16 @@ class MoneyTransferController extends Controller
     {
         $data = $request->all();
         $data['reference_no'] = 'mtr-' . date("Ymd") . '-'. date("his");
-        MoneyTransfer::create($data);
+        $transfer = MoneyTransfer::create($data);
+        $accountingService = app(\App\Services\AccountingService::class);
+        $result = $accountingService->recordMoneyTransfer($transfer, 'money_transfer_created');
+        if (!$result->success) {
+            \Log::error('Accounting failed for Money Transfer', ['transfer_id' => $transfer->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($transfer->getTable(), 'accounting_status')) {
+                $transfer->accounting_status = 'failed';
+                $transfer->save();
+            }
+        }
         return redirect()->back()->with('message', 'Money transfered successfully');
     }
 
@@ -50,13 +59,31 @@ class MoneyTransferController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->all();
-        MoneyTransfer::find($data['id'])->update($data);
+        $transfer = MoneyTransfer::find($data['id']);
+        $transfer->update($data);
+        // === ACCOUNTING ENGINE PHASE 2E: TRANSFER UPDATE ===
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($transfer), $transfer->id, '_reversed');
+        $result = $accountingService->recordMoneyTransfer($transfer, 'money_transfer_updated');
+        if (!$result->success) {
+            \Log::error('Accounting failed for Money Transfer Update', ['transfer_id' => $transfer->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($transfer->getTable(), 'accounting_status')) {
+                $transfer->accounting_status = 'failed';
+                $transfer->save();
+            }
+        }
         return redirect()->back()->with('message', 'Money transfer updated successfully');
     }
 
     public function destroy($id)
     {
-        MoneyTransfer::find($id)->delete();
+        $transfer = MoneyTransfer::find($id);
+
+        // === ACCOUNTING ENGINE PHASE 2E: TRANSFER DELETION ===
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($transfer), $transfer->id, '_deleted');
+        // ===========================================
+        $transfer->delete();
         return redirect()->back()->with('not_permitted', 'Data deleted successfully');
     }
 }

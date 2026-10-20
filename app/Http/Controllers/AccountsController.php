@@ -21,70 +21,25 @@ use Illuminate\Support\Facades\Auth;
 
 class AccountsController extends Controller
 {
-   
+
     public function index()
     {
-        
-        
         if(Auth::user()->hasPermissionTo('account-index')){
             $lims_account_all = Account::where('is_active', true)->get();
-            
-            // Calculate actual balance for each account
+
+            // Calculate actual ledger balance for each account
+            // (same logic as ExpenseController balance checks — single source of truth)
             foreach ($lims_account_all as $account) {
-                $balance = $account->initial_balance;
-                
-                // Add: Payments received (sales)
-                $payment_recieved = Payment::whereNotNull('sale_id')
-                    ->where('account_id', $account->id)
-                    ->sum('amount');
-                
-                // Add: Purchase returns
-                $purchase_return = ReturnPurchase::where('account_id', $account->id)
-                    ->sum('grand_total');
-                
-                // Add: Money transfers received
-                $received_transfers = MoneyTransfer::where('to_account_id', $account->id)
-                    ->sum('amount');
-                
-                // Subtract: Payments made (purchases)
-                $payment_sent = Payment::whereNotNull('purchase_id')
-                    ->where('account_id', $account->id)
-                    ->sum('amount');
-                
-                // Subtract: Returns
-                $returns = Returns::where('account_id', $account->id)
-                    ->sum('grand_total');
-                
-                // Subtract: Expenses
-                $expenses = Expense::where('account_id', $account->id)
-                    ->sum('amount');
-                
-                // Subtract: Payroll
-                $payrolls = Payroll::where('account_id', $account->id)
-                    ->sum('amount');
-                
-                // Subtract: Money transfers sent
-                $sent_transfers = MoneyTransfer::where('from_account_id', $account->id)
-                    ->sum('amount');
-                
-                // Calculate net balance
-                $account->current_balance = $balance 
-                    + $payment_recieved 
-                    + $purchase_return 
-                    + $received_transfers 
-                    - $payment_sent 
-                    - $returns 
-                    - $expenses 
-                    - $payrolls 
-                    - $sent_transfers;
+                $account->current_balance = $account->calculateBalance();
             }
-            
+
+
             return view('backend.account.index', compact('lims_account_all'));
         }
         else
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
-    
+
     public function create()
     {
         //
@@ -107,7 +62,7 @@ class AccountsController extends Controller
             $data['total_balance'] = $data['initial_balance'];
         else
             $data['total_balance'] = 0;
-    
+
         if(!$lims_account_data)
             $data['is_default'] = 1;
         $data['is_active'] = true;
@@ -154,10 +109,27 @@ class AccountsController extends Controller
         return redirect('accounts')->with('message', 'Account updated successfully');
     }
 
+    /* ==========================================================
+     |  SYNC BALANCES — one-click repair: rebuilds total_balance
+     |  for every active account from the ledger
+     +========================================================= */
+     /* ==========================================================
+      |  SYNC BALANCE (single account) — rebuilds total_balance
+      |  for one account from the ledger
+      +========================================================= */
+     public function syncBalance($id)
+     {
+         if(!Auth::user()->hasPermissionTo('account-index'))
+             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
+
+         $account = Account::findOrFail($id);
+         $account->syncTotalBalance();
+
+         return redirect('accounts')->with('message', 'Account "' . $account->name . '" balance synced with the ledger successfully');
+     }
+
     public function balanceSheet()
     {
-        
-        
         if(Auth::user()->hasPermissionTo('balance-sheet')){
             $lims_account_list = Account::where('is_active', true)->get();
             $debit = [];
@@ -174,9 +146,6 @@ class AccountsController extends Controller
 
                 $credit[] = $payment_recieved + $return_purchase + $recieved_money_via_transfer + $account->initial_balance;
                 $debit[] = $payment_sent + $returns + $expenses + $payrolls + $sent_money_via_transfer;
-
-                /*$credit[] = $payment_recieved + $return_purchase + $account->initial_balance;
-                $debit[] = $payment_sent + $returns + $expenses + $payrolls;*/
             }
             return view('backend.account.balance_sheet', compact('lims_account_list', 'debit', 'credit'));
         }
@@ -187,7 +156,6 @@ class AccountsController extends Controller
     public function accountStatement(Request $request)
     {
         $data = $request->all();
-        //return $data;
         $lims_account_data = Account::find($data['account_id']);
         $credit_list = new Collection;
         $debit_list = new Collection;
@@ -275,14 +243,14 @@ class AccountsController extends Controller
     public function accountsAll()
     {
         $lims_account_list = DB::table('accounts')->where('is_active', true)->get();
-        
+
         $html = '';
         foreach($lims_account_list as $account){
             if($account->is_default == 1){
                 $html .='<option selected value="'.$account->id.'">'.$account->name . ' (' . $account->account_no. ')'.'</option>';
             }else{
                 $html .='<option value="'.$account->id.'">'.$account->name . ' (' . $account->account_no. ')'.'</option>';
-            }      
+            }
         }
 
         return response()->json($html);

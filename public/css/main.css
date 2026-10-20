@@ -1,5 +1,5 @@
 
-      
+
       /* Modern Design System */
       :root {
         --primary-gradient: linear-gradient(135deg, #c4c6cf 0%, #299e42 100%);
@@ -598,7 +598,7 @@
         padding: 16px 20px;
         font-weight: 600;
       }
-      
+
 
       .modal-header .close {
         color: white;
@@ -770,3 +770,24 @@
             background-color: #e5e5e5;
         }
 
+
+        /* ---------- Social Links ---------- */
+        .social-links { display: inline-flex; align-items: center; gap: 10px; }
+        .social-link {
+            --brand: #0d5a39;
+            width: 30px; height: 30px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            color: inherit;
+            transition: background .25s, color .25s, transform .25s;
+        }
+        .social-link svg { width: 15px; height: 15px; fill: currentColor; }
+        .social-link:hover { background: var(--brand); color: #fff; transform: translateY(-2px); }
+
+        .announcement-right { display: inline-flex; align-items: center; gap: 14px; }
+        .announcement-bar .social-link { background: rgba(255,255,255,.12); color: #fff; }
+
+        .store-footer .social-links { margin-top: 14px; }
+        .store-footer .social-link { background: rgba(0,0,0,.08); color: #333; }
+        .store-footer .social-link:hover { color: #fff; }

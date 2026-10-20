@@ -89,6 +89,10 @@ use App\Http\Controllers\WhatsappController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\HRMController;
 use App\Http\Controllers\PolicyController;
+use App\Http\Controllers\SalaryTemplateController;
+use App\Http\Controllers\PayrollPaymentController;
+use App\Http\Controllers\SocialMediaController;
+
 
 // ---------------------------------------
 
@@ -96,7 +100,7 @@ Route::get('migrate', function() {
     Artisan::call('migrate');
 });
 
-// Your original shop index 
+// Your original shop index
 Route::get('/', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.index');
 
 // The new View All Products page
@@ -111,7 +115,7 @@ Route::get('/contact-us', [ContactController::class, 'index'])->name('contact.us
 Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.us.store');
 Route::get('clear',function() {
     Artisan::call('optimize:clear');
-    return redirect()->back();  
+    return redirect()->back();
 });
 //storage link
 Route::get('storage-link', function() {
@@ -195,10 +199,10 @@ Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name
 Route::post('/wishlist/add/{productId}', [WishlistController::class, 'store'])->name('wishlist.add');
 // Customer Protected Routes
 Route::middleware('auth:customer')->group(function () {
-    
+
     // Dashboard Route
     Route::get('/customer/dashboard', [CustomerDashboardController::class, 'index'])->name('customer.dashboard');
-    
+
     // Wishlist Route
    // Route::get('/customer/wishlist', [CustomerDashboardController::class, 'wishlist'])->name('customer.wishlist');
 
@@ -215,7 +219,7 @@ Route::middleware('auth:customer')->group(function () {
     // Order confirmation page right after Paystack redirects back
     Route::get('/customer/orders/{sale}/confirmation', [CustomerDashboardController::class, 'orderConfirmation'])
         ->name('customer.orders.confirmation');
-    
+
 });
 
 
@@ -341,8 +345,11 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::put('category-department/update/{id}', 'updateDepartment')->name('category-department.update');
         Route::get('category-department/{id}/edit', 'editDepartment')->name('category-department.edit');
         Route::post('category-department/department-data', 'departmentData')->name('category-department.data');
+
+        Route::post('category-department/deletebySelection', 'deleteDepartmentBySelection');
+        Route::delete('category-department/{id}', 'deleteDepartment')->name('category-department.destroy');
     });
- 
+
     Route::resource('category', CategoryController::class);
 
 
@@ -467,7 +474,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('pos', 'posSale')->name('sale.pos');
         Route::get('sales/lims_sale_search', 'limsSaleSearch')->name('sale.search');
         Route::get('sales/lims_product_search', 'limsProductSearch')->name('product_sale.search');
-        
+
         Route::get('sales/offline_products/{warehouse_id}', 'offlineProductsData')->name('product_sale.offline_products');
 
         Route::get('sales/getcustomergroup/{id}', 'getCustomerGroup')->name('sale.getcustomergroup');
@@ -496,7 +503,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::post('update-ad', 'updateAd')->name('ad.update');
 
     });
-    
+
     Route::post('sales/save-default-filter', [SaleController::class, 'saveDefaultFilter'])->name('sales.save-default-filter');
  // routes/web.php  (or wherever your sale routes are)
     Route::get('warehouse-products-sale', [SaleController::class, 'getWarehouseProductsForSale'])->name('warehouse.products.sale');
@@ -556,6 +563,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
             Route::post('deletebyselection', 'deleteBySelection');
         });
     });
+    Route::get('quotation/{id}/generate_proforma', [QuotationController::class, 'generateProforma'])->name('quotation.generate_proforma');
     Route::resource('quotations', QuotationController::class);
 
 
@@ -666,7 +674,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
             Route::post('monthly_purchase/{year}', 'monthlyPurchaseByWarehouse')->name('report.monthlyPurchaseByWarehouse');
             Route::get('best_seller', 'bestSeller')->name('report.bestSeller');
             Route::post('best_seller', 'bestSellerByWarehouse')->name('report.bestSellerByWarehouse');
-            Route::post('profit_loss', 'profitLoss')->name('report.profitLoss'); 
+            Route::post('profit_loss', 'profitLoss')->name('report.profitLoss');
             Route::any('profit_loss_data', 'profitLossData')->name('report.profitLossData');
             Route::get('product_report', 'productReport')->name('report.product');
             Route::post('product_report_data', 'productReportData');
@@ -814,6 +822,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('balancesheet', 'balanceSheet')->name('accounts.balancesheet');
         Route::post('account-statement', 'accountStatement')->name('accounts.statement');
         Route::get('accounts/all', 'accountsAll')->name('account.all');
+        Route::get('accounts/sync-balance/{id}', 'syncBalance')->name('accounts.sync-balance');
     });
     Route::resource('accounts', AccountsController::class);
 
@@ -824,9 +833,18 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     Route::resource('departments', DepartmentController::class);
     Route::resource('designations', DesignationController::class);
     Route::resource('shift', ShiftController::class);
-    Route::resource('overtime', OvertimeController::class);
+    // Route::resource('overtime', OvertimeController::class);
     Route::resource('leave-type', LeaveTypeController::class);
     Route::resource('leave', ControllersLeaveController::class);
+
+    // Make Payment
+    Route::get('payroll-payment',             [PayrollPaymentController::class, 'index'])->name('payroll-payment.index');
+    Route::post('payroll-payment/store',      [PayrollPaymentController::class, 'store'])->name('payroll-payment.store');
+    Route::delete('payroll-payment/{id}',     [PayrollPaymentController::class, 'destroy'])->name('payroll-payment.destroy');
+
+    Route::get('overtime',                    [OvertimeController::class, 'index'])->name('overtime.index');
+    Route::post('overtime/store',             [OvertimeController::class, 'store'])->name('overtime.store');
+    Route::delete('overtime/{id}',            [OvertimeController::class, 'destroy'])->name('overtime.destroy');
     Route::get('hrm-panel', [HRMController::class, 'index'])->name('hrm-panel');
 
 
@@ -836,13 +854,31 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     Route::resource('employees', EmployeeController::class);
 
 
-    Route::post('payroll/deletebyselection', [PayrollController::class, 'deleteBySelection']);
-    Route::post('payroll/generateCards', [PayrollController::class, 'generateCards'])->name('payroll.generateCards');
-    Route::get('payroll/get-employees', [PayrollController::class, 'getEmployeesByWarehouse'])->name('payroll.getEmployeesByWarehouse');
-    Route::get('payroll/monthly-data', [PayrollController::class, 'monthlyData'])->name('payroll.monthlyData');
-    Route::post('payroll-templates/store', [PayrollController::class, 'storeTemplate'])->name('payroll.templates.store');
-    Route::resource('payroll', PayrollController::class);
+    // Route::post('payroll/deletebyselection', [PayrollController::class, 'deleteBySelection']);
+    // Route::post('payroll/generateCards', [PayrollController::class, 'generateCards'])->name('payroll.generateCards');
+    // Route::get('payroll/get-employees', [PayrollController::class, 'getEmployeesByWarehouse'])->name('payroll.getEmployeesByWarehouse');
+    // Route::get('payroll/monthly-data', [PayrollController::class, 'monthlyData'])->name('payroll.monthlyData');
+    // Route::post('payroll-templates/store', [PayrollController::class, 'storeTemplate'])->name('payroll.templates.store');
+    // Route::resource('payroll', PayrollController::class);
+    //
+    //
 
+    // Salary Template (monthly) + Hourly Template
+       Route::get('salary-template',              [SalaryTemplateController::class, 'index'])->name('salary-template.index');
+       Route::post('salary-template/store',       [SalaryTemplateController::class, 'store'])->name('salary-template.store');
+       Route::get('salary-template/hourly',       [SalaryTemplateController::class, 'hourly'])->name('salary-template.hourly');
+       Route::post('salary-template/hourly/store',[SalaryTemplateController::class, 'storeHourly'])->name('salary-template.store-hourly');
+       Route::post('salary-template/assign',      [SalaryTemplateController::class, 'assign'])->name('salary-template.assign');
+       Route::delete('salary-template/{id}',      [SalaryTemplateController::class, 'destroy'])->name('salary-template.destroy');
+
+       // Manage Salary
+       Route::get('payroll',                     [PayrollController::class, 'index'])->name('payroll.index');
+       Route::get('payroll/generate',            [PayrollController::class, 'generate'])->name('payroll.generate');
+       Route::post('payroll/generate/store',     [PayrollController::class, 'generateStore'])->name('payroll.generate-store');
+       Route::post('payroll/store',              [PayrollController::class, 'store'])->name('payroll.store');
+       Route::get('payroll/{id}/details',        [PayrollController::class, 'details'])->name('payroll.details');
+       Route::post('payroll/update/{id}',        [PayrollController::class, 'update'])->name('payroll.update');
+       Route::delete('payroll/{id}',             [PayrollController::class, 'destroy'])->name('payroll.destroy');
     // AJAX endpoints for creating templates and template items from modal
     Route::post('payroll-templates/store', [\App\Http\Controllers\PayrollTemplateController::class, 'store']);
 
@@ -886,7 +922,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
             Route::post('store', 'store')->name('notifications.store');
             Route::get('mark-as-read', 'markAsRead')->name('notifications.markAsRead');
         });
-    }); 
+    });
 
     //Sms Template
     Route::resource('smstemplates', SmsTemplateController::class);
@@ -967,6 +1003,13 @@ Route::prefix('ai')->name('ai-assistant.')->middleware($middlewares)->group(func
 
     Route::resource('exchange', SaleExchangeController::class);
     Route::get('/sale-exchange/search', [SaleExchangeController::class, 'searchByReference'])->name('sale.exchange.search');
+
+
+    Route::get('social-media',                [SocialMediaController::class, 'index'])->name('social-media.index');
+    Route::post('social-media/store',         [SocialMediaController::class, 'store'])->name('social-media.store');
+    Route::post('social-media/update/{id}',   [SocialMediaController::class, 'update'])->name('social-media.update');
+    Route::post('social-media/toggle/{id}',   [SocialMediaController::class, 'toggle'])->name('social-media.toggle');
+    Route::delete('social-media/{id}',        [SocialMediaController::class, 'destroy'])->name('social-media.destroy');
 
     Route::resource('currency', CurrencyController::class);
 

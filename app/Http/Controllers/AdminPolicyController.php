@@ -78,7 +78,7 @@ class AdminPolicyController extends Controller
         $policy->update($validated);
 
         return redirect()
-            ->route('backend.policies.index')
+            ->route('policies.index')
             ->with('success', 'Policy updated successfully.');
     }
 

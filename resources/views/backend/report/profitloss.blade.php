@@ -2,274 +2,256 @@
 
 @section('content')
 
-@php
-    // -------------------------------------------------------------------
-    // UNIFIED CALCULATIONS: Ensure Operating Profit strictly depends 
-    // on Gross Profit minus Operating Expenses
-    // -------------------------------------------------------------------
-    
-    // 1. Calculate Net Revenue (Total Sales - Sales Returns)
-    $net_revenue = $total_sale;
-    if ($sale_return_amount > 0) {
-        $net_revenue -= $sale_return_amount;
-    }
-
-    // 2. Calculate Net COGS (Purchases - Purchase Returns + Payroll)
-    $net_cogs = $product_cost + $payroll;
-    if ($purchase_return_amount > 0) {
-        $net_cogs = ($product_cost - $purchase_return_amount) + $payroll;
-    }
-
-    // 3. Set the final Gross Profit
-    $calculated_gross_profit = $net_revenue - $net_cogs;
-
-    // 4. Calculate Operating Profit (Gross Profit - Total Operating Expenses)
-    $calculated_operating_profit = $calculated_gross_profit - $total_operating_expenses;
-    
-    $calculated_net_profit = $calculated_operating_profit -$product_tax;
-@endphp
-
 <div class="container-fluid mb-3">
-    <a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm">
-        <i class="fa fa-arrow-left"></i> Back to Reports Dashboard
-    </a>
+<a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm">
+<i class="fa fa-arrow-left"></i> Back to Reports Dashboard
+</a>
 </div>
 
 <section>
-    <div class="container-fluid">
-        <div class="card">
-            <div class="card-header mt-2">
-                <h3 class="text-center">
-                    Profit and Loss Report (<span id="selectedPeriod">{{ $period_label ?? ($selected_year ?? date('Y')) }}</span>)
-                </h3>
-            </div>
+<div class="container-fluid">
+<div class="card">
+<div class="card-header mt-2">
+<h3 class="text-center">
+Profit and Loss Report (<span id="selectedPeriod">{{ $period_label }}</span>)
+</h3>
+<p class="text-center text-muted mb-1 small">
+Sales Revenue &amp; Cost of Products Sold are pulled from the same engine as the
+Sale Report — they always match the Sale Report for this period and filters.
+</p>
+</div>
 
-            {{-- Filter Form --}}
-            {!! Form::open(['route' => 'report.profitLossData', 'method' => 'post', 'id' => 'yearForm']) !!}
-            @csrf
-            <div class="row mb-3 pl-report-filter">
-                <div class="col-md-3 offset-md-1 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>Choose Year</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <select name="year" id="year" class="form-control" required>
-                                @php
-                                    $currentYear = date('Y');
-                                    $startYear = $currentYear - 10;
-                                @endphp
-                                @for ($year = $currentYear; $year >= $startYear; $year--)
-                                    <option value="{{ $year }}"
-                                        {{ ($selected_year ?? $currentYear) == $year ? 'selected' : '' }}>
-                                        {{ $year }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 mt-3">
-                    <div class="form-group row">
-                        <label class="d-tc mt-2"><strong>Choose Month</strong> &nbsp;</label>
-                        <div class="d-tc">
-                            <select name="month" id="month" class="form-control">
-                                <option value="">All (Full Year)</option>
-                                @foreach(['01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'] as $num => $name)
-                                    <option value="{{ $num }}" {{ ($selected_month ?? '') === $num ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
+{{-- Filter Form --}}
+{!! Form::open(['route' => 'report.profitLossData', 'method' => 'post', 'id' => 'yearForm']) !!}
+@csrf
+<div class="row mb-3 pl-report-filter">
+<div class="col-md-3 offset-md-1 mt-3">
+<div class="form-group row">
+<label class="d-tc mt-2"><strong>Choose Year</strong> &nbsp;</label>
+<div class="d-tc">
+<select name="year" id="year" class="form-control" required>
+@php
+$currentYear = date('Y');
+$startYear = $currentYear - 10;
+@endphp
+@for ($year = $currentYear; $year >= $startYear; $year--)
+<option value="{{ $year }}"
+{{ ($selected_year ?? $currentYear) == $year ? 'selected' : '' }}>
+{{ $year }}
+</option>
+@endfor
+</select>
+</div>
+</div>
+</div>
+<div class="col-md-3 mt-3">
+<div class="form-group row">
+<label class="d-tc mt-2"><strong>Choose Month</strong> &nbsp;</label>
+<div class="d-tc">
+<select name="month" id="month" class="form-control">
+<option value="">All (Full Year)</option>
+@foreach(['01' => 'January', '02' => 'February', '03' => 'March', '04' => 'April', '05' => 'May', '06' => 'June', '07' => 'July', '08' => 'August', '09' => 'September', '10' => 'October', '11' => 'November', '12' => 'December'] as $num => $name)
+<option value="{{ $num }}" {{ ($selected_month ?? '') === $num ? 'selected' : '' }}>{{ $name }}</option>
+@endforeach
+</select>
+</div>
+</div>
+</div>
 
-                <div class="col-md-2 mt-3">
-                    <div class="form-group">
-                        <button class="btn btn-primary" type="submit">{{ trans('file.submit') }}</button>
-                    </div>
-                </div>
-            </div>
-            {!! Form::close() !!}
-        </div>
+<div class="col-md-2 mt-3">
+<div class="form-group">
+<button class="btn btn-primary" type="submit">{{ trans('file.submit') }}</button>
+</div>
+</div>
+</div>
+{!! Form::close() !!}
+</div>
 
-        {{-- Action Buttons --}}
-        <div class="mb-3">
-            <button class="btn btn-primary" id="printReport"><i class="fa fa-print"></i> Print Report</button>
-            <button class="btn btn-success ml-2" id="exportExcel"><i class="fa fa-file-excel"></i> Export Excel</button>
-            <button class="btn btn-danger ml-2" id="exportPDF"><i class="fa fa-file-pdf"></i> Export PDF</button>
-        </div>
+{{-- Action Buttons --}}
+<div class="mb-3">
+<button class="btn btn-primary" id="printReport"><i class="fa fa-print"></i> Print Report</button>
+<button class="btn btn-success ml-2" id="exportExcel"><i class="fa fa-file-excel"></i> Export Excel</button>
+<button class="btn btn-danger ml-2" id="exportPDF"><i class="fa fa-file-pdf"></i> Export PDF</button>
+</div>
 
-        {{-- P&L Statement Table --}}
-        <div class="table-responsive">
-            <table class="table table-bordered" style="width: 100%; max-width: 800px;" id="profitLossTable">
-                {{-- Report Header --}}
-                <thead class="table-dark">
-                    <tr>
-                        <th colspan="3" class="text-center">
-                            <h4 class="mb-0">PROFIT AND LOSS STATEMENT</h4>
-                            <p class="mb-0">{{ $period_subtitle ?? 'For the Year Ending ' . $selected_year }}</p>
-                        </th>
-                    </tr>
-                </thead>
+{{-- P&L Statement Table --}}
+<div class="table-responsive">
+<table class="table table-bordered" style="width: 100%; max-width: 800px;" id="profitLossTable">
+{{-- Report Header --}}
+<thead class="table-dark">
+<tr>
+<th colspan="3" class="text-center">
+<h4 class="mb-0">PROFIT AND LOSS STATEMENT</h4>
+<p class="mb-0">{{ $period_subtitle }}</p>
+</th>
+</tr>
+</thead>
 
-                {{-- Revenue Section --}}
-                <thead class="table-secondary">
-                    <tr>
-                        <th colspan="3"><strong>REVENUE</strong></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td width="70%">Sales Revenue</td>
-                        <td width="15%" class="text-end">{{ $currency_code }}</td>
-                        <td width="15%" class="text-end">{{ number_format($total_sale, 2) }}</td>
-                    </tr>
-                    
-                    @if($sale_return_amount > 0)
-                    <tr>
-                        <td>&nbsp;&nbsp;Less: Sales Returns</td>
-                        <td class="text-end">- {{ $currency_code }}</td>
-                        <td class="text-end">{{ number_format($sale_return_amount, 2) }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Net Sales Revenue</strong></td>
-                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($net_revenue, 2) }}</strong></td>
-                    </tr>
-                    @endif
-                </tbody>
+{{-- ==================== REVENUE ==================== --}}
+<thead class="table-secondary">
+<tr>
+<th colspan="3"><strong>REVENUE</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td width="70%">
+Sales Revenue
+<span class="text-muted small">(matches Sale Report "Sold Amount")</span>
+</td>
+<td width="15%" class="text-end">{{ $currency_code }}</td>
+<td width="15%" class="text-end">{{ number_format($total_sale, $decimal ?? 2) }}</td>
+</tr>
 
-                {{-- Cost of Goods Sold Section --}}
-                <thead class="table-secondary">
-                    <tr>
-                        <th colspan="3"><strong>COST OF GOODS SOLD</strong></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Cost of Products Sold (Purchases)</td>
-                        <td class="text-end">{{ $currency_code }}</td> 
-                        <td class="text-end">{{ number_format($product_cost, 2) }}</td>
-                    </tr>
-                    
-                    @if($purchase_return_amount > 0)
-                    <tr>
-                        <td>&nbsp;&nbsp;Less: Purchase Returns</td>
-                        <td class="text-end">- {{ $currency_code }}</td>
-                        <td class="text-end">{{ number_format($purchase_return_amount, 2) }}</td>
-                    </tr>
-                    @endif
-                    
-                    <tr>
-                        <td>Direct Labor (Payroll)</td>
-                        <td class="text-end">{{ $currency_code }}</td>
-                        <td class="text-end">{{ number_format($payroll, 2) }}</td>
-                    </tr>
-                    
-                    {{-- Total COGS --}}
-                    <tr class="table-active">
-                        <td><strong>Total Cost of Goods Sold</strong></td>
-                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($net_cogs, 2) }}</strong></td>
-                    </tr>
-                </tbody>
+@if($sale_return_amount > 0)
+<tr>
+<td>&nbsp;&nbsp;Less: Sales Returns</td>
+<td class="text-end">- {{ $currency_code }}</td>
+<td class="text-end">{{ number_format($sale_return_amount, $decimal ?? 2) }}</td>
+</tr>
+<tr>
+<td><strong>Net Sales Revenue</strong></td>
+<td class="text-end"><strong>{{ $currency_code }}</strong></td>
+<td class="text-end"><strong>{{ number_format($net_revenue, $decimal ?? 2) }}</strong></td>
+</tr>
+@endif
+</tbody>
 
-                {{-- Gross Profit Section --}}
-                <tbody>
-                    <tr class="table-success">
-                        <td><strong>GROSS PROFIT</strong></td>
-                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($calculated_gross_profit, 2) }}</strong></td>
-                    </tr>
-                </tbody>
+{{-- ==================== COST OF GOODS SOLD ==================== --}}
+<thead class="table-secondary">
+<tr>
+<th colspan="3"><strong>COST OF GOODS SOLD</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+Cost of Products Sold
+<span class="text-muted small">(matches Sale Report "COGS")</span>
+</td>
+<td class="text-end">{{ $currency_code }}</td>
+<td class="text-end">{{ number_format($total_item_cost, $decimal ?? 2) }}</td>
+</tr>
 
-                {{-- Operating Expenses Section --}}
-                <thead class="table-secondary">
-                    <tr>
-                        <th colspan="3"><strong>OPERATING EXPENSES</strong></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if($filtered_expenses->count() > 0)
-                        @foreach($filtered_expenses as $expense)
-                            <tr>
-                                <td>{{ $expense->name }}</td>
-                                <td class="text-end">{{ $currency_code }}</td>
-                                <td class="text-end">{{ number_format($expense->amount, 2) }}</td>
-                            </tr>
-                        @endforeach
-                    @else
-                        <tr>
-                            <td colspan="3" class="text-center">No operating expenses recorded</td>
-                        </tr>
-                    @endif
-                    
-                    <tr class="table-active">
-                        <td><strong>Total Operating Expenses</strong></td>
-                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($total_operating_expenses, 2) }}</strong></td>
-                    </tr>
-                </tbody>
+@if($purchase_return_amount > 0)
+<tr>
+<td>&nbsp;&nbsp;Less: Purchase Returns</td>
+<td class="text-end">- {{ $currency_code }}</td>
+<td class="text-end">{{ number_format($purchase_return_amount, $decimal ?? 2) }}</td>
+</tr>
+@endif
 
-                {{-- Operating Profit Section --}}
-                <tbody>
-                    <tr class="table-info">
-                        <td><strong>OPERATING PROFIT</strong></td>
-                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format($calculated_operating_profit, 2) }}</strong></td>
-                    </tr>
-                </tbody>
+{{-- Total COGS --}}
+<tr class="table-active">
+<td><strong>Total Cost of Goods Sold</strong></td>
+<td class="text-end"><strong>{{ $currency_code }}</strong></td>
+<td class="text-end"><strong>{{ number_format($net_cogs, $decimal ?? 2) }}</strong></td>
+</tr>
+</tbody>
 
-                {{-- Taxes Section --}}
-                <thead class="table-secondary">
-                    <tr>
-                        <th colspan="3"><strong>TAXES</strong></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Product Tax Expense</td>
-                        <td class="text-end">{{ $currency_code }}</td>
-                        <td class="text-end">{{ number_format($product_tax, 2) }}</td>
-                    </tr>
-                </tbody>
+{{-- ==================== GROSS PROFIT ==================== --}}
+<tbody>
+<tr class="table-success">
+<td><strong>GROSS PROFIT</strong></td>
+<td class="text-end"><strong>{{ $currency_code }}</strong></td>
+<td class="text-end"><strong>{{ number_format($calculated_gross_profit, $decimal ?? 2) }}</strong></td>
+</tr>
+</tbody>
 
-                {{-- Net Profit/Loss Section --}}
-                <tbody>
-                    <tr class="{{ $calculated_net_profit >= 0 ? 'table-success' : 'table-danger' }}">
-                        <td>
-                            <strong>
-                                @if($calculated_net_profit >= 0)
-                                    NET PROFIT
-                                @else
-                                    NET LOSS
-                                @endif
-                            </strong>
-                        </td>
-                        <td class="text-end"><strong>{{ $currency_code }}</strong></td>
-                        <td class="text-end"><strong>{{ number_format(abs($calculated_net_profit), 2) }}</strong></td>
-                    </tr>
-                </tbody>
+{{-- ==================== OPERATING EXPENSES ==================== --}}
+<thead class="table-secondary">
+<tr>
+<th colspan="3"><strong>OPERATING EXPENSES</strong></th>
+</tr>
+</thead>
+<tbody>
+@if($filtered_expenses->count() > 0 || $payroll > 0)
+<tr>
+<td>Direct Labor (Payroll)</td>
+<td class="text-end">{{ $currency_code }}</td>
+<td class="text-end">{{ number_format($payroll, $decimal ?? 2) }}</td>
+</tr>
+@foreach($filtered_expenses as $expense)
+<tr>
+<td>{{ $expense->name }}</td>
+<td class="text-end">{{ $currency_code }}</td>
+<td class="text-end">{{ number_format($expense->amount, $decimal ?? 2) }}</td>
+</tr>
+@endforeach
+@else
+<tr>
+<td colspan="3" class="text-center">No operating expenses recorded</td>
+</tr>
+@endif
 
-                {{-- Summary Footer --}}
-                <tfoot class="table-dark">
-                    <tr>
-                        <td colspan="3" class="text-center small">
-                            <em>
-                                Report generated on {{ date('F d, Y') }} | 
-                                Period: {{ date('F d, Y', strtotime($start_date)) }} to {{ date('F d, Y', strtotime($end_date)) }}
-                            </em>
-                        </td>
-                    </tr>
-                </tfoot>
-            </table>
-        </div>
-    </div>
+<tr class="table-active">
+<td><strong>Total Operating Expenses</strong></td>
+<td class="text-end"><strong>{{ $currency_code }}</strong></td>
+<td class="text-end"><strong>{{ number_format($total_operating_expenses, $decimal ?? 2) }}</strong></td>
+</tr>
+</tbody>
+
+{{-- ==================== OPERATING PROFIT ==================== --}}
+<tbody>
+<tr class="table-info">
+<td><strong>OPERATING PROFIT</strong></td>
+<td class="text-end"><strong>{{ $currency_code }}</strong></td>
+<td class="text-end"><strong>{{ number_format($calculated_operating_profit, $decimal ?? 2) }}</strong></td>
+</tr>
+</tbody>
+
+{{-- ==================== PRODUCT TAXES ==================== --}}
+<thead class="table-secondary">
+<tr>
+<th colspan="3"><strong>PRODUCT TAXES</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Product Tax (taxes charged on the goods sold)</td>
+<td class="text-end">{{ $currency_code }}</td>
+<td class="text-end">{{ number_format($product_tax, $decimal ?? 2) }}</td>
+</tr>
+</tbody>
+
+{{-- ==================== NET PROFIT / LOSS ==================== --}}
+<tbody>
+<tr class="{{ $calculated_net_profit >= 0 ? 'table-success' : 'table-danger' }}">
+<td>
+<strong>
+@if($calculated_net_profit >= 0)
+NET PROFIT
+@else
+NET LOSS
+@endif
+</strong>
+</td>
+<td class="text-end"><strong>{{ $currency_code }}</strong></td>
+<td class="text-end"><strong>{{ number_format(abs($calculated_net_profit), $decimal ?? 2) }}</strong></td>
+</tr>
+</tbody>
+
+{{-- Summary Footer --}}
+<tfoot class="table-dark">
+<tr>
+<td colspan="3" class="text-center small">
+<em>
+Report generated on {{ date('F d, Y') }} |
+Period: {{ date('F d, Y', strtotime($start_date)) }} to {{ date('F d, Y', strtotime($end_date)) }}
+</em>
+</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</div>
 </section>
 @endsection
 
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <script>
- $(document).ready(function() {
+$(document).ready(function() {
     const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     function updateSelectedPeriod() {
         const year = $('#year').val() || new Date().getFullYear();
@@ -305,23 +287,22 @@
         const year = $('#selectedPeriod').text() || new Date().getFullYear();
         const table = document.getElementById('profitLossTable');
         const html = table.outerHTML;
-        
-        // Create a blob and download
+
         const blob = new Blob([html], {type: 'application/vnd.ms-excel'});
         const fileName = 'Profit_Loss_Report_' + year + '.xls';
-        
-        if (window.navigator.msSaveOrOpenBlob) {
-            window.navigator.msSaveOrOpenBlob(blob, fileName);
-        } else {
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = fileName;
-            a.click();
-            URL.revokeObjectURL(a.href);
-        }
+
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveOrOpenBlob(blob, fileName);
+    } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
     });
 
-    // Export PDF (using browser print to PDF)
+    // Export PDF (browser print to PDF)
     $('#exportPDF').on('click', function() {
         const year = $('#selectedPeriod').text() || new Date().getFullYear();
         const printWindow = window.open('', '', 'height=900,width=1000');
@@ -334,8 +315,7 @@
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         printWindow.focus();
-        
-        // Trigger print dialog (user can choose to save as PDF)
+
         setTimeout(function() {
             printWindow.print();
         }, 500);

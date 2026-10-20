@@ -11,10 +11,7 @@ class JournalLine extends Model
 
     protected $guarded = ['id'];
 
-    protected $casts = [
-        'debit' => 'decimal:4',
-        'credit' => 'decimal:4',
-    ];
+    protected $casts = ['debit' => 'float', 'credit' => 'float'];
 
     public function journalEntry()
     {

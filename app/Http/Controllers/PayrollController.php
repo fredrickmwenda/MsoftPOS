@@ -2,31 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Account;
+use App\Models\Employee;
+use App\Models\Overtime;
+use App\Models\Payroll;
+use App\Models\PayrollItem;
+use App\Models\SalaryTemplate;
+use App\Models\Warehouse;
+use App\Models\MailSetting;
+use App\Mail\PayrollDetails;
+use App\Traits\MailInfo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use App\Models\Account;
-use App\Models\Employee;
-use App\Models\Payroll;
-use App\Models\PayrollTemplate;
-use App\Models\PayrollItem;
-use App\Models\PayrollItemMeta;
-use App\Models\PayrollPayment;
-use App\Models\Warehouse;
-use App\Mail\PayrollDetails;
-use App\Models\MailSetting;
-use App\Traits\MailInfo;
 
 class PayrollController extends Controller
 {
-    use MailInfo; 
+    use MailInfo;
 
-    /* =========================================================
-     |  INDEX — List all payrolls
-     +======================================================== */
-    public function index()
+    /* =====================================================
+     |  MANAGE SALARY — list
+     +==================================================== */
+    public function index(Request $request)
     {
         if (!Auth::user()->hasPermissionTo('payroll')) {
             return redirect()->back()->with('not_permitted', 'Access denied');
@@ -35,421 +34,396 @@ class PayrollController extends Controller
         $general_setting = DB::table('general_settings')->latest()->first();
         $isStaff = Auth::user()->roles->contains(fn($r) => $r->id > 2);
 
-        $lims_payroll_all = Payroll::with(['employee', 'account', 'items', 'payments'])
-            ->when($isStaff && $general_setting->staff_access === 'own', fn($q) => $q->where('user_id', Auth::id()))
+        $payrolls = Payroll::with(['employee', 'salaryTemplate', 'payments'])
+            ->when($isStaff && $general_setting->staff_access === 'own',
+                fn($q) => $q->where('user_id', Auth::id()))
+            ->when($request->filled('month'), function ($q) use ($request) {
+                [$y, $m] = explode('-', $request->month);
+                $q->where('year', $y)->where('month', $m);
+            })
             ->orderBy('id', 'desc')
             ->get();
 
-        $data = [
-            'lims_account_list'    => Account::where('is_active', true)->get(),
-            'lims_employee_list'   => Employee::where('is_active', true)->get(),
-            'lims_warehouse_list'  => Warehouse::where('is_active', true)->get(),
-            'payroll_templates'    => PayrollTemplate::with('taxes')->get(),
-            'lims_tax_list'        => \App\Models\Tax::all(),
-            'lims_payroll_all'     => $lims_payroll_all,
-            'general_setting'      => $general_setting,
-        ];
-
-        return view('backend.hrm.payroll.index', $data);
+        return view('backend.hrm.payroll.index', [
+            'lims_payroll_all'   => $payrolls,
+            'general_setting'    => $general_setting,
+            'lims_account_list'  => Account::where('is_active', true)->get(),
+            'lims_warehouse_list'=> Warehouse::where('is_active', true)->get(),
+        ]);
     }
 
-    /* =========================================================
-     |  STORE — Create single Payroll (with items + meta + payment)
-     +======================================================== */
-    public function store(Request $request)
+    /* =====================================================
+     |  GENERATE PAGE — employees with their assigned templates
+     +==================================================== */
+    public function generate(Request $request)
     {
-        $data = $this->normalizeRequest($request);
+        $month       = $request->input('month', now()->format('Y-m'));
+        [$year, $mon] = array_map('intval', explode('-', $month));
+        $warehouseId = (int) $request->input('warehouse_id', 0);
 
-        return DB::transaction(function () use ($data, $request) {
-            // 1) Create payroll
-            $payroll = Payroll::create($data);
+        $employees = Employee::with(['salaryTemplate.items'])
+            ->where('is_active', true)
+            ->when($warehouseId, fn($q) => $q->where('warehouse_id', $warehouseId))
+            ->orderBy('name')
+            ->get();
 
-            // 2) Snapshot items from template OR manual items
-            $this->syncItems($payroll, $request);
+        $existing = Payroll::where('year', $year)->where('month', $mon)
+            ->get()->keyBy('employee_id');
 
-            // 3) Recalculate totals
-            $payroll->recalculate();
+        // Overtime recorded during the month (auto-pulled into monthly payroll)
+        $overtimes = Overtime::where('year', $year)->where('month', $mon)
+            ->get()->groupBy('employee_id');
 
-            // 4) Record initial payment (if amount > 0)
-            if ((float) $payroll->amount > 0) {
-                PayrollPayment::create([
-                    'payroll_id'     => $payroll->id,
-                    'user_id'        => Auth::id(),
-                    'account_id'     => $data['account_id'] ?? null,
-                    'amount'         => $payroll->amount,
-                    'payment_method' => $data['paying_method'] ?? 0,
-                    'payment_date'   => $data['date'] ?? now(),
-                    'note'           => 'Initial payroll payment',
-                ]);
-            }
-
-            // 5) Mail (non-blocking)
-            $this->sendPayrollMail($payroll, $data);
-
-            return redirect('payroll')->with('message', 'Payroll created successfully');
-        });
+        return view('backend.hrm.payroll.generate', [
+            'employees'    => $employees,
+            'existing'     => $existing,
+            'overtimes'    => $overtimes,
+            'month'        => $month,
+            'year'         => $year,
+            'mon'          => $mon,
+            'warehouseId'  => $warehouseId,
+            'lims_warehouse_list' => Warehouse::where('is_active', true)->get(),
+            'lims_account_list'   => Account::where('is_active', true)->get(),
+        ]);
     }
 
-    /* =========================================================
-     |  UPDATE
-     +======================================================== */
-    public function update(Request $request, $id)
+    /* =====================================================
+     |  BULK GENERATE — server recalculates everything
+     +==================================================== */
+    public function generateStore(Request $request)
     {
-        $data = $this->normalizeRequest($request);
+        $request->validate([
+            'month'    => 'required|date_format:Y-m',
+            'payrolls' => 'required|array|min:1',
+        ]);
 
-        return DB::transaction(function () use ($id, $data, $request) {
-            $payroll = Payroll::findOrFail($data['payroll_id']);
-            $payroll->update($data);
+        [$year, $mon] = array_map('intval', explode('-', $request->month));
+        $accountId = $request->input('account_id') ?: Account::where('is_default', true)->value('id');
 
-            $this->syncItems($payroll, $request);
-            $payroll->recalculate();
+        $created = 0; $updated = 0;
 
-            return redirect('payroll')->with('message', 'Payroll updated successfully');
-        });
-    }
+        DB::transaction(function () use ($request, $year, $mon, $accountId, &$created, &$updated) {
+            foreach ($request->input('payrolls', []) as $employeeId => $row) {
+                if (empty($row['include'])) continue;
 
-    /* =========================================================
-     |  GENERATE CARDS — Bulk generate from template
-     +======================================================== */
-    public function generateCards(Request $request)
-    {
-        $data       = $request->all();
-        $employeeIds = $data['employee_ids'] ?? [];
-        $templateId = $data['payroll_template_id'] ?? null;
-
-        // Parse period
-        $rawMonth  = $data['month'];
-        $timestamp = strtotime($rawMonth . '-01');
-        $date      = date('Y-m-d', $timestamp);
-        $year      = (int) date('Y', $timestamp);
-        $month     = (int) date('n', $timestamp);
-
-        $account = Account::where('is_default', true)->first();
-        $accountId = $account?->id;
-
-        $template = $templateId ? PayrollTemplate::find($templateId) : null;
-        $templateItems = $template ? $template->getItemsCollection() : collect();
-
-        $created = 0;
-        $updated = 0;
-
-        DB::transaction(function () use (
-            $employeeIds, $templateId, $template, $templateItems,
-            $date, $year, $month, $accountId, &$created, &$updated
-        ) {
-            foreach ($employeeIds as $employeeId) {
-                $employee = Employee::find($employeeId);
+                $employee = Employee::with('salaryTemplate.items')->find($employeeId);
                 if (!$employee) continue;
 
-                // Calculate from template
-                $amount = 0;
-                foreach ($templateItems as $item) {
-                    $amt = (float) ($item['amount'] ?? 0);
-                    $amount += (($item['type'] ?? 'allowance') === 'allowance') ? $amt : -$amt;
-                }
-                $amount += $template ? (float) $template->amount_per_duration * (float) $template->work_duration : 0;
+                $template = $employee->salaryTemplate;
+                $payload  = $this->buildPayrollPayload($employee, $template, $row, $year, $mon, $accountId);
 
-                $payload = [
-                    'user_id'             => Auth::id(),
-                    'account_id'          => $accountId,
-                    'payroll_template_id' => $templateId,
-                    'employee_name'       => $employee->name,
-                    'work_duration'       => $template?->work_duration ?? 1,
-                    'duration_unit'       => $template?->duration_unit ?? 'day',
-                    'amount_per_duration' => $template?->amount_per_duration ?? 0,
-                    'total_duration_amount' => $template ? (float) $template->amount_per_duration * (float) $template->work_duration : 0,
-                    'gross_amount'        => $amount,
-                    'amount'              => $amount,
-                    'date'                => $date,
-                    'year'                => $year,
-                    'month'               => $month,
-                    'paying_method'       => 0,
-                    'created_at'          => now(),
-                ];
-
-                // updateOrCreate prevents duplicates for same employee+month+year
                 $payroll = Payroll::updateOrCreate(
-                    [
-                        'employee_id' => $employeeId,
-                        'year'        => $year,
-                        'month'       => $month,
-                    ],
+                    ['employee_id' => $employeeId, 'year' => $year, 'month' => $mon],
                     $payload
                 );
 
-                // New — assign pr-{unique} only on first creation
-                if ($payroll->wasRecentlyCreated || empty($payroll->reference_no)) {
-                    $payroll->reference_no = $this->generateUniqueReferenceNo($year, $month);
+                if (empty($payroll->reference_no)) {
+                    $payroll->reference_no = $this->generateUniqueReferenceNo($year, $mon);
                     $payroll->save();
                 }
 
-                // Sync template items into payroll_items (snapshot pattern)
-                $payroll->items()->delete();
-                PayrollItemMeta::where('payroll_id', $payroll->id)->delete();
-
-                foreach ($templateItems as $itemArray) {
-                    $payrollItem = PayrollItem::create([
-                        'payroll_id'   => $payroll->id,
-                        'name'         => $itemArray['name'] ?? 'Unnamed',
-                        'type'         => $itemArray['type'] ?? 'allowance',
-                        'amount_type'   => $itemArray['amount_type'] ?? 'fixed',
-                        'amount'       => $itemArray['amount'] ?? 0,
-                        'taxable'      => $itemArray['taxable'] ?? false,
-                        'description'  => $itemArray['description'] ?? null,
-                        'source'       => 'template',
-                    ]);
-                }
+                $this->syncItems($payroll, $template, $row);
+                $payroll->recalculate();
+                $payroll->refreshPaymentStatus();
 
                 $payroll->wasRecentlyCreated ? $created++ : $updated++;
             }
         });
 
-        return redirect('payroll')->with(
-            'message',
-            "Payroll cards generated — Created: {$created}, Updated: {$updated}"
-        );
+        return redirect()->route('payroll.index')
+            ->with('message', "Payroll generated — Created: {$created}, Updated: {$updated}");
     }
 
-    /* =========================================================
-     |  STORE TEMPLATE — Save template with JSON items + taxes
-     +======================================================== */
-    public function storeTemplate(Request $request)
+    /* =====================================================
+     |  SINGLE MANUAL PAYROLL (edge cases, one-off payments)
+     +==================================================== */
+    public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'                 => 'required|string|max:255',
-            'description'          => 'nullable|string',
-            'work_duration'        => 'nullable|numeric',
-            'duration_unit'        => 'nullable|in:hour,day,week,month',
-            'amount_per_duration'  => 'nullable|numeric',
-            'is_default'           => 'nullable|boolean',
-            'items'                => 'nullable|array',
-            'items.*.name'        => 'required_with:items|string',
-            'items.*.type'        => 'nullable|in:allowance,deduction',
-            'items.*.amount_type'  => 'nullable|in:fixed,percentage',
-            'items.*.amount'      => 'nullable|numeric',
-            'items.*.taxable'     => 'nullable|boolean',
-            'items.*.description' => 'nullable|string',
-            'tax_ids'              => 'nullable|array',
-            'tax_ids.*'            => 'exists:taxes,id',
+            'employee_id'   => 'required|exists:employees,id',
+            'month'         => 'required|date_format:Y-m',
+            'amount'        => 'required|numeric|min:0',
+            'paying_method' => 'required|in:0,1,2',
+            'account_id'    => 'nullable|exists:accounts,id',
+            'note'          => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($validated) {
-            // Handle is_default — only one default allowed
-            if (!empty($validated['is_default'])) {
-                PayrollTemplate::where('is_default', true)->update(['is_default' => false]);
+        [$year, $mon] = array_map('intval', explode('-', $validated['month']));
+
+        $payroll = DB::transaction(function () use ($validated, $year, $mon) {
+            $employee = Employee::with('salaryTemplate')->findOrFail($validated['employee_id']);
+
+            $payroll = Payroll::updateOrCreate(
+                ['employee_id' => $employee->id, 'year' => $year, 'month' => $mon],
+                [
+                    'user_id'             => Auth::id(),
+                    'account_id'          => $validated['account_id'] ?? Account::where('is_default', true)->value('id'),
+                    'employee_name'       => $employee->name,
+                    'salary_template_id'  => $employee->salary_template_id,
+                    'template_type'       => $employee->salaryTemplate?->type ?? SalaryTemplate::TYPE_MONTHLY,
+                    'basic_salary'        => $validated['amount'],
+                    'date'                => now()->toDateString(),
+                    'paying_method'       => $validated['paying_method'],
+                    'note'                => $validated['note'] ?? null,
+                ]
+            );
+
+            if (empty($payroll->reference_no)) {
+                $payroll->reference_no = $this->generateUniqueReferenceNo($year, $mon);
+                $payroll->save();
             }
 
-            $template = PayrollTemplate::create([
-                'name'                 => $validated['name'],
-                'description'          => $validated['description'] ?? null,
-                'work_duration'        => $validated['work_duration'] ?? 1,
-                'duration_unit'        => $validated['duration_unit'] ?? 'day',
-                'amount_per_duration'  => $validated['amount_per_duration'] ?? 0,
-                'items'                => $validated['items'] ?? [],
-                'is_default'           => $validated['is_default'] ?? false,
-            ]);
+            $payroll->recalculate();
+            $payroll->refreshPaymentStatus();
 
-            if (!empty($validated['tax_ids'])) {
-                $template->taxes()->sync($validated['tax_ids']);
-            }
-
-            $template->load('taxes');
-
-            return response()->json([
-                'success' => true,
-                'id'      => $template->id,
-                'name'    => $template->name,
-            ]);
+            return $payroll;
         });
+
+        $this->sendPayrollMail($payroll);
+
+        return redirect()->route('payroll.index')->with('message', 'Payroll created successfully');
     }
 
-    /* =========================================================
+    /* =====================================================
+     |  AJAX DETAILS (view modal)
+     +==================================================== */
+     /* =====================================================
+      |  AJAX DETAILS (view modal) — employee, user role,
+      |  template snapshot + full payroll breakdown
+      +==================================================== */
+     public function details($id)
+     {
+         $payroll = Payroll::with([
+                 'items',
+                 'payments',
+                 'employee.department',
+                 'employee.user.roles',   // ← the employee's login account + its roles
+                 'salaryTemplate',
+             ])->findOrFail($id);
+
+         $employee = $payroll->employee;
+         $user     = $employee?->user;
+
+         return response()->json([
+             'id'             => $payroll->id,
+             'reference_no'   => $payroll->reference_no,
+             'template_type'  => $payroll->template_type,
+             'year'           => (int) $payroll->year,
+             'month'          => (int) $payroll->month,
+             'payment_status' => $payroll->payment_status,
+             'paying_method'  => (int) $payroll->paying_method,
+             'note'           => $payroll->note,
+
+             /* ---- Employee + user role ---- */
+             'employee' => $employee ? [
+                 'name'       => $employee->name,
+                 'email'      => $employee->email,
+                 'phone'      => $employee->phone_number,
+                 'department' => $employee->department?->name,
+                 'roles'      => $user?->roles->pluck('name')->values()->all() ?? [],
+             ] : null,
+
+             /* ---- Assigned template ---- */
+             'salary_template' => $payroll->salaryTemplate ? [
+                 'id'   => $payroll->salaryTemplate->id,
+                 'name' => $payroll->salaryTemplate->name,
+                 'type' => $payroll->salaryTemplate->type,
+             ] : null,
+
+             /* ---- Snapshot breakdown ---- */
+             'basic_salary'    => (float) $payroll->basic_salary,
+             'overtime_hours'  => (float) $payroll->overtime_hours,
+             'overtime_rate'   => (float) $payroll->overtime_rate,
+             'overtime_amount' => (float) $payroll->overtime_amount,
+             'hourly_rate'     => (float) $payroll->hourly_rate,
+             'hours_per_day'   => (float) $payroll->hours_per_day,
+             'daily_rate'      => (float) $payroll->daily_rate,
+             'days_worked'     => (int)   $payroll->days_worked,
+             'gross_amount'    => (float) $payroll->gross_amount,
+             'total_allowance' => (float) $payroll->total_allowance,
+             'total_deduction' => (float) $payroll->total_deduction,
+             'amount'          => (float) $payroll->amount,   // net
+             'paid_amount'     => (float) $payroll->paid_amount,
+
+             /* ---- Line items & payments ---- */
+             'items'    => $payroll->items->map(fn ($i) => [
+                 'name' => $i->name, 'type' => $i->type,
+                 'amount' => (float) $i->amount, 'source' => $i->source,
+             ]),
+             'payments' => $payroll->payments->map(fn ($p) => [
+                 'payment_date'  => $p->payment_date?->format('d-m-Y'),
+                 'amount'        => (float) $p->amount,
+                 'paying_method' => (int) $p->paying_method,
+             ]),
+         ]);
+     }
+
+    /* =====================================================
+     |  UPDATE (period / method / note)
+     +==================================================== */
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'month'         => 'required|date_format:Y-m',
+            'paying_method' => 'required|in:0,1,2',
+            'note'          => 'nullable|string',
+        ]);
+
+        [$year, $mon] = array_map('intval', explode('-', $validated['month']));
+
+        $clash = Payroll::where('employee_id', Payroll::find($id)->employee_id)
+            ->where('year', $year)->where('month', $mon)->where('id', '!=', $id)->exists();
+
+        if ($clash) {
+            return redirect()->back()->with('not_permitted', 'A payroll already exists for that month.');
+        }
+
+        Payroll::findOrFail($id)->update([
+            'year' => $year, 'month' => $mon,
+            'paying_method' => $validated['paying_method'],
+            'note' => $validated['note'] ?? null,
+        ]);
+
+        return redirect()->route('payroll.index')->with('message', 'Payroll updated successfully');
+    }
+
+    /* =====================================================
      |  DELETE
-     +======================================================== */
+     +==================================================== */
     public function destroy($id)
     {
         $payroll = Payroll::findOrFail($id);
+
         DB::transaction(function () use ($payroll) {
             $payroll->items()->delete();
-            $payroll->metas()->delete();
             $payroll->payments()->delete();
             $payroll->delete();
         });
 
-        return redirect('payroll')->with('message', 'Payroll deleted successfully');
+        return redirect()->back()->with('message', 'Payroll deleted successfully');
     }
 
-    public function deleteBySelection(Request $request)
-    {
-        $ids = $request['payrollIdArray'] ?? [];
-        foreach ($ids as $id) {
-            $this->destroy($id);
-        }
-        return 'Payrolls deleted successfully';
-    }
-
-    /* =========================================================
-     |  AJAX — Get employees by warehouse
-     +======================================================== */
-    public function getEmployeesByWarehouse(Request $request)
-    {
-        $wid = $request->input('warehouse_id');
-        $employees = Employee::where('is_active', true)
-            ->when($wid && $wid != 0, fn($q) => $q->where('warehouse_id', $wid))
-            ->get(['id', 'name']);
-
-        return response()->json($employees);
-    }
-
-    /* =========================================================
-     |  AJAX — Get employee salary data
-     +======================================================== */
-    public function monthlyData(Request $request)
-    {
-        $employee = Employee::find($request->input('employee_id'));
-        if (!$employee) {
-            return response()->json(['salary' => 0, 'transactions' => 0, 'commission' => 0]);
-        }
-
-        return response()->json([
-            'salary'       => $employee->salary ?? $employee->basic_salary ?? 0,
-            'transactions' => 0,    // TODO: query previous loans/advances
-            'commission'   => 0,    // TODO: calculate from sales
-        ]);
-    }
-
-    /* =========================================================
+    /* =====================================================
      |  PRIVATE HELPERS
-     +======================================================== */
-
-    /**
-     * Normalize incoming request: dates, period splitting, defaults.
-     */
-    private function normalizeRequest(Request $request): array
+     +==================================================== */
+    private function buildPayrollPayload($employee, $template, array $row, int $year, int $mon, $accountId): array
     {
-        $data = $request->all();
+        $payload = [
+            'user_id'            => Auth::id(),
+            'account_id'         => $accountId,
+            'employee_name'      => $employee->name,
+            'salary_template_id' => $template?->id,
+            'template_type'      => $template?->type ?? SalaryTemplate::TYPE_MONTHLY,
+            'date'               => now()->toDateString(),
+            'year'               => $year,
+            'month'              => $mon,
+            'paying_method'      => $row['paying_method'] ?? 0,
+            'note'               => $row['note'] ?? null,
+            'basic_salary' => 0, 'overtime_hours' => 0, 'overtime_rate' => 0, 'overtime_amount' => 0,
+            'hourly_rate'  => 0, 'hours_per_day'  => 0, 'daily_rate'    => 0, 'days_worked'    => 0,
+        ];
 
-        // Date
-        $data['date'] = isset($data['created_at'])
-            ? date('Y-m-d', strtotime(str_replace('/', '-', $data['created_at'])))
-            : date('Y-m-d');
+        if ($template && $template->type === SalaryTemplate::TYPE_HOURLY) {
+            // HOURLY — paid on a daily basis
+            $days      = max(0, (int) ($row['days_worked'] ?? 0));
+            $dailyRate = $template->daily_rate; // hourly_rate × hours_per_day
 
-        // Split month input "YYYY-MM" into year/month/date
-        if (!empty($data['month'])) {
-            $ts = strtotime($data['month'] . '-01');
-            $data['date']  = date('Y-m-d', $ts);
-            $data['year']  = (int) date('Y', $ts);
-            $data['month'] = (int) date('n', $ts);
+            $payload += [
+                'hourly_rate'   => $template->hourly_rate,
+                'hours_per_day' => $template->hours_per_day,
+                'daily_rate'    => $dailyRate,
+                'days_worked'   => $days,
+                'gross_amount'  => $dailyRate * $days,
+            ];
+        } else {
+            // MONTHLY
+            $payload['basic_salary']   = $template
+                ? (float) $template->basic_salary
+                : (float) ($row['basic_salary'] ?? $employee->salary ?? 0);
+            $payload['overtime_hours'] = max(0, (float) ($row['overtime_hours'] ?? 0));
+            $payload['overtime_rate']  = $template
+                ? (float) $template->overtime_rate
+                : (float) ($row['overtime_rate'] ?? 0);
         }
 
-        // Reference number
-        $data['reference_no'] ??= 'payroll-' . date('Ymd') . '-' . date('his');
-        $data['user_id']      ??= Auth::id();
-
-        return $data;
+        return $payload;
     }
 
-    /**
-     * Sync payroll items + meta from request payload.
-     * If a template is selected, optionally clone template items too.
-     */
-    private function syncItems(Payroll $payroll, Request $request): void
+    private function syncItems(Payroll $payroll, $template, array $row): void
     {
-        $data = $request->all();
-
-        // Wipe existing items + meta (full sync)
         $payroll->items()->delete();
-        PayrollItemMeta::where('payroll_id', $payroll->id)->delete();
 
-        // 1) If a template was selected, snapshot template items first
-        if (!empty($data['payroll_template_id'])) {
-            $template = PayrollTemplate::find($data['payroll_template_id']);
-            if ($template) {
-                foreach ($template->getItemsCollection() as $tplItem) {
-                    $payrollItem = PayrollItem::create([
-                        'payroll_id'   => $payroll->id,
-                        'name'         => $tplItem['name'] ?? 'Template item',
-                        'type'         => $tplItem['type'] ?? 'allowance',
-                        'amount_type'   => $tplItem['amount_type'] ?? 'fixed',
-                        'amount'       => $tplItem['amount'] ?? 0,
-                        'taxable'      => $tplItem['taxable'] ?? false,
-                        'description'  => $tplItem['description'] ?? null,
-                        'source'       => 'template',
-                    ]);
-                }
+        // Snapshot template allowances/deductions (monthly only — hourly has none)
+        if ($template && $template->type === SalaryTemplate::TYPE_MONTHLY) {
+            foreach ($template->items as $item) {
+                PayrollItem::create([
+                    'payroll_id' => $payroll->id,
+                    'name'       => $item->name,
+                    'type'       => $item->type,
+                    'amount'     => $item->amount, // fixed
+                    'source'     => 'template',
+                ]);
+            }
+
+            // Auto-attach recorded overtime (manual input overrides)
+            $otHours = isset($row['overtime_hours'])
+                ? max(0, (float) $row['overtime_hours'])
+                : (float) Overtime::where('employee_id', $payroll->employee_id)
+                    ->where('year', $payroll->year)->where('month', $payroll->month)->sum('hours');
+
+            if ($otHours > 0 && (float) $payroll->overtime_rate > 0) {
+                PayrollItem::create([
+                    'payroll_id' => $payroll->id,
+                    'name'       => 'Overtime',
+                    'type'       => 'overtime',
+                    'amount'     => $otHours * (float) $payroll->overtime_rate,
+                    'source'     => 'overtime',
+                ]);
             }
         }
 
-        // 2) Add manual items from the form (overtime, bonus, etc.)
-        if (!empty($data['items']) && is_array($data['items'])) {
-            foreach ($data['items'] as $item) {
-                $payrollItem = PayrollItem::create([
-                    'payroll_id'   => $payroll->id,
-                    'name'         => $item['name'] ?? ($item['label'] ?? null),
-                    'type'         => $item['type'] ?? 'allowance',
-                    'amount_type'   => $item['amount_type'] ?? ($item['amountType'] ?? 'fixed'),
-                    'amount'       => $item['amount'] ?? 0,
-                    'taxable'      => !empty($item['taxable']),
-                    'description'  => $item['description'] ?? null,
-                    'meta'         => $item['meta'] ?? null,
-                    'source'       => 'manual',
-                ]);
-
-                // Sub-meta (e.g., tax bracket tiers)
-                if (!empty($item['meta']) && is_array($item['meta'])) {
-                    foreach ($item['meta'] as $meta) {
-                        PayrollItemMeta::create([
-                            'payroll_id'      => $payroll->id,
-                            'payroll_item_id' => $payrollItem->id,
-                            'name'            => $meta['name'] ?? null,
-                            'type'            => $meta['type'] ?? 'tax',
-                            'amount_type'     => $meta['amount_type'] ?? 'percentage',
-                            'percentage'      => $meta['percentage'] ?? null,
-                            'amount'          => $meta['amount'] ?? 0,
-                        ]);
-                    }
-                }
-            }
+        // Manual ad-hoc items from the form
+        foreach ($row['items'] ?? [] as $item) {
+            if (trim((string)($item['name'] ?? '')) === '' || !isset($item['amount'])) continue;
+            PayrollItem::create([
+                'payroll_id' => $payroll->id,
+                'name'       => $item['name'],
+                'type'       => in_array($item['type'] ?? '', ['allowance', 'deduction']) ? $item['type'] : 'allowance',
+                'amount'     => (float) $item['amount'],
+                'source'     => 'manual',
+            ]);
         }
     }
 
-    /**
-     * Send payroll email (silently fails if mail not configured).
-     */
-    private function sendPayrollMail(Payroll $payroll, array $data): void
+    private function sendPayrollMail(Payroll $payroll): void
     {
         try {
-            $employee = Employee::find($payroll->employee_id);
-            if (!$employee) return;
-
-            $mailData = [
-                'reference_no' => $payroll->reference_no,
-                'amount'       => $payroll->amount,
-                'name'          => $employee->name,
-                'email'         => $employee->email,
-                'currency'      => config('currency'),
-            ];
+            $employee = $payroll->employee;
+            if (!$employee || !$employee->email) return;
 
             $mailSetting = MailSetting::latest()->first();
-            if ($mailSetting) {
-                $this->setMailInfo($mailSetting);
-                Mail::to($mailData['email'])->send(new PayrollDetails($mailData));
-            }
+            if (!$mailSetting) return;
+
+            $this->setMailInfo($mailSetting);
+            Mail::to($employee->email)->send(new PayrollDetails([
+                'reference_no' => $payroll->reference_no,
+                'amount'       => $payroll->amount,
+                'name'         => $employee->name,
+                'email'        => $employee->email,
+                'currency'     => config('currency'),
+            ]));
         } catch (\Exception $e) {
-            // Silent fail — payroll is saved, mail is best-effort
+            // best-effort
         }
     }
-
 
     private function generateUniqueReferenceNo(int $year, int $month): string
     {
-        $prefix = 'pr-' . $year . str_pad($month, 2, '0', STR_PAD_LEFT);
+        $prefix = 'payr-' . $year . str_pad($month, 2, '0', STR_PAD_LEFT);
 
         do {
-            $code   = strtoupper(Str::random(6));
-            $refNo  = $prefix . '-' . $code;
-            $exists = Payroll::where('reference_no', $refNo)->exists();
-        } while ($exists);
+            $refNo = $prefix . '-' . strtoupper(Str::random(6));
+        } while (Payroll::where('reference_no', $refNo)->exists());
 
         return $refNo;
     }

@@ -107,11 +107,14 @@
                                                         }
                                                         else
                                                             $product_variant_id = null;
+                                                        $quantity = (float) $product_sale->qty;
+                                                        $product_price = (float) $product_sale->net_unit_price
+                                                            + ((float) $product_sale->discount / max($quantity, 1));
                                                         if($product_data->tax_method == 1){
-                                                            $product_price = $product_sale->net_unit_price + ($product_sale->discount / $product_sale->qty);
+                                                            $product_price = $product_sale->net_unit_price + ($product_sale->discount / max($quantity, 1));
                                                         }
                                                         elseif ($product_data->tax_method == 2) {
-                                                            $product_price =($product_sale->total / $product_sale->qty) + ($product_sale->discount / $product_sale->qty);
+                                                            $product_price = ($product_sale->total / max($quantity, 1)) + ($product_sale->discount / max($quantity, 1));
                                                         }
 
                                                         $tax = DB::table('taxes')->where('rate',$product_sale->tax_rate)->first();

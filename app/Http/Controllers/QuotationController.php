@@ -66,7 +66,7 @@ class QuotationController extends Controller
 
             $lims_warehouse_list = Warehouse::where('is_active', true)->get();
 
-            
+
 
             if($this->isStaff() && config('staff_access') == 'own')
                 $lims_quotation_all = Quotation::with('biller', 'customer', 'supplier', 'user')->orderBy('id', 'desc')->where('user_id', Auth::id())->get();
@@ -268,6 +268,10 @@ class QuotationController extends Controller
                 $nestedData['options'] .= '<li>
                         <a href="'.route('quotation.create_purchase', $quotation->id).'" class="btn btn-link"><i class="fa fa-shopping-basket"></i> '.trans('file.Create Purchase').'</a>
                         </li>';
+                $nestedData['options'] .= '<li>
+                        <a href="'.route('quotation.generate_proforma', $quotation->id).'" class="btn btn-link"><i class="fa fa-file"></i> '.trans('file.Generate Proforma').'</a>
+                        </li>';
+
                 if(in_array("quotes-delete", $request['all_permission']))
                     $nestedData['options'] .= \Form::open(["route" => ["quotations.destroy", $quotation->id], "method" => "DELETE"] ).'
                             <li>
@@ -277,32 +281,32 @@ class QuotationController extends Controller
                     </div>';
 
                 // data for quotation details by one click
-                $nestedData['quotation'] = array( 
-                    '[ "'.date(config('date_format'), strtotime($quotation->created_at->toDateString())).'"', 
-                    ' "'.$quotation->reference_no.'"', 
-                    ' "'.$status.'"',  
-                    ' "'.$quotation->biller->name.'"', 
-                    ' "'.$quotation->biller->company_name.'"', 
-                    ' "'.$quotation->biller->email.'"', 
-                    ' "'.$quotation->biller->phone_number.'"', 
-                    ' "'.$quotation->biller->address.'"', 
-                    ' "'.$quotation->biller->city.'"', 
-                    ' "'.$quotation->customer->name.'"', 
-                    ' "'.$quotation->customer->phone_number.'"', 
-                    ' "'.$quotation->customer->address.'"', 
-                    ' "'.$quotation->customer->city.'"', 
-                    ' "'.$quotation->id.'"', 
-                    ' "'.$quotation->total_tax.'"', 
-                    ' "'.$quotation->total_discount.'"', 
-                    ' "'.$quotation->total_price.'"', 
-                    ' "'.$quotation->order_tax.'"', 
-                    ' "'.$quotation->order_tax_rate.'"', 
-                    ' "'.$quotation->order_discount.'"', 
-                    ' "'.$quotation->shipping_cost.'"', 
-                    ' "'.$quotation->grand_total.'"', 
-                    ' "'.preg_replace('/\s+/S', " ", $quotation->note).'"', 
-                    ' "'.$quotation->user->name.'"', 
-                    ' "'.$quotation->user->email.'"', 
+                $nestedData['quotation'] = array(
+                    '[ "'.date(config('date_format'), strtotime($quotation->created_at->toDateString())).'"',
+                    ' "'.$quotation->reference_no.'"',
+                    ' "'.$status.'"',
+                    ' "'.$quotation->biller->name.'"',
+                    ' "'.$quotation->biller->company_name.'"',
+                    ' "'.$quotation->biller->email.'"',
+                    ' "'.$quotation->biller->phone_number.'"',
+                    ' "'.$quotation->biller->address.'"',
+                    ' "'.$quotation->biller->city.'"',
+                    ' "'.$quotation->customer->name.'"',
+                    ' "'.$quotation->customer->phone_number.'"',
+                    ' "'.$quotation->customer->address.'"',
+                    ' "'.$quotation->customer->city.'"',
+                    ' "'.$quotation->id.'"',
+                    ' "'.$quotation->total_tax.'"',
+                    ' "'.$quotation->total_discount.'"',
+                    ' "'.$quotation->total_price.'"',
+                    ' "'.$quotation->order_tax.'"',
+                    ' "'.$quotation->order_tax_rate.'"',
+                    ' "'.$quotation->order_discount.'"',
+                    ' "'.$quotation->shipping_cost.'"',
+                    ' "'.$quotation->grand_total.'"',
+                    ' "'.preg_replace('/\s+/S', " ", $quotation->note).'"',
+                    ' "'.$quotation->user->name.'"',
+                    ' "'.$quotation->user->email.'"',
                     ' "'.$quotation->document.'"',
                     ' "'.$quotation->order_tax_names.'"' // Add order tax names at index 26
                 );
@@ -338,13 +342,13 @@ class QuotationController extends Controller
     {
         $data = $request->except('document');
         $data['user_id'] = Auth::id();
-        
+
         // Handle multiple order taxes
         if(isset($data['order_tax_ids']) && !empty($data['order_tax_ids'])) {
             // Calculate total order tax rate from multiple taxes
             $order_tax_ids = explode(',', $data['order_tax_ids']);
             $total_order_tax_rate = 0;
-            
+
             foreach($order_tax_ids as $tax_id) {
                 $tax = Tax::find($tax_id);
                 if($tax) {
@@ -352,7 +356,7 @@ class QuotationController extends Controller
                 }
             }
             $data['order_tax_rate'] = $total_order_tax_rate;
-            
+
             // Store order tax names if provided
             if(isset($data['order_tax_names'])) {
                 $data['order_tax_names'] = $data['order_tax_names'];
@@ -360,7 +364,7 @@ class QuotationController extends Controller
         } else {
             $data['order_tax_rate'] = 0;
         }
-        
+
         // Store order tax IDs
         $data['order_tax_ids'] = isset($data['order_tax_ids']) ? $data['order_tax_ids'] : null;
         $data['order_tax_names'] = isset($data['order_tax_names']) ? $data['order_tax_names'] : null;
@@ -389,10 +393,10 @@ class QuotationController extends Controller
             }
             $data['document'] = $documentName;
         }
-        
+
         $data['reference_no'] = 'qr-' . date("Ymd") . '-'. date("his");
         $lims_quotation_data = Quotation::create($data);
-        
+
         if($lims_quotation_data->quotation_status == 2){
             //collecting mail data
             $lims_customer_data = Customer::find($data['customer_id']);
@@ -406,7 +410,7 @@ class QuotationController extends Controller
             $mail_data['shipping_cost'] = $lims_quotation_data->shipping_cost;
             $mail_data['grand_total'] = $lims_quotation_data->grand_total;
         }
-        
+
         $product_id = $data['product_id'];
         $product_batch_id = $data['product_batch_id'];
         $product_code = $data['product_code'];
@@ -427,28 +431,28 @@ class QuotationController extends Controller
             }
             else
                 $sale_unit_id = 0;
-            
+
             if($sale_unit_id)
                 $mail_data['unit'][$i] = $lims_sale_unit_data->unit_code;
             else
                 $mail_data['unit'][$i] = '';
-            
+
             $lims_product_data = Product::find($id);
-            
+
             if($lims_product_data->is_variant) {
                 $lims_product_variant_data = ProductVariant::select('variant_id')->FindExactProductWithCode($id, $product_code[$i])->first();
                 $product_quotation['variant_id'] = $lims_product_variant_data->variant_id;
             }
             else
                 $product_quotation['variant_id'] = null;
-            
+
             if($product_quotation['variant_id']){
                 $variant_data = Variant::find($product_quotation['variant_id']);
                 $mail_data['products'][$i] = $lims_product_data->name . ' [' . $variant_data->name .']';
             }
             else
                 $mail_data['products'][$i] = $lims_product_data->name;
-            
+
             $product_quotation['quotation_id'] = $lims_quotation_data->id;
             $product_quotation['product_id'] = $id;
             $product_quotation['product_batch_id'] = $product_batch_id[$i];
@@ -456,19 +460,19 @@ class QuotationController extends Controller
             $product_quotation['sale_unit_id'] = $sale_unit_id;
             $product_quotation['net_unit_price'] = $net_unit_price[$i];
             $product_quotation['discount'] = $discount[$i];
-            
+
             // FIX: Handle empty tax_rate - set to 0 if empty
             $product_quotation['tax_rate'] = !empty($tax_rate[$i]) ? $tax_rate[$i] : 0;
-            
+
             // FIX: Handle empty tax_names - set to empty string if empty
             $product_quotation['tax_names'] = !empty($tax_names[$i]) ? $tax_names[$i] : '';
-            
+
             $product_quotation['tax'] = $tax[$i];
             $product_quotation['total'] = $mail_data['total'][$i] = $total[$i];
-            
+
             ProductQuotation::create($product_quotation);
         }
-        
+
         $message = 'Quotation created successfully';
         $mail_setting = MailSetting::latest()->first();
         if($lims_quotation_data->quotation_status == 2 && $mail_data['email'] && $mail_setting) {
@@ -637,7 +641,7 @@ class QuotationController extends Controller
             $product_qty[] = $product_warehouse->qty;
             $lims_product_data = Product::find($product_warehouse->product_id);
             $lims_product_variant_data = ProductVariant::select('item_code')->FindExactProduct($product_warehouse->product_id, $product_warehouse->variant_id)->first();
-            
+
             if($lims_product_variant_data) {
                 $product_code[] =  $lims_product_variant_data->item_code;
                 $product_name[] = $lims_product_data->name;
@@ -675,19 +679,19 @@ class QuotationController extends Controller
         }
 
         $product_data = [
-            $product_code, 
+            $product_code,
             $product_name,
-            $product_qty, 
-            $product_type, 
-            $product_id, 
-            $product_list, 
-            $qty_list, 
-            $product_price, 
-            $batch_no, 
-            $product_batch_id, 
+            $product_qty,
+            $product_type,
+            $product_id,
+            $product_list,
+            $qty_list,
+            $product_price,
+            $batch_no,
+            $product_batch_id,
             $product_shelf
         ];
-        
+
         return $product_data;
     }
 
@@ -778,14 +782,14 @@ class QuotationController extends Controller
         $product[] = $lims_product_data->promotion;
         $product[] = $lims_product_data->is_batch;
         $product[] = $lims_product_data->is_imei;
-        return $product; 
+        return $product;
     }
 
     public function productQuotationData($id)
     {
         $lims_product_quotation_data = ProductQuotation::where('quotation_id', $id)->get();
         $product_quotation = [];
-        
+
         foreach ($lims_product_quotation_data as $key => $product_quotation_data) {
             $product = Product::find($product_quotation_data->product_id);
             if($product_quotation_data->variant_id) {
@@ -806,7 +810,7 @@ class QuotationController extends Controller
             $product_quotation[4][$key] = $product_quotation_data->tax_rate;
             $product_quotation[5][$key] = $product_quotation_data->discount;
             $product_quotation[6][$key] = $product_quotation_data->total;
-            
+
             // Get tax names for the product
             $tax_names = 'No Tax';
             if(!empty($product_quotation_data->tax_names)) {
@@ -816,7 +820,7 @@ class QuotationController extends Controller
                 $tax_names = $product_quotation_data->tax_rate . '%';
             }
             $product_quotation[8][$key] = $tax_names;
-            
+
             if($product_quotation_data->product_batch_id) {
                 $product_batch_data = ProductBatch::select('batch_no')->find($product_quotation_data->product_batch_id);
                 $product_quotation[7][$key] = $product_batch_data->batch_no;
@@ -856,7 +860,7 @@ class QuotationController extends Controller
             // Calculate total order tax rate from multiple taxes
             $order_tax_ids = explode(',', $data['order_tax_ids']);
             $total_order_tax_rate = 0;
-            
+
             foreach($order_tax_ids as $tax_id) {
                 $tax = Tax::find($tax_id);
                 if($tax) {
@@ -864,7 +868,7 @@ class QuotationController extends Controller
                 }
             }
             $data['order_tax_rate'] = $total_order_tax_rate;
-            
+
             // Store order tax names if provided
             if(isset($data['order_tax_names'])) {
                 $data['order_tax_names'] = $data['order_tax_names'];
@@ -872,7 +876,7 @@ class QuotationController extends Controller
         } else {
             $data['order_tax_rate'] = 0;
         }
-        
+
         // Store order tax IDs
         $data['order_tax_ids'] = isset($data['order_tax_ids']) ? $data['order_tax_ids'] : null;
         $data['order_tax_names'] = isset($data['order_tax_names']) ? $data['order_tax_names'] : null;
@@ -903,12 +907,12 @@ class QuotationController extends Controller
             }
             $data['document'] = $documentName;
         }
-        
+
         $lims_product_quotation_data = ProductQuotation::where('quotation_id', $id)->get();
-        
+
         //update quotation table
         $lims_quotation_data->update($data);
-        
+
         if($lims_quotation_data->quotation_status == 2){
             //collecting mail data
             $lims_customer_data = Customer::find($data['customer_id']);
@@ -922,7 +926,7 @@ class QuotationController extends Controller
             $mail_data['shipping_cost'] = $data['shipping_cost'];
             $mail_data['grand_total'] = $data['grand_total'];
         }
-        
+
         $product_id = $data['product_id'];
         $product_batch_id = $data['product_batch_id'];
         $product_variant_id = $data['product_variant_id'];
@@ -958,13 +962,13 @@ class QuotationController extends Controller
             }
             else
                 $sale_unit_id = 0;
-            
+
             $lims_product_data = Product::select('id', 'name', 'is_variant')->find($pro_id);
             if($sale_unit_id)
                 $mail_data['unit'][$i] = $lims_sale_unit_data->unit_code;
             else
                 $mail_data['unit'][$i] = '';
-            
+
             $input['quotation_id'] = $id;
             $input['product_id'] = $pro_id;
             $input['product_batch_id'] = $product_batch_id[$i];
@@ -976,7 +980,7 @@ class QuotationController extends Controller
             $input['tax_names'] = $tax_names[$i] ?? ''; // Comma-separated tax names
             $input['tax'] = $tax[$i];
             $input['total'] = $mail_data['total'][$i] = $total[$i];
-            
+
             $flag = 1;
             if($lims_product_data->is_variant) {
                 $lims_product_variant_data = ProductVariant::select('variant_id')->where('id', $product_variant_id[$i])->first();
@@ -1022,7 +1026,7 @@ class QuotationController extends Controller
         }
         return redirect('quotations')->with('message', $message);
     }
-    
+
     public function createSale($id)
     {
         $lims_customer_list = Customer::where('is_active', true)->get();
@@ -1052,6 +1056,63 @@ class QuotationController extends Controller
     {
         return Product::ActiveStandard()->select('id', 'name', 'code', 'price', 'qty', 'shelf')
                 ->whereNull('is_variant')->get();
+    }
+
+
+    public function generateProforma($id)
+    {
+        $lims_quotation_data = Quotation::find($id);
+        $lims_product_quotation_data = ProductQuotation::where('quotation_id', $id)->get();
+
+        $product_data = [];
+        foreach ($lims_product_quotation_data as $key => $product_quotation) {
+            $product = Product::find($product_quotation->product_id);
+            if ($product_quotation->variant_id) {
+                $variant = ProductVariant::select('item_code')
+                    ->FindExactProduct($product_quotation->product_id, $product_quotation->variant_id)->first();
+                if ($variant) $product->code = $variant->item_code;
+            }
+
+            $unit = '';
+            if ($product_quotation->sale_unit_id) {
+                $unit_data = Unit::find($product_quotation->sale_unit_id);
+                $unit = $unit_data->unit_code;
+            }
+
+            $batch_no = 'N/A';
+            if ($product_quotation->product_batch_id) {
+                $batch = ProductBatch::select('batch_no')->find($product_quotation->product_batch_id);
+                if ($batch) $batch_no = $batch->batch_no;
+            }
+
+            $product_data[$key] = [
+                'name'     => $product->name . ' [' . $product->code . ']',
+                'qty'      => $product_quotation->qty,
+                'unit'     => $unit,
+                'price'    => $product_quotation->net_unit_price,
+                'tax'      => $product_quotation->tax,
+                'tax_rate' => $product_quotation->tax_rate,
+                'discount' => $product_quotation->discount,
+                'total'    => $product_quotation->total,
+                'batch_no' => $batch_no,
+            ];
+        }
+
+        $valid_until = date('Y-m-d', strtotime($lims_quotation_data->created_at . ' +30 days'));
+
+        // Amount in words
+        $amount_in_words = '';
+        try {
+            $numberToWords = new NumberToWords();
+            $transformer = $numberToWords->getNumberTransformer('en');
+            $amount_in_words = ucfirst($transformer->toWords((int) $lims_quotation_data->grand_total));
+        } catch (\Exception $e) {
+            $amount_in_words = '';
+        }
+
+        return view('backend.quotation.proforma', compact(
+            'lims_quotation_data', 'product_data', 'valid_until', 'amount_in_words'
+        ));
     }
 
     public function productWithVariant()

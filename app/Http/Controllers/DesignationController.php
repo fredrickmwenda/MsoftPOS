@@ -11,13 +11,13 @@ class DesignationController extends Controller
 {
     public function index()
     {
- 
+
         if(Auth::user()->hasPermissionTo('department')) {
             $lims_designation_all = Designation::where('is_active', true)->get();
             return view('backend.hrm.designation.index', compact('lims_designation_all'));
         }
         else
-            return redirect()->back()->with('not_permitted', __('db.Sorry! You are not allowed to access this module'));
+            return redirect()->back()->with('not_permitted', __('file.Sorry! You are not allowed to access this module'));
     }
 
     public function store(Request $request)
@@ -37,7 +37,7 @@ class DesignationController extends Controller
         if($request->ajax()){
             return response()->json($designation);
         }
-        return redirect('designations')->with('message', __('db.Designation created successfully'));
+        return redirect('designations')->with('message', __('file.Designation created successfully'));
     }
 
     public function update(Request $request, $id)
@@ -54,7 +54,7 @@ class DesignationController extends Controller
         $data = $request->all();
         $lims_designation_data = Designation::find($data['designation_id']);
         $lims_designation_data->update($data);
-        return redirect('designations')->with('message', __('db.Designation updated successfully'));
+        return redirect('designations')->with('message', __('file.Designation updated successfully'));
     }
 
     public function deleteBySelection(Request $request)

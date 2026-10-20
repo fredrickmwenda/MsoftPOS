@@ -1,4 +1,4 @@
-@extends('backend.layout.main') 
+@extends('backend.layout.main')
 @section('content')
 <div class="container-fluid mb-3"><a href="{{ route('report.dashboard') }}" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-left"></i> Back to Reports Dashboard</a></div>
 @if(empty($report_rows))
@@ -33,6 +33,13 @@
 .report-summary-card--amount .report-summary-card__value { color: #0d6efd; }
 .report-summary-card--qty .report-summary-card__value { color: #198754; }
 .report-summary-card--stock .report-summary-card__value { color: #6f42c1; }
+
+.report-summary-card--profit .report-summary-card__value { color: #fd7e14; }
+.report-summary-card__sub {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6c757d;
+}
 </style>
 @endpush
 
@@ -46,27 +53,37 @@
             {{-- Exclusive totals (same as footer) in small cards --}}
             <div class="report-summary-cards px-3 pt-3">
                 <div class="row no-gutters">
-                    <div class="col-md-4 col-6 mb-2 pr-1">
+                    <div class="col-md-3 col-6 mb-2 pr-1">
                         <div class="report-summary-card report-summary-card--amount">
                             <span class="report-summary-card__label">{{trans('file.Sold Amount')}}</span>
                             <span class="report-summary-card__value" id="report-total-sold-amount">0</span>
                         </div>
                     </div>
-                    <div class="col-md-4 col-6 mb-2 pl-1 pr-1">
+                    <div class="col-md-3 col-6 mb-2 pl-1 pr-1">
                         <div class="report-summary-card report-summary-card--qty">
                             <span class="report-summary-card__label">{{trans('file.Sold Qty')}}</span>
                             <span class="report-summary-card__value" id="report-total-sold-qty">0</span>
                         </div>
                     </div>
-                    <div class="col-md-4 col-6 mb-2 pl-1">
+                    <div class="col-md-3 col-6 mb-2 pl-1 pr-1">
                         <div class="report-summary-card report-summary-card--stock">
                             <span class="report-summary-card__label">{{trans('file.In Stock')}}</span>
                             <span class="report-summary-card__value" id="report-total-in-stock">0</span>
                         </div>
                     </div>
+                    <div class="col-md-3 col-6 mb-2 pl-1">
+                        <div class="report-summary-card report-summary-card--profit">
+                            <span class="report-summary-card__label">Net Profit Margin</span>
+                            <span class="report-summary-card__value" id="report-net-profit-margin">{{ number_format($net_profit_margin, 2) }}%</span>
+                            <span class="report-summary-card__sub">
+                                Profit {{ number_format($net_profit, $general_setting->decimal ?? 2) }} &middot;
+                                COGS {{ number_format($total_item_cost, $general_setting->decimal ?? 2) }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
- 
+
             {!! Form::open(['route' => 'report.sale', 'method' => 'post']) !!}
             {{-- Ensures percentage_filter is always submitted when filtering (same as Sale index) --}}
             <input type="hidden" name="percentage_filter" value="{{ isset($percentage_filter) ? $percentage_filter : '' }}" />
@@ -77,9 +94,9 @@
                     <div class="form-group">
                         <label class="control-label"><strong>Start Date</strong> &nbsp;</label>
                         <div class="">
-                            <input 
-                                type="date" 
-                                class="form-control" 
+                            <input
+                                type="date"
+                                class="form-control"
                                 name="start_date"
                                 value="{{ !empty($start_date) ? $start_date : '' }}"
                             />
@@ -90,9 +107,9 @@
                     <div class="form-group">
                         <label class="control-label"><strong>End Date</strong> &nbsp;</label>
                         <div class="">
-                            <input 
-                                type="date" 
-                                class="form-control" 
+                            <input
+                                type="date"
+                                class="form-control"
                                 name="end_date"
                                 value="{{ !empty($end_date) ? $end_date : '' }}"
                             />
@@ -206,7 +223,7 @@
                     </div>
                 </div>
             </div>
-            
+
 
             {!! Form::close() !!}
         </div>
@@ -422,7 +439,7 @@ function datatable_sum(dt_selector, is_calling_first) {
         $('input[name="end_date"]').val(end.format('YYYY-MM-DD'));
     }
 
-    
+
 
     updateDateFields(start, end);
 });

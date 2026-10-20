@@ -31,6 +31,12 @@ class CustomerController extends Controller
     use \App\Traits\CacheForget;
     use \App\Traits\MailInfo;
 
+
+    public function __construct(public \App\Services\AccountingService $accountingService)
+    {
+    }
+
+
     public function customer_status($whatsapp_number){
         $check=DB::table('black_list_customers')->join('customers','customers.id','=','black_list_customers.customer_id')->where('whatsapp_number','LIKE','%'.$whatsapp_number.'%')->get();
 
@@ -51,7 +57,7 @@ class CustomerController extends Controller
 
     public function index()
     {
-        
+
         if(Auth::user()->hasPermissionTo('customers-index')){
             $all_permission = Auth::user()->getAllPermissions();
 
@@ -100,7 +106,7 @@ class CustomerController extends Controller
                 $paid_amount = $total_paid_amount;
                 $payment_status = 2;
             }
-            Payment::create([
+            $lims_payment_data = Payment::create([
                 'payment_reference' => 'spr-'.date("Ymd").'-'.date("his"),
                 'sale_id' => $sale_data->id,
                 'user_id' => Auth::id(),
@@ -115,13 +121,23 @@ class CustomerController extends Controller
             $sale_data->payment_status = $payment_status;
             $sale_data->save();
             $total_paid_amount -= $paid_amount;
+
+            $accountingService = app(\App\Services\AccountingService::class);
+            $result = $accountingService->recordPayment($lims_payment_data);
+            if (!$result->success) {
+                \Log::error('Accounting failed for Due Clearance Payment', ['payment_id' => $lims_payment_data->id, 'error' => $result->error]);
+                if (\Schema::hasColumn($lims_payment_data->getTable(), 'accounting_status')) {
+                $lims_payment_data->accounting_status = 'failed';
+                    $lims_payment_data->save();
+                }
+            }
         }
         return redirect()->back()->with('message', 'Due cleared successfully');
     }
 
     public function create()
     {
-        
+
         if(Auth::user()->hasPermissionTo('customers-add')){
             $lims_customer_group_all = CustomerGroup::where('is_active',true)->get();
             $custom_fields = CustomField::where('belongs_to', 'customer')->get();
@@ -289,21 +305,21 @@ class CustomerController extends Controller
 
         ]);
 
-     
-    
+
+
         $customer_data = $request->all();
         //return $customer_data;
         $customer_data['is_active'] = true;
         $prefixMessage = 'Customer';
 
         $customer_data['name'] = $customer_data['customer_name'];
- 
+
 
         $fullMessage = $prefixMessage.' created successfully!';
         // $mail_setting = MailSetting::latest()->first();
         // $message = $this->mailAction($customer_data, $mail_setting, $request, $fullMessage);
 
-    
+
 
         $lims_customer_data = Customer::create($customer_data);
         //inserting data for custom fields
@@ -332,7 +348,7 @@ class CustomerController extends Controller
 
     public function edit($id)
     {
-        
+
         if(Auth::user()->hasPermissionTo('customers-edit')){
             $lims_customer_data = Customer::find($id);
             $lims_customer_group_all = CustomerGroup::where('is_active',true)->get();
@@ -441,7 +457,7 @@ class CustomerController extends Controller
 
     public function importCustomer(Request $request)
     {
-        
+
         if(Auth::user()->hasPermissionTo('customers-add')){
             $upload=$request->file('file');
             $ext = pathinfo($upload->getClientOriginalName(), PATHINFO_EXTENSION);
@@ -539,7 +555,20 @@ class CustomerController extends Controller
         $lims_customer_data = Customer::find($data['customer_id']);
         $lims_customer_data->deposit += $data['amount'];
         $lims_customer_data->save();
-        Deposit::create($data);
+        $deposit = Deposit::create($data);
+
+        // === ACCOUNTING ENGINE PHASE 2E: DEPOSIT ===
+        $accountingService = app(\App\Services\AccountingService::class);
+        $result = $accountingService->recordDeposit($deposit, 'deposit_created');
+        if (!$result->success) {
+            \Log::error('Accounting failed for Deposit', ['deposit_id' => $deposit->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($deposit->getTable(), 'accounting_status')) {
+                $deposit->accounting_status = 'failed';
+                $deposit->save();
+            }
+        }
+        // ===========================================
+
         $message = 'Data inserted successfully';
         $mail_setting = MailSetting::latest()->first();
 
@@ -570,6 +599,17 @@ class CustomerController extends Controller
         $lims_customer_data->deposit += $amount_dif;
         $lims_customer_data->save();
         $lims_deposit_data->update($data);
+
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($lims_deposit_data), $lims_deposit_data->id, '_reversed');
+        $result = $accountingService->recordDeposit($lims_deposit_data, 'deposit_updated');
+        if (!$result->success) {
+            \Log::error('Accounting failed for Deposit Update', ['deposit_id' => $lims_deposit_data->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($lims_deposit_data->getTable(), 'accounting_status')) {
+                $lims_deposit_data->accounting_status = 'failed';
+                $lims_deposit_data->save();
+            }
+        }
         return redirect('customer')->with('create_message', 'Data updated successfully');
     }
 
@@ -580,6 +620,9 @@ class CustomerController extends Controller
         $lims_customer_data = Customer::find($lims_deposit_data->customer_id);
         $lims_customer_data->deposit -= $lims_deposit_data->amount;
         $lims_customer_data->save();
+
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($lims_deposit_data), $lims_deposit_data->id, '_deleted');
         $lims_deposit_data->delete();
         return redirect('customer')->with('not_permitted', 'Data deleted successfully');
     }

@@ -24,4 +24,9 @@ class JournalEntry extends Model
     {
         return $this->morphTo();
     }
+
+    public function relatedEntry() { return $this->belongsTo(self::class, 'related_journal_entry_id'); }
+
+
+
 }

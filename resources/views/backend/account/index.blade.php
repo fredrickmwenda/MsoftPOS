@@ -56,6 +56,12 @@
                             </button>
                             <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
                                 <li><button type="button" data-id="{{$account->id}}" data-account_no="{{$account->account_no}}" data-name="{{$account->name}}"  data-initial_balance="{{$account->initial_balance}}" data-note="{{$account->note}}" class="edit-btn btn btn-link" data-toggle="modal" data-target="#editModal"><i class="dripicons-document-edit"></i> {{trans('file.edit')}}</button></li>
+                                <li>
+                                    <a href="{{ route('accounts.sync-balance', $account->id) }}"
+                                       onclick="return confirm('Rebuild this account balance from the ledger?')">
+                                        <i class="dripicons-loop"></i> Sync Balance
+                                    </a>
+                                </li>
                                 <li class="divider"></li>
                                 {{ Form::open(['route' => ['accounts.destroy', $account->id], 'method' => 'DELETE'] ) }}
                                 <li>

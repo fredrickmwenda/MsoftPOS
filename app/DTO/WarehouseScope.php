@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /**
  * Value object representing warehouse access scope derived from AssistantContextData.
  */
-final readonly class WarehouseScope
+final class WarehouseScope
 {
     /**
      * @param bool $isRestricted If false, access is unrestricted/admin. If true, restricted to $warehouseIds.
@@ -15,9 +15,9 @@ final readonly class WarehouseScope
      * @param int|null $ownUserId If present, restricts access to rows owned by this user (staff_access = 'own').
      */
     public function __construct(
-        public bool $isRestricted,
-        public array $warehouseIds = [],
-        public ?int $ownUserId = null
+        public readonly bool $isRestricted,
+        public readonly array $warehouseIds = [],
+        public readonly ?int $ownUserId = null
     ) {}
 
     /**

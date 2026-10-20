@@ -62,6 +62,16 @@ class GiftCardController extends Controller
         $data['created_by'] = Auth::id();
         $data['expense'] = 0;
         GiftCard::create($data);
+
+        $accountingService = app(\App\Services\AccountingService::class);
+        $result = $accountingService->recordGiftCardSale($giftCard, 'gift_card_created');
+        if (!$result->success) {
+            \Log::error('Accounting failed for GiftCard creation', ['gift_card_id' => $giftCard->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($giftCard->getTable(), 'accounting_status')) {
+                $giftCard->accounting_status = 'failed';
+                $giftCard->save();
+            }
+        }
         $message = 'GiftCard created successfully';
         if($data['user_id']){
             $lims_user_data = User::find($data['user_id']);
@@ -149,6 +159,16 @@ class GiftCardController extends Controller
         $lims_gift_card_data->amount += $data['amount'];
         $lims_gift_card_data->save();
         GiftCardRecharge::create($data);
+
+        $accountingService = app(\App\Services\AccountingService::class);
+        $result = $accountingService->recordGiftCardSale($lims_gift_card_data, 'gift_card_recharged');
+        if (!$result->success) {
+            \Log::error('Accounting failed for GiftCard recharge', ['gift_card_id' => $lims_gift_card_data->id, 'error' => $result->error]);
+            if (\Schema::hasColumn($lims_gift_card_data->getTable(), 'accounting_status')) {
+                $lims_gift_card_data->accounting_status = 'failed';
+                $lims_gift_card_data->save();
+            }
+        }
         $message = 'GiftCard recharged successfully';
         if($lims_customer_data->email){
             $data['email'] = $lims_customer_data->email;
@@ -171,10 +191,13 @@ class GiftCardController extends Controller
     public function deleteBySelection(Request $request)
     {
         $gift_card_id = $request['gift_cardIdArray'];
+        $accountingService = app(\App\Services\AccountingService::class);
         foreach ($gift_card_id as $id) {
             $lims_gift_card_data = GiftCard::find($id);
             $lims_gift_card_data->is_active = false;
             $lims_gift_card_data->save();
+
+            $accountingService->reverseTransaction(get_class($lims_gift_card_data), $lims_gift_card_data->id, '_deleted');
         }
         return 'Gift Card deleted successfully!';
     }
@@ -184,6 +207,9 @@ class GiftCardController extends Controller
         $lims_gift_card_data = GiftCard::find($id);
         $lims_gift_card_data->is_active = false;
         $lims_gift_card_data->save();
+        $accountingService = app(\App\Services\AccountingService::class);
+        $accountingService->reverseTransaction(get_class($lims_gift_card_data), $lims_gift_card_data->id, '_deleted');
+
         return redirect('gift_cards')->with('not_permitted', 'Data deleted successfully');
     }
 }
