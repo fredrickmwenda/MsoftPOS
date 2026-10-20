@@ -79,7 +79,17 @@ class Sale extends Model
 
     public function payments()
     {
-        return $this->hasMany('App\Models\Payment');
+        return $this->hasMany('App\\Models\\Payment');
+    }
+
+    public function delivery()
+    {
+        return $this->hasOne(Delivery::class, 'sale_id', 'id');
+    }
+
+    public function productSales()
+    {
+        return $this->hasMany('App\\Models\\Product_Sale', 'sale_id', 'id');
     }
 
     public function sale_additional_costs()

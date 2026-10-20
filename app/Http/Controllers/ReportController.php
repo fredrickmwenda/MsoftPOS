@@ -1782,6 +1782,10 @@ class ReportController extends Controller
                     if(count($lims_product_return_data)) {
                         foreach ($lims_product_return_data as $product_return) {
                             $unit = DB::table('units')->find($product_return->sale_unit_id);
+                            if (!$unit) {
+                                $returned_qty += (float) $product_return->qty;
+                                continue;
+                            }
                             if($unit->operator == '*'){
                                 $returned_qty += $product_return->qty * $unit->operation_value;
                             }
@@ -2255,7 +2259,7 @@ class ReportController extends Controller
         // ---------- 1. Dates (same default behaviour as the Sale List) ----------
         $start_date = $request->input('start_date') ?: date('Y-m-d');
         $end_date   = $request->input('end_date')   ?: date('Y-m-d');
-
+ 
         $warehouse_id  = (int) $request->input('warehouse_id', 0);
         $biller_id     = (int) $request->input('biller_id', 0);
         $user_id       = (int) $request->input('user_id', 0);

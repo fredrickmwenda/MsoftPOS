@@ -302,7 +302,7 @@ class CartController extends Controller
         $error = null;
 
         if ($reference) {
-            $sale = Sale::with(['productSales.product', 'delivery', 'customer', 'payments'])
+            $sale = Sale::with(['product_sales.product', 'delivery', 'customer', 'payments'])
                 ->where('reference_no', $reference)
                 ->first();
 
@@ -421,11 +421,10 @@ class CartController extends Controller
 
         try {
             Delivery::create([
+                'reference_no' => 'del-' . $sale->reference_no,
                 'sale_id' => $sale->id,
-                'customer_id' => $checkoutData['customer_id'],
                 'address' => $checkoutData['delivery_address'],
                 'status' => 1,
-                'delivered_at' => null,
             ]);
         } catch (\Throwable $e) {
             Log::warning('Delivery record creation failed', [

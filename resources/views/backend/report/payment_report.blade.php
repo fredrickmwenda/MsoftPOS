@@ -111,7 +111,7 @@
                     <td>@if($purchase){{$purchase->reference_no}}@else N/A @endif</td>
                     <td>{{$payment->paying_method}}</td>
                     <td class="text-right">{{$payment->amount}}</td>
-                    <td>{{$user->name}}</td>
+                    <td>{{ $user->name ?? 'N/A' }}</td>
                 </tr>
                 @endforeach  
             </tbody>

@@ -3942,14 +3942,8 @@ public function saleData(Request $request)
                 if (!$revRes->success) {
                     throw new \App\Exceptions\AccountingException($revRes->error);
                 }
-                $deletedSale = \App\Models\Sale::withTrashed()->find($id);
-                if ($deletedSale && \Schema::hasColumn($deletedSale->getTable(), 'accounting_status')) {
-                    $deletedSale->accounting_status = 'reversed';
-                    $deletedSale->save();
-                }
             } catch (\App\Exceptions\AccountingException $e) {
                 \Log::error('Accounting error on Sale Destroy: ' . $e->getMessage());
-
             }
 
         }
@@ -3967,7 +3961,7 @@ public function saleData(Request $request)
     public function destroy($id)
     {
         $url = url()->previous();
-        $lims_sale_data = Sale::find($id);
+        $lims_sale_data = Sale::findOrFail($id);
         $return_ids = Returns::where('sale_id', $id)->pluck('id')->toArray();
         if(count($return_ids)) {
             ProductReturn::whereIn('return_id', $return_ids)->delete();
@@ -4110,11 +4104,6 @@ public function saleData(Request $request)
             $revRes = $accountingService->reverseTransaction(\App\Models\Sale::class, $id, '_deleted');
             if (!$revRes->success) {
                 throw new \App\Exceptions\AccountingException($revRes->error);
-            }
-            $deletedSale = \App\Models\Sale::withTrashed()->find($id);
-            if ($deletedSale && \Schema::hasColumn($deletedSale->getTable(), 'accounting_status')) {
-                $deletedSale->accounting_status = 'reversed';
-                $deletedSale->save();
             }
         } catch (\App\Exceptions\AccountingException $e) {
             \Log::error('Accounting error on Sale Destroy: ' . $e->getMessage());
