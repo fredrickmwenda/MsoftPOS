@@ -210,9 +210,9 @@
                         <!-- FOOTER (always at the bottom because body has flex:1) -->
                         <div class="product-footer">
                             <div class="price-box">
-                                <strong>GH₵ {{ number_format((float) $product->price, 2) }}</strong>
+                                <strong>{{ $currencyCode }} {{ number_format((float) $product->price, 2) }}</strong>
                                 @if ($hasWholesale)
-                                    <small>GH₵ {{ number_format((float) $product->wholesale_price, 2) }}</small>
+                                    <small>{{ $currencyCode }} {{ number_format((float) $product->wholesale_price, 2) }}</small>
                                 @endif
                             </div>
 

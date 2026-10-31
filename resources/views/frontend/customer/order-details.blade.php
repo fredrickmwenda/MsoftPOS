@@ -121,27 +121,27 @@
                                             @endif
                                             <div>
                                                 <div class="product-name">{{ $ps->product->name ?? 'Product #' . $ps->product_id }}</div>
-                                                <div class="product-variant">Unit: ₦{{ number_format($ps->price, 2) }}</div>
+                                                <div class="product-variant">Unit: {{ $currencyCode }} {{ number_format((float) $ps->net_unit_price, 2) }}</div>
                                             </div>
                                         </div>
                                     </td>
-                                    <td style="text-align:center;">{{ $ps->quantity }}</td>
-                                    <td style="text-align:right;">₦{{ number_format($ps->price, 2) }}</td>
-                                    <td style="text-align:right; font-weight:600;">₦{{ number_format($ps->price * $ps->quantity, 2) }}</td>
+                                    <td style="text-align:center;">{{ $ps->qty }}</td>
+                                    <td style="text-align:right;">{{ $currencyCode }} {{ number_format((float) $ps->net_unit_price, 2) }}</td>
+                                    <td style="text-align:right; font-weight:600;">{{ $currencyCode }} {{ number_format((float) $ps->total, 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                     </table>
 
                     <div class="totals">
-                        <div class="row"><span>Subtotal</span><span>₦{{ number_format($sale->subtotal ?? ($sale->total_amount - ($sale->shipping_fee ?? 0)), 2) }}</span></div>
-                        @if(isset($sale->shipping_fee))
-                            <div class="row"><span>Shipping</span><span>₦{{ number_format($sale->shipping_fee, 2) }}</span></div>
+                        <div class="row"><span>Subtotal</span><span>{{ $currencyCode }} {{ number_format((float) $sale->total_price, 2) }}</span></div>
+                        @if((float) $sale->shipping_cost > 0)
+                            <div class="row"><span>Shipping</span><span>{{ $currencyCode }} {{ number_format((float) $sale->shipping_cost, 2) }}</span></div>
                         @endif
-                        @if(isset($sale->discount) && $sale->discount > 0)
-                            <div class="row"><span>Discount</span><span>-₦{{ number_format($sale->discount, 2) }}</span></div>
+                        @if((float) $sale->order_discount > 0)
+                            <div class="row"><span>Discount</span><span>-{{ $currencyCode }} {{ number_format((float) $sale->order_discount, 2) }}</span></div>
                         @endif
-                        <div class="row grand"><span>Total</span><span>₦{{ number_format($sale->total_amount, 2) }}</span></div>
+                        <div class="row grand"><span>Total</span><span>{{ $currencyCode }} {{ number_format((float) $sale->grand_total, 2) }}</span></div>
                     </div>
                 </div>
             </div>
@@ -151,8 +151,8 @@
                 <div class="card">
                     <h2>Delivery Information</h2>
                     @if($sale->delivery)
-                        <div class="info-row"><span class="label">Recipient</span><span class="value">{{ $sale->delivery->recipient_name ?? '—' }}</span></div>
-                        <div class="info-row"><span class="label">Phone</span><span class="value">{{ $sale->delivery->recipient_phone ?? '—' }}</span></div>
+                        <div class="info-row"><span class="label">Recipient</span><span class="value">{{ $sale->customer?->name ?? '—' }}</span></div>
+                        <div class="info-row"><span class="label">Phone</span><span class="value">{{ $sale->customer?->phone_number ?? '—' }}</span></div>
                         <div class="info-row"><span class="label">Address</span><span class="value">{{ $sale->delivery->address ?? '—' }}</span></div>
                         <div class="info-row"><span class="label">Tracking No.</span><span class="value">{{ $sale->delivery->tracking_number ?? 'N/A' }}</span></div>
                         <div class="info-row"><span class="label">Status</span><span class="value">{{ $sale->delivery->status_label ?? 'Processing' }}</span></div>
@@ -174,7 +174,7 @@
                                     <small style="color:#9ca3af;">{{ $payment->payment_method ?? 'Online' }}</small>
                                 </span>
                                 <span class="value">
-                                    ₦{{ number_format($payment->amount, 2) }}<br>
+                                    {{ $currencyCode }} {{ number_format((float) $payment->amount, 2) }}<br>
                                     <small>
                                         @if($payment->status == 1)
                                             <span class="badge badge-paid">Success</span>

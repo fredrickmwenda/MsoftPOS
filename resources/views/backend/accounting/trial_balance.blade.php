@@ -118,7 +118,7 @@
             loadReport();
         });
 
-        $('select[name="warehouse_id"]').on('change', function() {
+        $('select[name="warehouse_id"], input[name="start_date"], input[name="end_date"]').on('change', function() {
             loadReport();
         });
     });

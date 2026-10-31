@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
+use App\Models\Currency;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 
@@ -71,7 +72,9 @@ class DashboardController extends Controller
             ->latest()
             ->paginate(10);
 
-        return view('frontend.customer.orders', compact('sales'));
+        $currencyCode = $this->activeCurrencyCode();
+
+        return view('frontend.customer.orders', compact('sales', 'currencyCode'));
     }
 
     /**
@@ -85,7 +88,9 @@ class DashboardController extends Controller
 
         $sale->load(['productSales.product', 'delivery', 'payments']);
 
-        return view('frontend.customer.order-details', compact('sale'));
+        $currencyCode = $this->activeCurrencyCode($sale);
+
+        return view('frontend.customer.order-details', compact('sale', 'currencyCode'));
     }
 
     /**
@@ -99,6 +104,15 @@ class DashboardController extends Controller
 
         $sale->load(['productSales.product', 'delivery']);
 
-        return view('frontend.customer.order-confirmation', compact('sale'));
+        $currencyCode = $this->activeCurrencyCode($sale);
+
+        return view('frontend.customer.order-confirmation', compact('sale', 'currencyCode'));
+    }
+
+    private function activeCurrencyCode(?Sale $sale = null): string
+    {
+        return Currency::where('is_active', true)->orderBy('id')->value('code')
+            ?? $sale?->currency?->code
+            ?? '';
     }
 }

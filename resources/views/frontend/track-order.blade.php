@@ -87,7 +87,7 @@
                     <div class="status-box">
                         <div class="label">Payment Status</div>
                         <div class="value {{ $sale->payment_status == 4 ? 'badge-paid' : 'badge-pending' }}">
-                            @if($sale->payment_status == 4) Paid @elseif($sale->payment_status == 1) Pending @elseif($sale->payment_status == 2) Due @elseif($sale->payment_status == 3) Partial @endif
+                            @if($sale->payment_status == 4) Paid @elseif($sale->payment_status == 5) Failed @elseif($sale->payment_status == 1) Pending @elseif($sale->payment_status == 2) Due @elseif($sale->payment_status == 3) Partial @endif
                         </div>
                     </div>
                     <div class="status-box">
@@ -100,9 +100,11 @@
                         <div class="label">Delivery</div>
                         <div class="value">
                             @if($sale->delivery)
-                                @if($sale->delivery->status == 1) Packing
-                                @elseif($sale->delivery->status == 2) Delivering
-                                @elseif($sale->delivery->status == 3) Delivered
+                                @if((int) $sale->delivery->status === 0) Awaiting payment
+                                @elseif((int) $sale->delivery->status === 1) Packing
+                                @elseif((int) $sale->delivery->status === 2) Delivering
+                                @elseif((int) $sale->delivery->status === 3) Delivered
+                                @elseif((int) $sale->delivery->status === 4) Payment failed
                                 @else Customer Unavailable
                                 @endif
                             @else
@@ -116,6 +118,8 @@
                 <div class="status-box" style="margin-bottom: 20px;">
                     <div class="label">Delivery Address</div>
                     <div class="value">{{ $sale->delivery->address }}</div>
+                    <div class="label" style="margin-top: 12px;">Contact</div>
+                    <div class="value">{{ $sale->customer?->name ?? 'Customer' }} · {{ $sale->customer?->phone_number ?? 'Phone not available' }}</div>
                 </div>
                 @endif
 
@@ -133,8 +137,8 @@
                         <tr>
                             <td>{{ $item->product?->name ?? 'Unknown Product' }}</td>
                             <td>{{ $item->qty }}</td>
-                            <td>GH₵ {{ number_format($item->net_unit_price, 2) }}</td>
-                            <td>GH₵ {{ number_format($item->total, 2) }}</td>
+                            <td>{{ $currencyCode }} {{ number_format($item->net_unit_price, 2) }}</td>
+                            <td>{{ $currencyCode }} {{ number_format($item->total, 2) }}</td>
                         </tr>
                         @endforeach
                     </tbody>
@@ -142,12 +146,14 @@
 
                 <div class="grand-total">
                     <span>Grand Total:</span>
-                    <strong>GH₵ {{ number_format($sale->grand_total, 2) }}</strong>
+                    <strong>{{ $currencyCode }} {{ number_format($sale->grand_total, 2) }}</strong>
                 </div>
 
                 @if($sale->payment_status != 4)
                 <div class="alert-error" style="margin-top: 20px;">
-                    @if($sale->staff_note && str_contains($sale->staff_note, 'Pay on Delivery'))
+                    @if((int) $sale->payment_status === 5)
+                        Paystack did not complete this payment. No payment was recorded; please place a new order or contact support if you were charged.
+                    @elseif($sale->staff_note && str_contains($sale->staff_note, 'Pay on Delivery'))
                         Your order is pending payment on delivery. Our team will contact you shortly to arrange delivery and collect payment.
                     @else
                         Your payment is being verified. Please check back shortly or contact support.

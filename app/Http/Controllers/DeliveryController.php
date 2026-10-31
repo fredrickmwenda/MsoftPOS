@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ProductBatch;
 use App\Models\Delivery;
+use App\Models\Payment;
 use App\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,7 @@ use Mail;
 use App\Models\MailSetting;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Courier;
+use App\Models\Account;
 
 class DeliveryController extends Controller
 {
@@ -288,23 +290,19 @@ class DeliveryController extends Controller
     {
         $delivery = Delivery::findOrFail($id);
 
+        if ((int) $delivery->status === 0 || (int) $delivery->status === 4) {
+            return redirect()->back()->with('not_permitted', 'This order is not ready to be marked delivered.');
+        }
+
         DB::transaction(function () use ($delivery) {
             $delivery->update([
                 'status' => 3,
-                'delivered_at' => now(),
             ]);
 
-            // For pay-on-delivery orders, decrement stock NOW (not at order time)
             $sale = $delivery->sale;
-            if ($sale && (int) $sale->payment_status !== 4) {
-                foreach ($sale->productSales as $productSale) {
-                    $product = Product::find($productSale->product_id);
-                    if ($product) {
-                        $product->decrement('qty', $productSale->qty);
-                    }
-                }
-
-                // Mark the sale as paid + completed
+            $isPayOnDelivery = str_contains((string) $sale?->staff_note, 'Pay on Delivery');
+            if ($sale && $isPayOnDelivery && (int) $sale->payment_status !== 4) {
+                // COD inventory was reserved at checkout; delivery only records the cash collection.
                 $sale->update([
                     'sale_status' => 1,
                     'payment_status' => 4,
@@ -313,7 +311,9 @@ class DeliveryController extends Controller
 
                 Payment::create([
                     'sale_id' => $sale->id,
-                    'user_id' => auth()->id(),
+                    'user_id' => auth()->id() ?? $sale->user_id,
+                    'account_id' => Account::where('is_default', true)->value('id')
+                        ?? Account::where('is_active', true)->value('id'),
                     'payment_reference' => 'cod-' . date('Ymd') . '-' . $sale->id,
                     'amount' => $sale->grand_total,
                     'paying_method' => 'Pay on Delivery',
@@ -323,7 +323,7 @@ class DeliveryController extends Controller
         });
 
         return redirect()->route('delivery.index')
-            ->with('message', 'Order marked as delivered and stock updated.');
+            ->with('message', 'Order marked as delivered.');
     }
 
 

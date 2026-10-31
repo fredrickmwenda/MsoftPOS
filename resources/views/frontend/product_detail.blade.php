@@ -74,7 +74,7 @@
                 <span class="stock">In Stock: {{ $product->qty ?? 0 }} available</span>
             </div>
 
-            <div class="price-main">GH₵ {{ number_format((float) $product->price, 2) }}</div>
+            <div class="price-main">{{ $currencyCode }} {{ number_format((float) $product->price, 2) }}</div>
 
             <div class="product-details">
                 <h3>Product Details</h3>
@@ -89,7 +89,7 @@
                 </div>
                 <div class="metric-item">
                     <span>Wholesale Price</span>
-                    <strong>GH₵ {{ number_format((float)($product->wholesale_price ?? 0), 2) }}</strong>
+                    <strong>{{ $currencyCode }} {{ number_format((float)($product->wholesale_price ?? 0), 2) }}</strong>
                 </div>
                 <div class="metric-item">
                     <span>Category</span>
@@ -126,7 +126,7 @@
                             <img src="{{ $related->image_url }}" alt="{{ $related->name }}">
                             <div class="carousel-body">
                                 <h4>{{ \Illuminate\Support\Str::limit($related->name, 30) }}</h4>
-                                <strong>GH₵ {{ number_format((float) $related->price, 2) }}</strong>
+                                <strong>{{ $currencyCode }} {{ number_format((float) $related->price, 2) }}</strong>
                             </div>
                         </a>
                     </div>

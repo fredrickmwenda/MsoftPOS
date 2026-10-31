@@ -23,6 +23,7 @@ use App\Models\PosSetting;
 use App\Models\Roles;
 use App\Models\HirePurchaseInstallment;
 use App\Models\Policy;
+use App\Models\Currency;
 
 // Import all observers
 use App\Observers\ProductObserver;
@@ -79,6 +80,11 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer(['frontend.layout', 'frontend.policies.*'], function ($view) {
             $view->with('footerPolicies', Policy::active()->ordered()->get());
+        });
+
+        View::composer('frontend.*', function ($view) {
+            $currencyCode = Currency::where('is_active', true)->orderBy('id')->value('code') ?? '';
+            $view->with('currencyCode', $currencyCode);
         });
     }
 }

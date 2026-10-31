@@ -283,9 +283,9 @@
                 @if($selectedCategory) <input type="hidden" name="category" value="{{ $selectedCategory->slug }}"> @endif
                 @if($query) <input type="hidden" name="q" value="{{ $query }}"> @endif
                 <div class="price-inputs">
-                    <input type="number" name="min_price" placeholder="Min GH" value="{{ $minPrice > 0 ? $minPrice : '' }}" min="0">
+                    <input type="number" name="min_price" placeholder="Min {{ $currencyCode }}" value="{{ $minPrice > 0 ? $minPrice : '' }}" min="0">
                     <span>-</span>
-                    <input type="number" name="max_price" placeholder="Max GH" value="{{ $maxPrice > 0 ? $maxPrice : '' }}" min="0">
+                    <input type="number" name="max_price" placeholder="Max {{ $currencyCode }}" value="{{ $maxPrice > 0 ? $maxPrice : '' }}" min="0">
                 </div>
                 <button type="submit" class="btn-filter">Apply Filter</button>
             </form>
@@ -315,7 +315,7 @@
                             </h3>
                             <div class="card-footer">
                                 <div class="card-price-row">
-                                    <span class="card-price">GH {{ number_format((float) $product->price, 2) }}</span>
+                                    <span class="card-price">{{ $currencyCode }} {{ number_format((float) $product->price, 2) }}</span>
                                 </div>
                                 <form action="{{ route('cart.add', $product->id) }}" method="POST" class="add-cart-form">
                                     @csrf

@@ -325,22 +325,22 @@
                 
                 <div class="form-group">
                     <label>Full Name</label>
-                    <input type="text" name="name" value="{{ $customer->name ?? old('name') }}" placeholder="Enter your full name" required>
+                    <input type="text" name="name" value="{{ old('name', $customer->name ?? '') }}" placeholder="Enter your full name" required>
                 </div>
 
                 <div class="form-group">
                     <label>Phone Number</label>
-                    <input type="tel" name="phone_number" value="{{ $customer->phone_number ?? old('phone_number') }}" placeholder="e.g. +233 24 000 0000" required>
+                    <input type="tel" name="phone_number" value="{{ old('phone_number', $customer->phone_number ?? '') }}" placeholder="e.g. +233 24 000 0000" required>
                 </div>
 
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" name="email" value="{{ $customer->email ?? old('email') }}" placeholder="you@example.com" required>
+                    <input type="email" name="email" value="{{ old('email', $customer->email ?? '') }}" placeholder="you@example.com" required>
                 </div>
 
                 <div class="form-group">
                     <label>Delivery Address</label>
-                    <input type="text" name="delivery_address" value="{{ old('delivery_address') }}" placeholder="House number, street name, area" required>
+                    <input type="text" name="delivery_address" value="{{ old('delivery_address', $customer->address ?? '') }}" placeholder="House number, street name, area" required>
                 </div>
 
                 <div class="form-group">

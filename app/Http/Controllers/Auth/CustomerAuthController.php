@@ -25,7 +25,7 @@ public function login(Request $request)
    
     if (Auth::guard('customer')->attempt($credentials)) {
         $request->session()->regenerate();
-        return redirect()->route('customer.dashboard');
+        return redirect()->intended(route('customer.dashboard')); 
     }
 
     return back()->withErrors([
@@ -58,7 +58,7 @@ public function login(Request $request)
         Auth::guard('customer')->login($customer);
         $request->session()->regenerate();
 
-        return redirect()->route('customer.dashboard');
+        return redirect()->intended(route('customer.dashboard'));
     }   
 
 public function logout(Request $request)

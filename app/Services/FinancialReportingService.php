@@ -53,6 +53,26 @@ class FinancialReportingService
     }
 
     /**
+     * Return whether an account normally carries a debit balance.
+     * Account codes remain the authoritative fallback because existing data
+     * uses several different account_type labels.
+     */
+    public function isDebitNormal($accountCode, $accountType = '')
+    {
+        $code = (string) $accountCode;
+        $type = strtolower((string) $accountType);
+
+        return str_starts_with($code, '1')
+            || str_starts_with($code, '5')
+            || str_starts_with($code, '4150')
+            || str_starts_with($code, '4160')
+            // Contra-revenue accounts are debit-normal; contra assets,
+            // liabilities, and equity remain credit-normal unless explicitly
+            // configured by a more specific account code.
+            || (str_starts_with($code, '4') && str_contains($type, 'contra'));
+    }
+
+    /**
      * Get real-time aggregated account balances.
      *
      * @param string|null $startDate
@@ -97,10 +117,8 @@ class FinancialReportingService
             ->get();
 
         foreach ($balances as $balance) {
-            $type = strtolower($balance->type);
-            $isContra = str_starts_with($balance->account_no, '4150') || str_starts_with($balance->account_no, '4160') || str_contains($type, 'contra');
-            $isDebitNormal = str_starts_with($balance->account_no, '1') || str_starts_with($balance->account_no, '5') || $isContra;
-            
+            $isDebitNormal = $this->isDebitNormal($balance->account_no, $balance->type);
+
             if ($isDebitNormal) {
                 $balance->net_balance = $balance->total_debit - $balance->total_credit;
             } else {

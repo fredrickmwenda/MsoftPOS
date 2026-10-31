@@ -95,9 +95,9 @@
                         <div class="item-row">
                             <span class="name">
                                 {{ $ps->product->name ?? 'Product #' . $ps->product_id }}
-                                <span style="color:#9ca3af; font-weight:400;"> × {{ $ps->quantity }}</span>
+                                <span style="color:#9ca3af; font-weight:400;"> × {{ $ps->qty }}</span>
                             </span>
-                            <span>₦{{ number_format($ps->price * $ps->quantity, 2) }}</span>
+                            <span>{{ $currencyCode }} {{ number_format((float) $ps->total, 2) }}</span>
                         </div>
                     @endforeach
                 </div>
@@ -105,7 +105,7 @@
 
             <div class="summary-row grand">
                 <span class="label">Total</span>
-                <span class="value">₦{{ number_format($sale->total_amount, 2) }}</span>
+                <span class="value">{{ $currencyCode }} {{ number_format((float) $sale->grand_total, 2) }}</span>
             </div>
         </div>
 
@@ -129,7 +129,7 @@
                         Your payment has been confirmed — no further action needed.
                     @else
                         <strong>Pay on delivery.</strong>
-                        Please have ₦{{ number_format($sale->total_amount, 2) }} ready when your order arrives.
+                        Please have {{ $currencyCode }} {{ number_format((float) $sale->grand_total, 2) }} ready when your order arrives.
                     @endif
                 </div>
             </div>
@@ -141,7 +141,7 @@
                     @if($sale->delivery && $sale->delivery->estimated_delivery)
                         Estimated delivery: {{ \Carbon\Carbon::parse($sale->delivery->estimated_delivery)->format('F d, Y') }}.
                     @else
-                        You'll receive an update once your order ships. Track it from your account.
+                        We'll deliver to {{ $sale->delivery->address ?? $sale->customer?->address ?? 'your provided address' }} and contact you at {{ $sale->customer?->phone_number ?? 'your provided phone number' }} with updates.
                     @endif
                 </div>
             </div>

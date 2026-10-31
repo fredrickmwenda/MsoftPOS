@@ -46,6 +46,13 @@ class ReportController extends Controller
             return $role->id > 2;
         });
     }
+
+    private function reportDecimalPlaces(): int
+    {
+        $generalSetting = cache()->get('general_setting') ?? GeneralSetting::first();
+
+        return max(0, (int) ($generalSetting?->decimal ?? 2));
+    }
     /**
      * Get percentage_filter from GeneralSetting model. Returns null if not set or 100.
      */
@@ -2638,6 +2645,7 @@ class ReportController extends Controller
 
     public function warehouseSaleData(Request $request)
     {
+        $decimal = $this->reportDecimalPlaces();
         $columns = array(1 => 'created_at', 2 => 'reference_no');
 
         $start_date   = $request->input('start_date') ?: date('Y-m-d');
@@ -2736,13 +2744,13 @@ class ReportController extends Controller
                     } else {
                         $unitCode = '';
                     }
-                    $line = $product_sale->product_name . ' (' . number_format($product_sale->qty, cache()->get('general_setting')->decimal) . ' ' . $unitCode . ')';
+                    $line = $product_sale->product_name . ' (' . number_format($product_sale->qty, $decimal) . ' ' . $unitCode . ')';
                     $nestedData['product'] = $index ? $nestedData['product'] . '<br>' . $line : $line;
                 }
 
-                $nestedData['grand_total'] = number_format($sale->grand_total, cache()->get('general_setting')->decimal);
-                $nestedData['paid'] = number_format($sale->paid_amount, cache()->get('general_setting')->decimal);
-                $nestedData['due'] = number_format($sale->grand_total - $sale->paid_amount, cache()->get('general_setting')->decimal);
+                $nestedData['grand_total'] = number_format($sale->grand_total, $decimal);
+                $nestedData['paid'] = number_format($sale->paid_amount, $decimal);
+                $nestedData['due'] = number_format($sale->grand_total - $sale->paid_amount, $decimal);
 
                 if ($sale->sale_status == 1) {
                     $nestedData['sale_status'] = '<div class="badge badge-success">' . trans('file.Completed') . '</div>';
@@ -2767,6 +2775,7 @@ class ReportController extends Controller
 
     public function warehousePurchaseData(Request $request)
     {
+        $decimal = $this->reportDecimalPlaces();
         $columns = array(1 => 'created_at', 2 => 'reference_no');
 
         $start_date   = $request->input('start_date') ?: date('Y-m-d');
@@ -2869,13 +2878,13 @@ class ReportController extends Controller
                     } else {
                         $unitCode = '';
                     }
-                    $line = $product_purchase->product_name . ' (' . number_format($product_purchase->qty, cache()->get('general_setting')->decimal) . ' ' . $unitCode . ')';
+                    $line = $product_purchase->product_name . ' (' . number_format($product_purchase->qty, $decimal) . ' ' . $unitCode . ')';
                     $nestedData['product'] = $index ? $nestedData['product'] . '<br>' . $line : $line;
                 }
 
-                $nestedData['grand_total'] = number_format($purchase->grand_total, cache()->get('general_setting')->decimal);
-                $nestedData['paid'] = number_format($purchase->paid_amount, cache()->get('general_setting')->decimal);
-                $nestedData['balance'] = number_format($purchase->grand_total - $purchase->paid_amount, cache()->get('general_setting')->decimal);
+                $nestedData['grand_total'] = number_format($purchase->grand_total, $decimal);
+                $nestedData['paid'] = number_format($purchase->paid_amount, $decimal);
+                $nestedData['balance'] = number_format($purchase->grand_total - $purchase->paid_amount, $decimal);
 
                 if ($purchase->status == 1) {
                     $nestedData['status'] = '<div class="badge badge-success">' . trans('file.Completed') . '</div>';
@@ -2900,6 +2909,7 @@ class ReportController extends Controller
 
     public function warehouseQuotationData(Request $request)
     {
+        $decimal = $this->reportDecimalPlaces();
         $columns = array(1 => 'created_at', 2 => 'reference_no');
 
         $start_date   = $request->input('start_date') ?: date('Y-m-d');
@@ -2995,11 +3005,11 @@ class ReportController extends Controller
                     } else {
                         $unitCode = '';
                     }
-                    $line = $product_quotation->product_name . ' (' . number_format($product_quotation->qty, cache()->get('general_setting')->decimal) . ' ' . $unitCode . ')';
+                    $line = $product_quotation->product_name . ' (' . number_format($product_quotation->qty, $decimal) . ' ' . $unitCode . ')';
                     $nestedData['product'] = $index ? $nestedData['product'] . '<br>' . $line : $line;
                 }
 
-                $nestedData['grand_total'] = number_format($quotation->grand_total, cache()->get('general_setting')->decimal);
+                $nestedData['grand_total'] = number_format($quotation->grand_total, $decimal);
 
                 if ($quotation->quotation_status == 1) {
                     $nestedData['status'] = '<div class="badge badge-danger">' . trans('file.Pending') . '</div>';
@@ -3022,6 +3032,7 @@ class ReportController extends Controller
 
     public function warehouseReturnData(Request $request)
     {
+        $decimal = $this->reportDecimalPlaces();
         $columns = array(1 => 'created_at', 2 => 'reference_no');
 
         $start_date   = $request->input('start_date') ?: date('Y-m-d');
@@ -3117,11 +3128,11 @@ class ReportController extends Controller
                     } else {
                         $unitCode = '';
                     }
-                    $line = $product_return->product_name . ' (' . number_format($product_return->qty, cache()->get('general_setting')->decimal) . ' ' . $unitCode . ')';
+                    $line = $product_return->product_name . ' (' . number_format($product_return->qty, $decimal) . ' ' . $unitCode . ')';
                     $nestedData['product'] = $index ? $nestedData['product'] . '<br>' . $line : $line;
                 }
 
-                $nestedData['grand_total'] = number_format($return->grand_total, cache()->get('general_setting')->decimal);
+                $nestedData['grand_total'] = number_format($return->grand_total, $decimal);
                 $data[] = $nestedData;
             }
         }
@@ -3138,6 +3149,7 @@ class ReportController extends Controller
 
     public function warehouseExpenseData(Request $request)
     {
+        $decimal = $this->reportDecimalPlaces();
         $columns = array(1 => 'created_at', 2 => 'reference_no');
 
         $start_date   = $request->input('start_date') ?: date('Y-m-d');
@@ -3216,7 +3228,7 @@ class ReportController extends Controller
                 $nestedData['date'] = date(config('date_format'), strtotime($expense->created_at));
                 $nestedData['reference_no'] = $expense->reference_no;
                 $nestedData['category'] = $expense->category;
-                $nestedData['amount'] = number_format($expense->amount, cache()->get('general_setting')->decimal);
+                $nestedData['amount'] = number_format($expense->amount, $decimal);
                 $nestedData['note'] = $expense->note;
                 $data[] = $nestedData;
             }

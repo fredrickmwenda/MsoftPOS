@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Biller;
+use App\Models\Account;
 use App\Models\Customer;
+use App\Models\Currency;
 use App\Models\Delivery;
 use App\Models\GeneralSetting;
 use App\Models\Payment;
@@ -20,6 +22,10 @@ class CartController extends Controller
 {
     public function index()
     {
+        if (! auth('customer')->check()) {
+            return $this->redirectGuestToCustomerLogin();
+        }
+
         $cart = session()->get('cart', []);
         $subtotal = 0;
         foreach ($cart as $item) {
@@ -28,8 +34,31 @@ class CartController extends Controller
         return view('backend.cart.index', compact('cart', 'subtotal'));
     }
 
+    protected function redirectGuestToCustomerLogin()
+    {
+        session()->put('url.intended', route('cart.index'));
+
+        return redirect()->route('customer.login')
+            ->with('error', 'Please sign in or create an account to use your shopping cart.');
+    }
+
     public function add(Request $request, $id)
     {
+        if (! auth('customer')->check()) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please sign in to add products to your cart.',
+                    'redirect' => route('customer.login'),
+                ], 401);
+            }
+
+            session()->put('url.intended', url()->previous());
+
+            return redirect()->route('customer.login')
+                ->with('error', 'Please sign in or create an account before adding products to your cart.');
+        }
+
         $product = Product::findOrFail($id);
         $cart = session()->get('cart', []);
         $quantity = max(1, (int) $request->input('quantity', 1));
@@ -51,6 +80,10 @@ class CartController extends Controller
 
     public function update(Request $request)
     {
+        if (! auth('customer')->check()) {
+            return $this->redirectGuestToCustomerLogin();
+        }
+
         $request->validate([
             'id' => 'required|integer',
             'quantity' => 'required|integer|min:1',
@@ -66,6 +99,10 @@ class CartController extends Controller
 
     public function remove($id)
     {
+        if (! auth('customer')->check()) {
+            return $this->redirectGuestToCustomerLogin();
+        }
+
         $cart = session()->get('cart', []);
         if (isset($cart[$id])) {
             unset($cart[$id]);
@@ -78,31 +115,42 @@ class CartController extends Controller
      * Handle the "Continue to secure payment" form submission.
      *
      * PAYSTACK branch:
-     *   1. Resolve or create the customer record
-     *   2. Create a PENDING Sale + Product_Sale rows (no stock decrement yet)
-     *   3. Initialize Paystack transaction and redirect to authorization URL
-     *   4. On callback success → finalize the sale (mark paid + decrement stock)
-     *   5. Redirect to order confirmation page showing the reference_no
+     *   1. Require a signed-in customer and validate delivery details
+     *   2. Reserve stock and create a pending Sale, items, and Delivery record
+     *   3. Initialize Paystack and redirect to authorization URL
+     *   4. Mark paid only after matching server-side payment verification
+     *   5. Redirect to the customer's order confirmation page
      *
-     * PAY-ON-DELIVERY branch:
-     *   1. Guest guard — must be logged in as a customer (no anonymous COD)
-     *   2. Resolve or create the customer record
-     *   3. Create a PENDING Sale + Product_Sale rows (no stock decrement)
-     *   4. Redirect to order confirmation page showing the reference_no
+     * PAY-ON-DELIVERY follows the same authenticated checkout and stock
+     * reservation flow, with payment remaining pending until delivery.
      */
     public function checkout(Request $request)
     {
+        if (! auth('customer')->check()) {
+            session()->put('url.intended', route('cart.index'));
+
+            return redirect()->route('customer.login')
+                ->with('error', 'Please sign in or create an account to complete your purchase.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
             'phone_number' => 'required|string|max:20',
             'email' => 'required|email|max:255',
-            'delivery_address' => 'required|string',
+            'delivery_address' => 'required|string|max:2000',
             'payment_method' => 'required|in:paystack,delivery',
         ]);
 
         $cart = session()->get('cart', []);
         if (empty($cart)) {
             return redirect()->route('shop.index')->with('error', 'Your cart is empty.');
+        }
+
+        // Checkout prices and quantities are always re-read from the catalogue.
+        foreach ($cart as $productId => $item) {
+            if ((int) ($item['quantity'] ?? 0) < 1 || ! Product::whereKey($productId)->exists()) {
+                return redirect()->route('cart.index')->with('error', 'Your cart contains an unavailable product. Please review it and try again.');
+            }
         }
 
         // ─── Step 1: resolve or create the customer ───────────────────────
@@ -123,33 +171,19 @@ class CartController extends Controller
 
         // ─── Step 2a: PAY ON DELIVERY ─────────────────────────────────────
         if ($request->payment_method === 'delivery') {
-            // Guest guard — pay-on-delivery requires a verified customer
-            // account so the fulfilment team has a real, contactable buyer.
-            if (! auth('customer')->check()) {
-                session()->flash('cod_pending_checkout', $checkoutData);
-
-                return redirect()
-                    ->route('customer.login')
-                    ->withInput()
-                    ->with('error',
-                        'Please log in or create an account to place a pay-on-delivery order. '
-                        . 'This helps our team verify your contact details before arranging delivery.'
-                    );
+            try {
+                $sale = DB::transaction(
+                    fn () => $this->createSaleRecord($checkoutData, paid: false, paymentMethod: 'Pay on Delivery')
+                );
+            } catch (\RuntimeException $e) {
+                return redirect()->route('cart.index')->with('error', $e->getMessage());
             }
-
-            $sale = DB::transaction(
-                fn () => $this->createSaleRecord($checkoutData, paid: false, paymentMethod: 'Pay on Delivery')
-            );
 
             session()->forget('cart');
             session()->forget('pending_checkout');
-            session()->forget('cod_pending_checkout');
 
-            // Redirect to the order confirmation page so the customer can
-            // see their reference number and track the order later.
-            return redirect()
-                ->route('customer.orders.confirmation', $sale)
-                ->with('success',
+
+            return redirect()->route('customer.orders.confirmation', $sale)->with('success',
                     'Your order has been placed successfully. '
                     . 'Your reference number is ' . $sale->reference_no . '. '
                     . 'Please save it — you can use it to track your order status. '
@@ -159,9 +193,13 @@ class CartController extends Controller
         }
 
         // ─── Step 2b: PAYSTACK — create pending sale first ────────────────
-        $pendingSale = DB::transaction(
-            fn () => $this->createSaleRecord($checkoutData, paid: false, paymentMethod: 'Paystack')
-        );
+        try {
+            $pendingSale = DB::transaction(
+                fn () => $this->createSaleRecord($checkoutData, paid: false, paymentMethod: 'Paystack')
+            );
+        } catch (\RuntimeException $e) {
+            return redirect()->route('cart.index')->with('error', $e->getMessage());
+        }
 
         // ─── Step 3: Initialize Paystack transaction ──────────────────────
         $initResult = $this->startPaystackCheckout($checkoutData, $pendingSale);
@@ -214,13 +252,25 @@ class CartController extends Controller
         // ─── 2. Verify with Paystack ────────────────────────────────────
         $verify = $this->verifyPaystackTransaction($reference);
 
+        if (($checkoutData['paystack_reference'] ?? null) !== $reference) {
+            Log::warning('Paystack callback reference does not match checkout session', [
+                'reference' => $reference,
+                'expected_reference' => $checkoutData['paystack_reference'] ?? null,
+            ]);
+
+            return redirect()->route('shop.index')->with('error', 'Payment reference could not be matched to this order. Please contact support.');
+        }
+
         if (! $verify['success']) {
             Log::warning('Paystack callback verification failed', [
                 'reference' => $reference,
                 'reason' => $verify['message'] ?? 'unknown',
             ]);
 
-            session()->forget('pending_checkout');
+            if (! empty($verify['definitive_failure'])) {
+                DB::transaction(fn () => $this->failPendingSale((int) $checkoutData['sale_id']));
+                session()->forget('pending_checkout');
+            }
 
             return redirect()
                 ->route('shop.index')
@@ -228,6 +278,21 @@ class CartController extends Controller
                     'Payment verification failed. If you were charged, please contact support with reference '
                     . $reference
                 );
+        }
+
+        if ((int) round(($verify['amount'] ?? -1) * 100) !== (int) round((float) $checkoutData['subtotal'] * 100)
+            || strtoupper($verify['currency'] ?? '') !== 'GHS'
+            || ($verify['reference'] ?? null) !== $reference
+        ) {
+            Log::warning('Paystack verified payment does not match order', [
+                'reference' => $reference,
+                'verified_reference' => $verify['reference'] ?? null,
+                'amount' => $verify['amount'] ?? null,
+                'currency' => $verify['currency'] ?? null,
+                'sale_id' => $checkoutData['sale_id'] ?? null,
+            ]);
+
+            return redirect()->route('shop.index')->with('error', 'Payment details did not match this order. Please contact support with reference ' . $reference);
         }
 
         // ─── 3. Finalize the sale (idempotent — safe if Paystack also fires webhook) ─
@@ -311,7 +376,11 @@ class CartController extends Controller
             }
         }
 
-        return view('frontend.track-order', compact('sale', 'reference', 'error'));
+        $currencyCode = Currency::where('is_active', true)->orderBy('id')->value('code')
+            ?? $sale?->currency?->code
+            ?? '';
+
+        return view('frontend.track-order', compact('sale', 'reference', 'error', 'currencyCode'));
     }
 
     // ════════════════════════════════════════════════════════════════
@@ -320,11 +389,14 @@ class CartController extends Controller
 
     protected function getCustomerFromRequest(Request $request): Customer
     {
-        $customer = Customer::where('email', $request->email)->first();
+        $customer = auth('customer')->id()
+            ? Customer::find(auth('customer')->id())
+            : Customer::where('email', $request->email)->first();
 
         if ($customer) {
             $customer->update([
                 'name' => $request->name,
+                'email' => $request->email,
                 'phone_number' => $request->phone_number,
                 'address' => $request->delivery_address,
             ]);
@@ -347,10 +419,20 @@ class CartController extends Controller
 
     protected function getCartSubtotal(array $cart): float
     {
+        $products = Product::whereIn('id', array_keys($cart))
+            ->get(['id', 'price'])
+            ->keyBy('id');
+
         $subtotal = 0;
-        foreach ($cart as $item) {
-            $subtotal += ((float) ($item['price'] ?? 0)) * ((int) ($item['quantity'] ?? 0));
+        foreach ($cart as $productId => $item) {
+            $product = $products->get($productId);
+            if (!$product) {
+                continue;
+            }
+
+            $subtotal += (float) $product->price * (int) ($item['quantity'] ?? 0);
         }
+
         return round($subtotal, 2);
     }
 
@@ -365,10 +447,21 @@ class CartController extends Controller
         $warehouse = Warehouse::where('is_active', true)->first();
         $biller = Biller::where('is_active', true)->first();
         $generalSetting = GeneralSetting::latest()->first();
+        $currency = Currency::where('is_active', true)->orderBy('id')->first();
         $subtotal = $this->getCartSubtotal($cart);
 
         $referenceNo = 'sr-' . date('Ymd') . '-'
             . str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+
+        // Reserve inventory atomically so concurrent checkouts cannot oversell.
+        foreach ($cart as $productId => $item) {
+            $product = Product::whereKey($productId)->lockForUpdate()->first();
+            $qty = (int) ($item['quantity'] ?? 0);
+            if (! $product || $qty < 1 || (int) $product->qty < $qty) {
+                throw new \RuntimeException('One or more products do not have enough stock. Please update your cart.');
+            }
+            $product->decrement('qty', $qty);
+        }
 
         $sale = Sale::create([
             'reference_no' => $referenceNo,
@@ -386,7 +479,7 @@ class CartController extends Controller
             'order_discount' => 0,
             'shipping_cost' => 0,
             'grand_total' => $subtotal,
-            'currency_id' => $generalSetting?->currency ?? 1,
+            'currency_id' => $currency?->id ?? $generalSetting?->currency ?? 1,
             'exchange_rate' => 1,
             'sale_status' => $paid ? 1 : 2,
             'payment_status' => $paid ? 4 : 1,
@@ -404,7 +497,7 @@ class CartController extends Controller
             }
 
             $qty = (int) ($item['quantity'] ?? 0);
-            $price = (float) ($item['price'] ?? 0);
+            $price = (float) $product->price;
 
             Product_Sale::create([
                 'sale_id' => $sale->id,
@@ -419,19 +512,13 @@ class CartController extends Controller
             ]);
         }
 
-        try {
-            Delivery::create([
-                'reference_no' => 'del-' . $sale->reference_no,
-                'sale_id' => $sale->id,
-                'address' => $checkoutData['delivery_address'],
-                'status' => 1,
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Delivery record creation failed', [
-                'sale_id' => $sale->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        Delivery::create([
+            'reference_no' => 'del-' . $sale->reference_no,
+            'sale_id' => $sale->id,
+            'address' => $checkoutData['delivery_address'],
+            // 0 means awaiting payment; COD orders may be prepared immediately.
+            'status' => $paid || $paymentMethod === 'Pay on Delivery' ? 1 : 0,
+        ]);
 
         if ($paid) {
             Payment::create([
@@ -443,12 +530,7 @@ class CartController extends Controller
                 'payment_note' => 'Cart checkout via ' . $paymentMethod,
             ]);
 
-            foreach ($cart as $productId => $item) {
-                $product = Product::find($productId);
-                if ($product) {
-                    $product->decrement('qty', (int) ($item['quantity'] ?? 0));
-                }
-            }
+            // Stock is reserved under lock before the order is created.
         }
 
         return $sale;
@@ -456,7 +538,7 @@ class CartController extends Controller
 
     protected function finalizePendingSale(int $saleId, string $paystackReference, float $amountPaid): void
     {
-        $sale = Sale::with('product_sales')->findOrFail($saleId);
+        $sale = Sale::with('product_sales')->lockForUpdate()->findOrFail($saleId);
 
         if ((int) $sale->payment_status === 4) {
             Log::info('finalizePendingSale skipped — sale already paid', [
@@ -472,34 +554,13 @@ class CartController extends Controller
             'paid_amount' => $sale->grand_total,
         ]);
 
-        foreach ($sale->product_sales as $productSale) {
-            $product = Product::find($productSale->product_id);
-            if (! $product) {
-                Log::warning('finalizePendingSale: product missing', [
-                    'product_id' => $productSale->product_id,
-                    'sale_id' => $sale->id,
-                ]);
-                continue;
-            }
-
-            if ($product->qty < $productSale->qty) {
-                Log::warning('finalizePendingSale: stock below order qty — clamping to 0', [
-                    'product_id' => $product->id,
-                    'current_qty' => $product->qty,
-                    'order_qty' => $productSale->qty,
-                    'sale_id' => $sale->id,
-                ]);
-                $product->qty = 0;
-                $product->save();
-            } else {
-                $product->decrement('qty', $productSale->qty);
-            }
-        }
 
         Payment::create([
             'sale_id' => $sale->id,
-            'user_id' => auth()->id() ?? 1,
+            'user_id' => $sale->user_id,
+            'account_id' => $this->getDefaultAccountId(),
             'payment_reference' => $paystackReference,
+            'change' => 0,
             'amount' => $amountPaid,
             'paying_method' => 'Paystack',
             'payment_note' => 'Paystack callback confirmation',
@@ -515,9 +576,39 @@ class CartController extends Controller
         ]);
     }
 
+    protected function getDefaultAccountId(): int
+    {
+        $accountId = Account::where('is_default', true)->value('id')
+            ?? Account::where('is_active', true)->value('id');
+
+        if (! $accountId) {
+            throw new \RuntimeException('No active payment account is configured.');
+        }
+
+        return (int) $accountId;
+    }
+
+    protected function failPendingSale(int $saleId): void
+    {
+        $sale = Sale::with('product_sales')->lockForUpdate()->find($saleId);
+        if (! $sale || (int) $sale->payment_status === 4 || (int) $sale->payment_status === 5) {
+            return;
+        }
+
+        foreach ($sale->product_sales as $productSale) {
+            Product::whereKey($productSale->product_id)->increment('qty', $productSale->qty);
+        }
+
+        $sale->update(['payment_status' => 5, 'sale_status' => 5]);
+        Delivery::where('sale_id', $sale->id)->update(['status' => 4]);
+    }
+
     protected function deletePendingSale(Sale $sale): void
     {
         DB::transaction(function () use ($sale) {
+            foreach (Product_Sale::where('sale_id', $sale->id)->get() as $productSale) {
+                Product::whereKey($productSale->product_id)->increment('qty', $productSale->qty);
+            }
             Product_Sale::where('sale_id', $sale->id)->delete();
             Delivery::where('sale_id', $sale->id)->delete();
             $sale->delete();
@@ -555,9 +646,10 @@ class CartController extends Controller
 
         $reference = 'cart-' . time() . '-' . random_int(1000, 9999);
 
-        $response = Http::withToken($secretKey)
-            ->acceptJson()
-            ->post('https://api.paystack.co/transaction/initialize', [
+        try {
+            $response = Http::withToken($secretKey)
+                ->acceptJson()
+                ->post('https://api.paystack.co/transaction/initialize', [
                 'email' => $checkoutData['email'],
                 'amount' => $amountInKobo,
                 'currency' => 'GHS',
@@ -572,6 +664,18 @@ class CartController extends Controller
                     'payment_method' => 'paystack',
                 ],
             ]);
+        } catch (\Throwable $e) {
+            Log::warning('Paystack initialize request failed', [
+                'sale_id' => $sale->id,
+                'reference' => $reference,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Unable to reach Paystack at the moment. Please try again.',
+            ];
+        }
 
         $body = $response->json() ?? [];
 
@@ -621,6 +725,10 @@ class CartController extends Controller
                 return [
                     'success' => false,
                     'message' => $payload['message'] ?? 'Paystack verification reported a non-success status.',
+                    'definitive_failure' => $response->successful()
+                        && (($payload['status'] ?? false) === true)
+                        && isset($payload['data']['status'])
+                        && $payload['data']['status'] !== 'success',
                 ];
             }
 
@@ -628,6 +736,8 @@ class CartController extends Controller
                 'success' => true,
                 'message' => 'Verified.',
                 'amount' => ($payload['data']['amount'] ?? 0) / 100,
+                    'currency' => $payload['data']['currency'] ?? null,
+                    'reference' => $payload['data']['reference'] ?? null,
             ];
         } catch (\Throwable $e) {
             Log::error('Paystack verify exception', [

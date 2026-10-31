@@ -86,7 +86,7 @@
                             <p>{{ \Illuminate\Support\Str::limit(strip_tags($item->product->product_details ?? ''), 60) }}</p>
                             
                             <div class="card-footer">
-                                <span class="price-text">GH₵ {{ number_format($item->product->price, 2) }}</span>
+                                <span class="price-text">{{ $currencyCode }} {{ number_format($item->product->price, 2) }}</span>
                                 <form action="{{ route('cart.add', $item->product->id) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="quantity" value="1">

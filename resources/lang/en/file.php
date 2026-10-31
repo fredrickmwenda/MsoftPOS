@@ -1040,5 +1040,8 @@ return [
 	'Edit' => 'Edit',
 	'Delete' => 'Delete',
 	'Pay' => 'Pay',
+	'Proforma Invoice' => 'Proforma Invoice',
+	'Social Media' => 'Social Media',
+	'Generate Proforma' => 'Generate Proforma'
 ];
 ?>

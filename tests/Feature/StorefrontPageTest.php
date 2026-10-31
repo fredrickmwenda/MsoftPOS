@@ -9,7 +9,7 @@ class StorefrontPageTest extends TestCase
 {
     use WithoutMiddleware;
 
-    public function test_storefront_page_loads_with_categories_and_products():
+    public function test_storefront_page_loads_with_categories_and_products(): void
     {
         $response = $this->get('/shop');
 

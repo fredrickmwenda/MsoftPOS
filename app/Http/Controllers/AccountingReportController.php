@@ -19,8 +19,13 @@ class AccountingReportController extends Controller
 
     public function balanceSheet(Request $request)
     {
+        $request->validate([
+            'as_of' => ['nullable', 'date'],
+            'warehouse_id' => ['nullable', 'integer'],
+        ]);
+
         // Default to today's date if not provided
-        $asOfDate = $request->input('as_of', date('Y-m-d'));
+        $asOfDate = $request->input('as_of', date('Y-m-d')); 
         $fiscalYearStart = date('Y-01-01', strtotime($asOfDate));
         $warehouseId = $request->input('warehouse_id');
 
@@ -51,8 +56,14 @@ class AccountingReportController extends Controller
 
     public function trialBalance(Request $request)
     {
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $request->validate([
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'warehouse_id' => ['nullable', 'integer'],
+        ]);
+
+        $startDate = $request->input('start_date', date('Y-01-01'));
+        $endDate = $request->input('end_date', date('Y-m-d'));
         $warehouseId = $request->input('warehouse_id');
 
         $balances = $this->reportingService->getAccountBalances($startDate, $endDate, null, $warehouseId);
@@ -68,9 +79,16 @@ class AccountingReportController extends Controller
 
     public function generalLedger(Request $request)
     {
+        $request->validate([
+            'account_id' => ['nullable', 'integer'],
+            'start_date' => ['nullable', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
+            'warehouse_id' => ['nullable', 'integer'],
+        ]);
+
         $accountId = $request->input('account_id');
-        $startDate = $request->input('start_date');
-        $endDate = $request->input('end_date');
+        $startDate = $request->input('start_date', date('Y-01-01'));
+        $endDate = $request->input('end_date', date('Y-m-d'));
         $warehouseId = $request->input('warehouse_id');
 
         $accounts = AccountingAccount::where('is_active', true)->orderBy('code')->get();
@@ -82,11 +100,12 @@ class AccountingReportController extends Controller
         if ($accountId) {
             $selectedAccount = AccountingAccount::where('is_active', true)->find($accountId);
             if (!$selectedAccount) {
-                return redirect()->route('accounting.generalLedger')->with('not_permitted', __('db.Account not found'));
+                return redirect()->route('accounting.general-ledger')->with('not_permitted', __('db.Account not found'));
             }
-            $accountCode = (string) $selectedAccount->code;
-            $accountType = strtolower((string) $selectedAccount->account_type);
-            $isDebitNormal = str_starts_with($accountCode, '1') || str_starts_with($accountCode, '5') || str_contains($accountType, 'contra');
+            $isDebitNormal = $this->reportingService->isDebitNormal(
+                $selectedAccount->code,
+                $selectedAccount->account_type
+            );
 
             // Calculate opening balance
             if ($startDate) {

@@ -452,6 +452,27 @@ class ReturnPurchaseController extends Controller
             $data['document'] = $documentName;
         }
 
+        // A return cannot exceed the quantity originally received, less prior returns.
+        $returnProductIds = $data['is_return'] ?? $data['product_id'];
+        $returnQuantities = $data['qty'] ?? [];
+        foreach ($returnProductIds as $key => $pro_id) {
+            $requestedQty = (float) ($returnQuantities[$key] ?? 0);
+            $receivedQty = (float) ProductPurchase::where('purchase_id', $data['purchase_id'])
+                ->where('product_id', $pro_id)
+                ->sum('recieved');
+            $previouslyReturnedQty = (float) DB::table('purchase_product_return as ppr')
+                ->join('return_purchases as rp', 'rp.id', '=', 'ppr.return_id')
+                ->where('rp.purchase_id', $data['purchase_id'])
+                ->where('ppr.product_id', $pro_id)
+                ->sum('ppr.qty');
+
+            if ($requestedQty <= 0 || $requestedQty > ($receivedQty - $previouslyReturnedQty)) {
+                return redirect()->back()
+                    ->with('not_permitted', 'Return quantity for product #' . $pro_id . ' exceeds the remaining received quantity.')
+                    ->withInput();
+            }
+        }
+
         $lims_return_data = ReturnPurchase::create($data);
         $mail_data['email'] = '';
         if($data['supplier_id']) {
@@ -643,12 +664,16 @@ class ReturnPurchaseController extends Controller
             if (!$res->success) {
                 throw new \App\Exceptions\AccountingException($res->error);
             }
-            $lims_return_data->accounting_status = 'posted';
-            $lims_return_data->save();
+            if (\Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                $lims_return_data->accounting_status = 'posted';
+                $lims_return_data->save();
+            }
         } catch (\App\Exceptions\AccountingException $e) {
             \Log::error('Accounting error on Purchase Return Store: ' . $e->getMessage());
-            $lims_return_data->accounting_status = 'failed';
-            $lims_return_data->save();
+            if (\Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                $lims_return_data->accounting_status = 'failed';
+                $lims_return_data->save();
+            }
         }
         $message = 'Return created successfully';
         if($mail_data['email']){
@@ -976,12 +1001,16 @@ class ReturnPurchaseController extends Controller
             if (!$res->success) {
                 throw new \App\Exceptions\AccountingException($res->error);
             }
-            $lims_return_data->accounting_status = 'posted';
-            $lims_return_data->save();
+            if (\Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                $lims_return_data->accounting_status = 'posted';
+                $lims_return_data->save();
+            }
         } catch (\App\Exceptions\AccountingException $e) {
             \Log::error('Accounting error on Purchase Return Update: ' . $e->getMessage());
-            $lims_return_data->accounting_status = 'failed';
-            $lims_return_data->save();
+            if (\Schema::hasColumn($lims_return_data->getTable(), 'accounting_status')) {
+                $lims_return_data->accounting_status = 'failed';
+                $lims_return_data->save();
+            }
         }
         $message = 'Return updated successfully';
         if($data['supplier_id']) {

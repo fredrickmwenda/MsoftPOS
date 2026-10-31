@@ -39,16 +39,20 @@
                                         ->pluck('products.name')
                                         ->toArray();
 
-                    if($delivery->status == 1)
+                    if((int) $delivery->status === 0)
+                        $status = 'Awaiting payment';
+                    elseif((int) $delivery->status === 1)
                         $status = trans('file.Packing');
-                    elseif($delivery->status == 2)
+                    elseif((int) $delivery->status === 2)
                         $status = trans('file.Delivering');
-                    else
+                    elseif((int) $delivery->status === 3)
                         $status = trans('file.Delivered');
+                    else
+                        $status = 'Payment failed';
 
                     $barcode = \DNS2D::getBarcodePNG($delivery->reference_no, 'QRCODE');
                 ?>
-                <tr class="delivery-link" data-barcode="{{$barcode}}" data-delivery='["{{date($general_setting->date_format, strtotime($delivery->created_at->toDateString()))}}", "{{$delivery->reference_no}}", "{{$delivery->sale->reference_no}}", "{{$status}}", "{{$delivery->id}}", "{{$delivery->sale->customer->name}}", "{{$delivery->sale->customer->phone_number}}", "{{$delivery->sale->customer->address}}", "{{$delivery->sale->customer->city}}", "{{$delivery->note}}", "{{$delivery->user->name}}", "{{$delivery->delivered_by}}", "{{$delivery->recieved_by}}"]'>
+                <tr class="delivery-link" data-barcode="{{$barcode}}" data-delivery='["{{date($general_setting->date_format, strtotime($delivery->created_at->toDateString()))}}", "{{$delivery->reference_no}}", "{{$delivery->sale->reference_no}}", "{{$status}}", "{{$delivery->id}}", "{{$delivery->sale->customer->name}}", "{{$delivery->sale->customer->phone_number}}", "{{ addslashes($delivery->address) }}", "{{$delivery->sale->customer->city}}", "{{$delivery->note}}", "{{$delivery->user->name}}", "{{$delivery->delivered_by}}", "{{$delivery->recieved_by}}"]'>
                     <td>{{$key}}</td>
                     <td>{{ $delivery->reference_no }}</td>
                     <td>{{ $customer_sale[0]->reference_no }}</td>
@@ -65,8 +69,10 @@
                     <td><div class="badge badge-info">{{$status}}</div></td>
                     @elseif($delivery->status == 2)
                     <td><div class="badge badge-primary">{{$status}}</div></td>
-                    @elseif($delivery->status == 0)
-                        <td><div class="badge badge-danger">Customer Unavailable</div></td>
+                    @elseif((int) $delivery->status === 0)
+                        <td><div class="badge badge-warning">{{$status}}</div></td>
+                    @elseif((int) $delivery->status === 4)
+                        <td><div class="badge badge-danger">{{$status}}</div></td>
                     @else
                     <td><div class="badge badge-success">{{$status}}</div></td>
                     @endif

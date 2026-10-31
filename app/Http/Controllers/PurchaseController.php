@@ -731,16 +731,25 @@ class PurchaseController extends Controller
                 $product_purchase['purchase_unit_id'] = $lims_purchase_unit_data->id ?? null;
                 $product_purchase['net_unit_cost'] = $net_unit_cost[$i] ?? 0;
                 $product_purchase['discount'] = $discount[$i] ?? 0;
-                $product_purchase['tax_rates'] = (!empty($tax_rate[$i])) ? $tax_rate[$i] : '';
-                $product_purchase['tax_names'] = (isset($tax_names[$i]) && !empty($tax_names[$i])) ? $tax_names[$i] : '';
+                // The form submits tax IDs, while product_purchases.tax_rate
+                // stores the resulting numeric rate used by reports.
+                $taxIds = array_filter(array_map('intval', explode(',', (string) ($tax_rate[$i] ?? ''))));
+                $product_purchase['tax_rate'] = $taxIds
+                    ? Tax::whereIn('id', $taxIds)->sum('rate')
+                    : 0;
                 $product_purchase['tax'] = $tax[$i] ?? 0;
                 $product_purchase['total'] = $total[$i] ?? 0;
 
                 ProductPurchase::create($product_purchase);
             }
 
+            $accountingResult = $this->accountingService->recordPurchase($lims_purchase_data, 'purchase_created');
+            if (! $accountingResult->success) {
+                throw new \App\Exceptions\AccountingException($accountingResult->error);
+            }
+
             DB::commit();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             \Log::error('Purchase store failed: ' . $e->getMessage());
             return redirect()->back()
@@ -1908,15 +1917,13 @@ class PurchaseController extends Controller
 
     public function rejectPayment(Request $request, $id)
     {
-        $user = Auth::user();
-        $payment = \App\Models\Payment::where('purchase_id', $id)
-                ->orderBy('created_at', 'desc')
-                ->first();
+        $payment = Payment::findOrFail($id);
 
-        if (!$payment->purchase_id) {
+        if (! $payment->purchase_id) {
             return response()->json(['message' => 'Payment is not linked to any purchase.'], 400);
         }
-        $purchase = Purchase::findOrFail($id);
+
+        $purchase = Purchase::findOrFail($payment->purchase_id);
 
 
 
@@ -2213,6 +2220,7 @@ class PurchaseController extends Controller
                 $lims_product_data = Product::find($id);
                 $lims_purchase_unit_data = $this->resolvePurchaseUnit($purchase_unit[$key] ?? '', $lims_product_data);
                 $quantity = $this->convertQuantity($recieved[$key] ?? 0, $lims_purchase_unit_data);
+                $new_recieved_value = $quantity;
 
                 $lims_product_data = Product::find($pro_id);
                 //dealing with product barch

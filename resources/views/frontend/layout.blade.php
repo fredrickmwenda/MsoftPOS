@@ -68,7 +68,7 @@
 <body class="storefront-page">
     <div class="announcement-bar">
         <div class="container announcement-inner">
-            <span>🚚 Free delivery in Accra on orders over GH₵1,000</span>
+            <span>🚚 Free delivery in Accra on orders over {{ $currencyCode }} 1,000</span>
             <div class="announcement-right">
                 <span>Call or WhatsApp: <strong>{{ $phoneNumber }}</strong></span>
                 @include('frontend.partials.social-links', ['context' => 'announcement'])

@@ -95,7 +95,7 @@
                                 <td class="ref">{{ $sale->reference_no }}</td>
                                 <td>{{ $sale->created_at->format('M d, Y') }}</td>
                                 <td>{{ $sale->productSales->count() }} item(s)</td>
-                                <td>₦{{ number_format($sale->total_amount, 2) }}</td>
+                                <td>{{ $currencyCode }} {{ number_format((float) $sale->grand_total, 2) }}</td>
                                 <td><span class="badge {{ $paymentLabel[1] }}">{{ $paymentLabel[0] }}</span></td>
                                 <td>
                                     @if($sale->delivery)
