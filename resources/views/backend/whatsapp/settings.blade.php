@@ -45,8 +45,8 @@
 
 @push('scripts')
     <script type="text/javascript">
-        $("ul#whatsapp").siblings('a').attr('aria-expanded', 'true');
-        $("ul#whatsapp").addClass("show");
-        $("ul#whatsapp #whatsapp-settings-menu").addClass("active");
+    $("ul#communication").siblings('a').attr('aria-expanded', 'true');
+    $("ul#communication").addClass("show");
+    $("ul#communication #whatsapp-settings-menu").addClass("active");
     </script>
 @endpush

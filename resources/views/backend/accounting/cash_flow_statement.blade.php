@@ -6,16 +6,62 @@
     .top-fields label { font-size:11px; font-weight:600; margin-left:10px; padding:0 3px; position:absolute; top:-8px; z-index:9; background-color: white; }
     .top-fields input { font-size:13px; height:36px; }
     .btn-block { height: 36px; display: flex; align-items: center; justify-content: center; }
+
+    /* =========================================
+       PRINT STYLES
+       ========================================= */
+    @media print {
+        /* Hide everything on the page */
+        body * {
+            visibility: hidden;
+        }
+
+        /* Make the report content and its children visible */
+        #report-content, #report-content * {
+            visibility: visible;
+        }
+
+        /* Position the report at the top left of the page */
+        #report-content {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Remove backgrounds so text is readable on paper and doesn't waste ink */
+        .bg-light, .bg-primary, .bg-info, .bg-warning, .bg-secondary, .bg-success {
+            background-color: transparent !important;
+            color: #000 !important;
+            border-bottom: 2px solid #000 !important;
+        }
+
+        /* Ensure table borders print correctly */
+        .table-bordered th, .table-bordered td {
+            border: 1px solid #000 !important;
+        }
+
+        /* Hide the filter card and print button explicitly just in case */
+        #filter-card, .btn-icon, .no-print {
+            display: none !important;
+        }
+    }
 </style>
 @endpush
+
 @section('content')
 <section>
     <div class="container-fluid">
         <form id="filter-form" action="{{ route('accounting.cash-flow') }}" method="GET">
-            <div class="card mt-3 mb-2" id="filter-card">
+            <div class="card mt-3 mb-2 no-print" id="filter-card">
                 <div class="card-body">
                     <h3 class="text-center mt-2">{{__('file.Cash Flow Statement')}}</h3>
-                    <button class="btn btn-primary btn-icon" onclick="window.print();" type="button" style="position: absolute; top: 15px; right: 15px"><i class="ti ti-printer"></i></button>
+
+                    <!-- Added class 'no-print' to the print button so it hides on paper -->
+                    <button class="btn btn-primary btn-icon no-print" onclick="window.print();" type="button" style="position: absolute; top: 15px; right: 15px"><i class="ti ti-printer"></i> Print</button>
+
                     <div class="row mt-4">
                         <div class="col-md-3">
                             <div class="form-group top-fields">
@@ -42,7 +88,7 @@
                             </div>
                         </div>
                         <div class="col-md-3 d-flex align-items-end">
-                            <button type="submit" class="btn btn-primary btn-block"><i class="ti ti-filter"></i> Filter</button>
+                            <button type="submit" class="btn btn-primary btn-block no-print"><i class="ti ti-filter"></i> Filter</button>
                         </div>
                     </div>
                 </div>
@@ -50,14 +96,16 @@
         </form>
     </div>
 
+    <!-- This is the only part that will print -->
     <div id="report-content" class="table-responsive px-4 mb-5 pb-5">
+        <h3 class="text-center mb-4" style="display: none;" id="print-title">{{__('file.Cash Flow Statement')}}</h3>
         <table class="table table-bordered table-striped dataTable">
             <tbody>
                 <tr class="bg-light">
                     <th><strong>{{__('file.Opening Cash')}}</strong></th>
                     <th class="text-right"><strong>{{ number_format($opening_cash, 2) }}</strong></th>
                 </tr>
-                
+
                 <tr>
                     <th colspan="2" class="bg-primary text-white"><strong>{{__('file.Operating Activities')}}</strong></th>
                 </tr>
@@ -133,6 +181,10 @@
 
 @push('scripts')
 <script type="text/javascript">
+$("ul#account").siblings('a').attr('aria-expanded','true');
+$("ul#account").addClass("show");
+$("ul#account #cash-flow-menu").addClass("active");
+
     $(document).ready(function() {
         function loadReport() {
             $.ajax({
@@ -140,14 +192,16 @@
                 type: "GET",
                 data: $('#filter-form').serialize(),
                 beforeSend: function() {
-                    $('#report-content').html('<div class="text-center p-5"><div class="spinner-border text-primary" role="status"></div></div>');
+                    $('#report-content').html('<div class="text-center p-5 no-print"><div class="spinner-border text-primary" role="status"></div></div>');
                 },
                 success: function(response) {
                     var newContent = $(response).find('#report-content').html();
                     $('#report-content').html(newContent);
+                    // Re-show the print title if it was removed by the AJAX response
+                    $('#print-title').show();
                 },
                 error: function() {
-                    $('#report-content').html('<div class="alert alert-danger m-4">Error loading data. Please try again.</div>');
+                    $('#report-content').html('<div class="alert alert-danger m-4 no-print">Error loading data. Please try again.</div>');
                 }
             });
         }
@@ -167,6 +221,14 @@
         $('select[name="warehouse_id"]').on('change', function() {
             loadReport();
         });
+
+        // Add a title just for the print view
+        $('#print-title').show();
+
+        // Ensure window.print() triggers the CSS visibility correctly
+        window.onbeforeprint = function() {
+            $('#print-title').show();
+        };
     });
 </script>
 @endpush

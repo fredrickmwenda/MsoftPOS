@@ -58,6 +58,16 @@
 
                                     </div>
                                 </div>
+                                <div class="col-md-3 mt-4">
+                                    <div class="form-group">
+                                        <input type="checkbox" name="ecommerce_enabled" value="1"
+                                            {{ old('ecommerce_enabled', $lims_general_setting_data->ecommerce_enabled ?? false) ? 'checked' : '' }}>
+                                        &nbsp;
+                                        <label>{{trans('file.Enable Ecommerce Setup')}}</label>
+                                        <br>
+                                        <small class="text-muted">When unchecked, visitors land on the admin login page instead of the storefront.</small>
+                                    </div>
+                                </div>
                                 @if(config('database.connections.saleprosaas_landlord'))
                                     <div class="col-md-4 mt-4">
                                         <div class="form-group">
@@ -91,7 +101,7 @@
                                     </div>
                                 </div>
 
-                                
+
                                 <div class="col-md-2">
                                     <div class="form-group">
                                         <label><strong>Filter By Percentage</strong></label>
@@ -114,8 +124,8 @@
                                         @endif
                                     </div>
                                 </div>
-                                
-                                
+
+
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>{{trans('file.Time Zone')}}</label>

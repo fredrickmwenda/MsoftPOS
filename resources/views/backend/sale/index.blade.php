@@ -32,7 +32,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="col-md-2 @if(\Auth::user()->roles->contains(fn($role) => $role->id > 2)){{'d-none'}}@endif">
                     <div class="form-group">
                         <label><strong>{{trans('file.Warehouse')}}</strong></label>
@@ -44,7 +44,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="col-md-2">
                     <div class="form-group">
                         <label><strong>{{trans('file.Sale Status')}}</strong></label>
@@ -56,7 +56,7 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="col-md-2">
                     <div class="form-group">
                         <label><strong>{{trans('file.Payment Status')}}</strong></label>
@@ -82,17 +82,12 @@
                     </div>
                 </div>
 
-                
-                <!-- Filter By Percentage: show only top X% of sales by value (permission required) -->
-               
-
-     
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
-                
+
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button type="button" class="btn btn-secondary" id="reset-filters">Reset</button>
@@ -101,7 +96,7 @@
             </div>
             {!! Form::close() !!}
         </div>
-        
+
         <!-- Total Sales card (shown when filtered; value filled by DataTable response) -->
         <div class="row ml-1 mb-2">
             <div class="col-md-4">
@@ -113,13 +108,13 @@
                 </div>
             </div>
         </div>
-        
+
         @if(in_array("sales-add", $all_permission))
             <a href="{{route('sales.create')}}" class="btn btn-info add-sale-btn"><i class="dripicons-plus"></i> {{trans('file.Add Sale')}}</a>&nbsp;
             <a href="{{url('sales/sale_by_csv')}}" class="btn btn-primary add-sale-btn"><i class="dripicons-copy"></i> {{trans('file.Import Sale')}}</a>
         @endif
     </div>
-    
+
     <div class="table-responsive">
         <table id="sale-table" class="table sale-list" style="width: 100%">
             <thead>
@@ -132,7 +127,7 @@
                     <th>{{trans('file.Sale Status')}}</th>
                     <th>{{trans('file.Payment Status')}}</th>
                     <th>{{trans('file.Delivery Status')}}</th>
-                    <th>Sale Source</th> <!-- NEW -->
+                    <th>Sale Source</th>
                     <th>{{trans('file.grand total')}}<br><small class="text-muted">(Individual)</small></th>
                     <th>{{trans('file.Returned Amount')}}</th>
                     <th>{{trans('file.Paid')}}</th>
@@ -167,7 +162,6 @@
     </div>
 </section>
 
-<!-- Rest of your modals remain exactly the same -->
 <div id="sale-details" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
     <div role="document" class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -310,7 +304,7 @@
                         <label>{{trans('Mobile Number')}} *</label>
                         <input type="number" name="mobile_number" class="form-control">
                     </div>
-                    
+
                     <div class="gift-card form-group">
                         <label> {{trans('file.Gift Card')}} *</label>
                         <select id="gift_card_id" name="gift_card_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Gift Card...">
@@ -327,20 +321,20 @@
                             @endforeach
                         </select>
                     </div>
-                    
+
                     <div class="form-group mt-2">
                         <div class="card-element" class="form-control">
                         </div>
                         <div class="card-errors" role="alert"></div>
                     </div>
-                    
+
                     <div id="cheque">
                         <div class="form-group">
                             <label>{{trans('file.Cheque Number')}} *</label>
                             <input type="text" name="cheque_no" class="form-control">
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label> {{trans('file.Account')}}</label>
                         <select class="form-control selectpicker" name="account_id">
@@ -353,7 +347,7 @@
                         @endforeach
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>{{trans('file.Payment Note')}}</label>
                         <textarea rows="3" class="form-control" name="payment_note"></textarea>
@@ -419,7 +413,7 @@
                             </select>
                         </div>
                     </div>
-                    
+
                     <div class="form-group col-md-12 edit_mobile_money_fields">
                         <label>{{trans('Mobile Money')}} *</label>
                         <select id="mobile_money_operator" name="mobile-op" class="form-control" data-live-search="true" data-live-search-style="begins" title="Mobile money operator">
@@ -434,7 +428,7 @@
                         <label>{{trans('Mobile Number')}} *</label>
                         <input type="number" name="mobile_number" class="form-control">
                     </div>
-                    
+
                     <div class="gift-card form-group">
                         <label> {{trans('file.Gift Card')}} *</label>
                         <select id="gift_card_id" name="gift_card_id" class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Gift Card...">
@@ -443,20 +437,20 @@
                             @endforeach
                         </select>
                     </div>
-                    
+
                     <div class="form-group mt-2">
                         <div class="card-element" class="form-control">
                         </div>
                         <div class="card-errors" role="alert"></div>
                     </div>
-                    
+
                     <div id="edit-cheque">
                         <div class="form-group">
                             <label>{{trans('file.Cheque Number')}} *</label>
                             <input type="text" name="edit_cheque_no" class="form-control">
                         </div>
                     </div>
-                    
+
                     <div class="form-group">
                         <label> {{trans('file.Account')}}</label>
                         <select class="form-control selectpicker" name="account_id">
@@ -465,7 +459,7 @@
                         @endforeach
                         </select>
                     </div>
-                    
+
                     <div class="form-group">
                         <label>{{trans('file.Payment Note')}}</label>
                         <textarea rows="3" class="form-control" name="edit_payment_note"></textarea>
@@ -555,36 +549,6 @@
     $("ul#sale").siblings('a').attr('aria-expanded','true');
     $("ul#sale").addClass("show");
     $("ul#sale #sale-list-menu").addClass("active");
- 
-    // Handle Save as Default button for admin percentage filter
-    $('#save-admin-filter').on('click', function() {
-        var pct = $('#percentage_filter_value').val() || $('#percentage_filter_select').val();
-        
-        if(!pct || pct === '') {
-            alert('Please select a percentage before saving as default');
-            return;
-        }
-        
-        $.ajax({
-            type: 'POST',
-            url: '{{ route("sales.save-default-filter") }}',
-            data: {
-                percentage_filter: pct,
-                _token: $('meta[name="csrf-token"]').attr('content')
-            },
-            success: function(response) {
-                if(response.success) {
-                    alert('✓ Default filter saved! All users will see this filter when they login.');
-                    location.reload();
-                } else {
-                    alert('Error: ' + response.message);
-                }
-            },
-            error: function() {
-                alert('Error saving default filter. Please try again.');
-            }
-        });
-    });
 
     @if(config('database.connections.saleprosaas_landlord'))
         if(localStorage.getItem("message")) {
@@ -605,13 +569,15 @@
         });
     @endif
 
+    var decimal_places = {{ $general_setting->decimal ?? 2 }};
+
     var columns = [{"data": "key"}, {"data": "date"}, {"data": "reference_no"}, {"data": "biller"}, {"data": "customer"}, {"data": "sale_status"}, {"data": "payment_status"}, {"data": "delivery_status"}, {"data": "sale_source"}, {"data": "grand_total"}, {"data": "returned_amount"}, {"data": "paid_amount"}, {"data": "due"}];
     var field_name = <?php echo json_encode($field_name) ?>;
     for(i = 0; i < field_name.length; i++) {
         columns.push({"data": field_name[i]});
     }
     columns.push({"data": "options"});
-    
+
     @if($lims_pos_setting_data)
         var public_key = <?php echo json_encode($lims_pos_setting_data->stripe_public_key) ?>;
     @endif
@@ -621,8 +587,6 @@
     @endif
     var sale_id = [];
     var user_verified = <?php echo json_encode(env('USER_VERIFIED')) ?>;
-    var starting_date = <?php echo json_encode($starting_date); ?>;
-    var ending_date = <?php echo json_encode($ending_date); ?>;
     var warehouse_id = <?php echo json_encode($warehouse_id); ?>;
     var sale_status = <?php echo json_encode($sale_status); ?>;
     var payment_status = <?php echo json_encode($payment_status); ?>;
@@ -652,7 +616,7 @@
     $('input[name="ending_date"]').on('change', function() {
         var startDate = new Date($('input[name="starting_date"]').val());
         var endDate = new Date($(this).val());
-        
+
         if (endDate < startDate) {
             alert('{{trans("file.End date cannot be earlier than start date")}}');
             $(this).val($('input[name="starting_date"]').val());
@@ -662,46 +626,29 @@
     $('input[name="starting_date"]').on('change', function() {
         var endDate = new Date($('input[name="ending_date"]').val());
         var startDate = new Date($(this).val());
-        
+
         if (endDate < startDate) {
             $('input[name="ending_date"]').val($(this).val());
         }
     });
 
-
-
-        // Keep hidden in sync with percentage select so form submit and DataTable always have the value
-    $('#percentage_filter_select').on('change', function() {
-        $('#percentage_filter_value').val($(this).val() || '');
-    });
-
-    // ===== ADD THIS BLOCK =====
     // Intercept the filter form submission
     $('#filter-form').on('submit', function(e) {
-        e.preventDefault(); // Stop the page from reloading
-        
-        // Make sure selectpickers have updated their hidden select elements
+        e.preventDefault();
         $('.selectpicker').selectpicker('refresh');
-        
-        // Reload the DataTable using the new filter inputs
         $('#sale-table').DataTable().ajax.reload();
     });
-    // ===========================
 
     // Reset filters
     $('#reset-filters').on('click', function() {
         $('input[name="starting_date"]').val('');
         $('input[name="ending_date"]').val('');
-        $('#percentage_filter_value').val('');
-        $('#percentage_filter_select').val('');
         $('#warehouse_id').val(0);
         $('#sale-status').val(0);
         $('#payment-status').val(0);
-        $('#sale_source').val('all'); // NEW
+        $('#sale_source').val('all');
         $('.selectpicker').selectpicker('refresh');
-
-        $('#sale-table').DataTable().ajax.reload(); 
-
+        $('#sale-table').DataTable().ajax.reload();
     });
 
     $(".gift-card").hide();
@@ -734,21 +681,60 @@
         a.print();
     });
 
-    $(document).on("click", "table.sale-list tbody .add-payment", function() {
+    // Helper: calculate the remaining due for a sale data object
+    function getSaleDue(data) {
+        var grand_total = parseFloat(String(data.grand_total).replace(/,/g, '')) || 0;
+        var paid = parseFloat(String(data.paid_amount).replace(/,/g, '')) || 0;
+        var returned = parseFloat(String(data.returned_amount).replace(/,/g, '')) || 0;
+        // Returned amount reduces the effective amount still owed
+        return grand_total - returned - paid;
+    }
+
+    // ============================================================
+    // ADD PAYMENT — only allowed when there is a due amount.
+    // When opened, the due amount is pre-filled as the amount
+    // being paid and received.
+    // ============================================================
+    $(document).on("click", "table.sale-list tbody .add-payment", function(e) {
+        var rowData = $(this).closest('tr').data('sale');
+        var saleId  = $(this).data('id').toString();
+        var due     = getSaleDue({
+            grand_total: rowData[21],
+            paid_amount: rowData[22],
+            returned_amount: rowData[23] !== undefined ? rowData[23] : 0
+        });
+
+        // Block the popup if there is nothing left to pay
+        if (!(due > 0)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            alert('{{ trans("file.This sale has no due amount") }}');
+            return false;
+        }
+
         $("#cheque").hide();
         $(".gift-card").hide();
         $(".card-element").hide();
         $('select[name="paid_by_id"]').val(1);
         $('.selectpicker').selectpicker('refresh');
-        rowindex = $(this).closest('tr').index();
+
+        var rowindex = $(this).closest('tr').index();
         deposit = $('table.sale-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.deposit').val();
-        var sale_id = $(this).data('id').toString();
-        var balance = $('table.sale-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(12)').text();
-        balance = parseFloat(balance.replace(/,/g, ''));
-        $('input[name="paying_amount"]').val(balance);
-        $('#add-payment input[name="balance"]').val(balance);
-        $('input[name="amount"]').val(balance);
-        $('input[name="sale_id"]').val(sale_id);
+
+        // Pre-fill both fields with the exact due amount
+        $('input[name="paying_amount"]').val(due.toFixed(decimal_places));
+        $('input[name="amount"]').val(due.toFixed(decimal_places));
+        $('#add-payment input[name="balance"]').val(due.toFixed(decimal_places));
+        $('input[name="sale_id"]').val(saleId);
+        $('.change').text((0).toFixed(decimal_places));
+
+        // Point-based payment validation against the due amount
+        var paidById = $('select[name="paid_by_id"]').val();
+        if (paidById == 6 && due > parseFloat(deposit)) {
+            alert('Amount exceeds customer deposit! Customer deposit : ' + deposit);
+        } else if (paidById == 7) {
+            pointCalculation(due);
+        }
     });
 
     $(document).on("click", "table.sale-list tbody .get-payment", function(event) {
@@ -872,7 +858,7 @@
             $(".card-element").hide();
             $(".gift-card").hide();
             $("#cheque").hide();
-       
+
         } else {
             $(".card-element").hide();
             $(".gift-card").hide();
@@ -1032,19 +1018,18 @@
         "ajax":{
             url: "sales/sale-data",
             type: "POST",
-            // Use a single function to gather all dynamic data
             data: function ( d ) {
                 d.all_permission = all_permission;
                 d.starting_date = $('input[name="starting_date"]').val();
                 d.ending_date = $('input[name="ending_date"]').val();
                 d.warehouse_id = $('#warehouse_id').val();
-                d.sale_status = $('#sale-status').val();              
-                d.sale_source = $('#sale_source').val(); 
-                d.percentage_filter = $('#percentage_filter_value').val() || $('select#percentage_filter_select').val();
+                d.sale_status = $('#sale-status').val();
+                d.payment_status = $('#payment-status').val();
+                d.sale_source = $('#sale_source').val();
             },
             dataSrc: function(json) {
                 if (json.total_sales_amount !== undefined) {
-                    $('#total-sales-card-amount').text(parseFloat(json.total_sales_amount).toFixed({{ $general_setting->decimal ?? 2 }}));
+                    $('#total-sales-card-amount').text(parseFloat(json.total_sales_amount).toFixed(decimal_places));
                 } else {
                     $('#total-sales-card-amount').text('—');
                 }
@@ -1052,7 +1037,6 @@
             },
             dataType: "json"
         },
-        // ... keep the rest of your DataTable configuration exactly the same
         "createdRow": function( row, data, dataIndex ) {
             $(row).addClass('sale-link');
             $(row).attr('data-sale', data['sale']);
@@ -1189,23 +1173,40 @@
         drawCallback: function () {
             var api = this.api();
             datatable_sum(api, false);
+
+            // Disable "Add Payment" buttons on rows that have no due amount
+            api.rows({ page: 'current' }).every(function () {
+                var rowNode = this.node();
+                var data = this.data();
+                if (!data) return;
+                var due = getSaleDue(data);
+                $(rowNode).find('.add-payment').each(function () {
+                    if (due > 0) {
+                        $(this).removeClass('disabled');
+                        $(this).css({ 'pointer-events': '', 'opacity': '' });
+                    } else {
+                        $(this).addClass('disabled');
+                        $(this).css({ 'pointer-events': 'none', 'opacity': '0.4' });
+                    }
+                });
+            });
         }
     } );
 
     function datatable_sum(dt_selector, is_calling_first) {
         if (dt_selector.rows( '.selected' ).any() && is_calling_first) {
             var rows = dt_selector.rows( '.selected' ).indexes();
-            $( dt_selector.column( 8 ).footer() ).html(dt_selector.cells( rows, 8, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 9 ).footer() ).html(dt_selector.cells( rows, 9, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 10 ).footer() ).html(dt_selector.cells( rows, 10, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 11 ).footer() ).html(dt_selector.cells( rows, 11, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 12 ).footer() ).html(dt_selector.cells( rows, 12, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
         }
         else {
             var rows = dt_selector.rows( { page: 'current' } ).indexes();
-            $( dt_selector.column( 8 ).footer() ).html(dt_selector.cells( rows, 8, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 9 ).footer() ).html(dt_selector.cells( rows, 9, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 10 ).footer() ).html(dt_selector.cells( rows, 10, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
             $( dt_selector.column( 11 ).footer() ).html(dt_selector.cells( rows, 11, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
+            $( dt_selector.column( 12 ).footer() ).html(dt_selector.cells( rows, 12, { page: 'current' } ).data().sum().toFixed({{$general_setting->decimal}}));
         }
     }
 
@@ -1357,7 +1358,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         const paidBySelect = document.querySelector('[name="paid_by_id"]');
         const mobileMoneyFields = document.querySelectorAll('.mobile_money_fields');
-        
+
         function toggleMobileMoneyFields() {
             if (paidBySelect && paidBySelect.value === '8') {
                 mobileMoneyFields.forEach(field => field.style.display = 'block');
@@ -1370,11 +1371,11 @@
             paidBySelect.addEventListener('change', toggleMobileMoneyFields);
         }
     });
-    
+
     document.addEventListener("DOMContentLoaded", function () {
         const paidBySelect = document.querySelector('[name="edit_paid_by_id"]');
         const mobileMoneyFields = document.querySelectorAll('.edit_mobile_money_fields');
-        
+
         function toggleMobileMoneyFields() {
             if (paidBySelect && paidBySelect.value === '8') {
                 mobileMoneyFields.forEach(field => field.style.display = 'block');

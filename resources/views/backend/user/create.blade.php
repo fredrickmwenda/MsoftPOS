@@ -16,15 +16,44 @@
                         {!! Form::open(['route' => 'user.store', 'method' => 'post', 'files' => true]) !!}
                             <div class="row">
                                 <div class="col-md-6">
+
                                     <div class="form-group">
-                                        <label><strong>{{trans('file.UserName')}} *</strong> </label>
-                                        <input type="text" name="name" required class="form-control">
-                                        @if($errors->has('name'))
-                                       <small>
-                                           <strong>{{ $errors->first('name') }}</strong>
-                                        </small>
+                                        <label><strong>First Name *</strong></label>
+                                        <input type="text"
+                                               name="first_name"
+                                               value="{{ old('first_name') }}"
+                                               required
+                                               class="form-control">
+
+                                        @if($errors->has('first_name'))
+                                            <small class="text-danger">
+                                                {{ $errors->first('first_name') }}
+                                            </small>
                                         @endif
                                     </div>
+
+
+
+
+
+
+
+                                    <div class="form-group">
+                                        <label><strong>Username *</strong></label>
+                                        <input type="text"
+                                               name="name"
+                                               value="{{ old('name') }}"
+                                               required
+                                               class="form-control"
+                                               placeholder="Enter login username">
+
+                                        @if($errors->has('name'))
+                                            <small class="text-danger">
+                                                {{ $errors->first('name') }}
+                                            </small>
+                                        @endif
+                                    </div>
+
                                     <div class="form-group">
                                         <label><strong>{{trans('file.Password')}} *</strong> </label>
                                         <div class="input-group">
@@ -39,15 +68,9 @@
                                             @endif
                                         </div>
                                     </div>
-                                    <div class="form-group">
-                                        <label><strong>{{trans('file.Email')}} *</strong></label>
-                                        <input type="email" name="email" placeholder="example@example.com" required class="form-control">
-                                        @if($errors->has('email'))
-                                       <small>
-                                           <strong class="text-danger">{{ $errors->first('email') }}</strong>
-                                        </small>
-                                        @endif
-                                    </div>
+
+
+
                                     <div class="form-group">
                                         <label><strong>{{trans('file.Phone Number')}} *</strong></label>
                                         <input type="text" name="phone_number" required class="form-control">
@@ -56,6 +79,14 @@
                                                <strong>{{ $errors->first('phone_number') }}</strong>
                                             </small>
                                         @endif
+                                    </div>
+                                    <div class="form-group">
+                                        <label><strong>{{trans('file.Role')}} *</strong></label>
+                                        <select name="roles[]" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role..." multiple>
+                                            @foreach($lims_role_list as $role)
+                                                <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="customer-section">
                                         <div class="form-group">
@@ -81,17 +112,49 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
+                                        <label><strong>Last Name *</strong></label>
+                                        <input type="text"
+                                               name="last_name"
+                                               value="{{ old('last_name') }}"
+                                               required
+                                               class="form-control">
+
+                                        @if($errors->has('last_name'))
+                                            <small class="text-danger">
+                                                {{ $errors->first('last_name') }}
+                                            </small>
+                                        @endif
+                                    </div>
+                                    <div class="form-group">
+                                        <label><strong>Position *</strong></label>
+                                        <input type="text"
+                                               name="position"
+                                               value="{{ old('position') }}"
+                                               required
+                                               class="form-control"
+                                               placeholder="e.g. Manager, Accountant, Cashier">
+
+                                        @if($errors->has('position'))
+                                            <small class="text-danger">
+                                                {{ $errors->first('position') }}
+                                            </small>
+                                        @endif
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><strong>{{trans('file.Email')}} *</strong></label>
+                                        <input type="email" name="email" placeholder="example@example.com" required class="form-control">
+                                        @if($errors->has('email'))
+                                       <small>
+                                           <strong class="text-danger">{{ $errors->first('email') }}</strong>
+                                        </small>
+                                        @endif
+                                    </div>
+                                    <div class="form-group">
                                         <label><strong>{{trans('file.Company Name')}}</strong></label>
                                         <input type="text" name="company_name" class="form-control">
                                     </div>
-                                    <div class="form-group">
-                                        <label><strong>{{trans('file.Role')}} *</strong></label>
-                                        <select name="roles[]" required class="selectpicker form-control" data-live-search="true" data-live-search-style="begins" title="Select Role..." multiple>
-                                            @foreach($lims_role_list as $role)
-                                                <option value="{{ $role->id }}">{{ $role->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
+
                                     <div class="customer-section">
                                         <div class="form-group">
                                             <label><strong>{{trans('file.Customer Group')}} *</strong></label>

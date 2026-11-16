@@ -12,7 +12,7 @@
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
- 
+
 <section>
     <div class="container-fluid">
         <!-- Trigger the modal with a button -->
@@ -71,7 +71,7 @@
                 <select name="department_id" class="form-control selectpicker" >
                     <option value="">Select Department</option>
                     @php $department_lists = DB::table('category_departments')->where('is_active', true)->get(); @endphp
-                    
+
                     @foreach($department_lists as $department)
                     <option value="{{$department->id}}">{{$department->name}}</option>
                     @endforeach
@@ -91,7 +91,7 @@
             <div class="col-md-6 form-group">
                 <label>{{ __('Icon') }} (SVG format)</label>
                 <input type="file" name="icon" class="form-control">
-            </div> 
+            </div>
             <div class="col-md-6 form-group">
                 <br>
                 <input type="checkbox" name="featured" id="featured" value="1"> <label>{{ __('List on category dropdown') }}</label>
@@ -185,9 +185,14 @@
         var url ="category/";
         var id = $(this).data('id').toString();
         url = url.concat(id).concat("/edit");
+
         $.get(url, function(data){
             $("#editModal input[name='name']").val(data['name']);
             $("#editModal select[name='parent_id']").val(data['parent_id']);
+
+            // ADD THIS LINE TO SELECT THE DEPARTMENT:
+            $("#editModal select[name='department_id']").val(data['department_id']);
+
             $("#editModal input[name='category_id']").val(data['id']);
             if (data['is_sync_disable']) {
                 $("#editModal input[name='is_sync_disable']").prop("checked", true);
@@ -197,10 +202,11 @@
             }
             $("#editModal input[name='page_title']").val(data['page_title']);
             $("#editModal input[name='short_description']").val(data['short_description']);
+
+            // Ensure the selectpicker UI updates
             $('.selectpicker').selectpicker('refresh');
         });
     });
-
     $('#category-table').DataTable( {
         "processing": true,
         "serverSide": true,
@@ -230,7 +236,7 @@
                     'next': '<i class="dripicons-chevron-right"></i>'
             }
         },
-        order:[['2', 'asc']],
+        order:[['0', 'desc']],
         'columnDefs': [
             {
                 "orderable": false,

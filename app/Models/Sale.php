@@ -8,15 +8,15 @@ class Sale extends Model
 {
     protected $fillable =[
         "reference_no", "user_id", "cash_register_id", "table_id",
-         "queue", "customer_id", "warehouse_id", "biller_id", "item", 
-         "total_qty", "total_discount", "total_tax", "total_price", 
-         "order_tax_rate","order_tax", "order_discount_type", "order_discount_value", 
+         "queue", "customer_id", "warehouse_id", "biller_id", "item",
+         "total_qty", "total_discount", "total_tax", "total_price",
+         "order_tax_rate","order_tax", "order_discount_type", "order_discount_value",
         "order_discount", "coupon_id", "coupon_discount", "shipping_cost", "grand_total",
-         "currency_id", "exchange_rate", "sale_status", "payment_status", "paid_amount", 
+         "currency_id", "exchange_rate", "sale_status", "payment_status", "paid_amount",
          "document", "sale_note", "staff_note", "created_at", "woocommerce_order_id",
          // Hire Purchase fields
-         "is_hire_purchase", "hire_purchase_down_payment", "hire_purchase_terms", 
-         "hire_purchase_interest_rate", "hire_purchase_status", "hire_purchase_start_date", 
+         "is_hire_purchase", "hire_purchase_down_payment", "hire_purchase_terms",
+         "hire_purchase_interest_rate", "hire_purchase_status", "hire_purchase_start_date",
          "hire_purchase_end_date",
         "sale_source",
 
@@ -128,7 +128,7 @@ class Sale extends Model
         $balance = $this->grand_total - $this->hire_purchase_down_payment;
         $interest = $balance * ($this->hire_purchase_interest_rate / 100);
         $totalWithInterest = $balance + $interest;
-        
+
         return round($totalWithInterest / $this->hire_purchase_terms, 2);
     }
 
@@ -144,12 +144,12 @@ class Sale extends Model
         $balance = $this->grand_total - $this->hire_purchase_down_payment;
         $interest = $balance * ($this->hire_purchase_interest_rate / 100);
         $totalWithInterest = $balance + $interest;
-        
+
         // Subtract all paid installments
         $paidInstallments = $this->hire_purchase_installments()
             ->where('payment_status', 'paid')
             ->sum('amount');
-        
+
         return round($totalWithInterest - $paidInstallments, 2);
     }
 

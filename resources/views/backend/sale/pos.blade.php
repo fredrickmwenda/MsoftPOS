@@ -12,7 +12,7 @@
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
- 
+
 
 {!! ToastMagic::styles() !!}
 
@@ -24,10 +24,10 @@
         @else
         <a href="{{url('/')}}"><h1 class="d-inline" style="color: #000000!important;">{{$general_setting->site_title}}</h1></a>
         @endif
-        
+
     <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
-    
-    
+
+
     </span>
 
     @include('backend.layout.sidebar')
@@ -39,9 +39,9 @@
         <a id="toggle-btn" href="#" class="menu-btn"><i class="fa fa-bars"> </i></a>
 
         <span class="brand-big mb-3 mt-2">
-            
+
             <a href="{{url('/')}}"><h1 class="d-inline" style="color: #000000!important;">{{$general_setting->site_title}}</h1></a>
-            
+
         </span>
 
         <div class="navbar-header">
@@ -153,7 +153,7 @@
                     <li>
                         <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
                     </li>
-                    
+
                     @if(\Auth::user()->roles->contains(fn($role) => $role->id != 5))
                     <li>
                         <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>
@@ -177,7 +177,7 @@
 </header>
 <section class="forms pos-section">
     <div class="container-fluid">
-        
+
         <div class="row">
             <audio id="mysoundclip1" preload="auto">
                 <source src="{{url('beep/beep-timber.mp3')}}"></source>
@@ -207,7 +207,7 @@
                     @if(in_array("deposit",$options))
                     <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i> {{trans('file.Deposit')}}</button>
                     @endif
-                    
+
                     @if(in_array("mobile_money",$options))
                     <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-mobile"></i> Mobile Money</button>
                     @endif
@@ -218,7 +218,7 @@
                     <button type="button" class="pos-payment-btn pos-payment-btn--recent" data-toggle="modal" data-target="#recentTransaction"><i class="dripicons-clock"></i> {{trans('file.Recent Transaction')}}</button>
                 </div>
             </div>
-              
+
             <div class="col-md-10 col-lg-10 order-2 order-md-2 transition-all" id="main-column"  style="background-color:#f5f5f0 !important;">
                 <div class="card " style="margin-top: 10px;"  style="background-color:#f5f5f0 !important;">
                     <div class="card-body" style="padding-bottom: 0px !important;">
@@ -229,7 +229,7 @@
                             else
                                 $keybord_active = 0;
 
-                            
+
                             $customer_active = $permissionChecks['customers-add'];
                         @endphp
                         <div class="row">
@@ -489,14 +489,14 @@
                                 </div>
                             </div>
                         </div>
-                    
+
                         <div class="payment-amount">
                             <h2>{{trans('file.grand total')}} <span id="grand-total">{{number_format(0, $general_setting->decimal, '.', '')}}</span></h2>
                         </div>
                         <div class="payment-options"></div>
-                
-                        
-        
+
+
+
                         <!-- payment modal -->
                         <div id="add-payment" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                             <div role="document" class="modal-dialog modal-lg">
@@ -548,8 +548,8 @@
                                                         </div>
                                                         <div class="card-errors" role="alert"></div>
                                                     </div>
-                                                    
-                                                    
+
+
                                                     <div class="form-group col-md-12 mobile_money_fields">
                                                         <label>{{trans('Mobile Money')}} *</label>
                                                         <select id="mobile_money_operator" name="mobile-op" class="form-control" data-live-search="true" data-live-search-style="begins" title="Mobile money operator">
@@ -564,8 +564,8 @@
                                                         <label>{{trans('Mobile Number')}} *</label>
                                                         <input type="number" name="mobile_number" class="form-control">
                                                     </div>
-                                                    
-                                                    
+
+
                                                     <div class="form-group col-md-12 gift-card">
                                                         <label> {{trans('file.Gift Card')}} *</label>
                                                         <input type="hidden" name="gift_card_id">
@@ -628,7 +628,7 @@
                                                 <select id="order-discount-type" name="order_discount_type_select" class="form-control">
                                                 <option value="Percentage">{{trans('file.Percentage')}}</option>
                                                 <option value="Flat">{{trans('file.Flat')}}</option>
-                                                
+
                                                 </select>
                                                 <input type="hidden" name="order_discount_type">
                                             </div>
@@ -700,13 +700,13 @@
                                 </div>
                             </div>
                         </div>
-            
+
                         {!! Form::close() !!}
                     </div>
                 </div>
             </div>
             <!-- product list -->
-            
+
             <!-- product edit modal -->
             <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                 <div role="document" class="modal-dialog">
@@ -747,7 +747,7 @@
                                             $tax_rate_all[] = $tax->rate;
                                         }
                                         ?>
-                     
+
                                     <div id="edit_unit" class="col-md-4 form-group">
                                         <label>{{trans('file.Product Unit')}}</label>
                                         <select name="edit_unit" class="form-control selectpicker">
@@ -809,7 +809,7 @@
                 </div>
             </div>
 
-        
+
 
             <!-- recent transaction modal -->
             <div id="recentTransaction" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
@@ -1056,13 +1056,13 @@
                                           <td>{{trans('file.Credit Card Payment')}}:</td>
                                           <td class="credit_card_payment text-right"></td>
                                         </tr>
-                                        
+
                                         <tr>
                                             <td>{{trans('Mobile Money payment')}}:</td>
                                             <td class="mobile_payment text-right"></td>
                                           </tr>
                                         <tr>
-                                        
+
                                           <td>{{trans('file.Cheque Payment')}}:</td>
                                           <td class="cheque_payment text-right"></td>
                                         </tr>
@@ -1377,7 +1377,7 @@
                             ' | Price: ' + product_warehouse_price[index] +
                             ' | Qty: ' + product_qty[index] +
                             ' | Shelf: ' + product_shelf[index] +
-                            ' | Embedded: ' + is_embeded[index] 
+                            ' | Embedded: ' + is_embeded[index]
                         );
                     else
                         lims_product_array.push(
@@ -1385,7 +1385,7 @@
                             ' | Name: ' + product_name[index] +
                             ' | Price: ' + product_warehouse_price[index] +
                             ' | Qty: ' + product_qty[index] +
-                            ' | Shelf: ' + product_shelf[index] 
+                            ' | Shelf: ' + product_shelf[index]
                         );
                 });
             },
@@ -1760,7 +1760,7 @@
         else if($("input[name='biller_id_hidden']").val()){
           biller_id = $("input[name='biller_id_hidden']").val();
         }
-        
+
         $('select[name=warehouse_id]').val(warehouse_id);
         $('select[name=biller_id]').val(biller_id);
     }
@@ -1894,7 +1894,7 @@
         });
     }
     $(document).ready(function () {
-        
+
         // Remove payment row
         $(document).on("click", ".remove-payment", function () {
             $(this).closest(".payment-row").remove();
@@ -1908,7 +1908,7 @@
 
             // Update change
             change(payingAmount, totalPaid);
-            
+
             // Hide the container if no more split payments
             if ($('#paymentMethodsContainer').children().length === 0) {
                 $('#paymentMethodsContainer').hide();
@@ -1997,7 +1997,7 @@
                 var data = ui.content[0].value;
                 $(this).autocomplete( "close" );
                 productSearch(data);
-            } 
+            }
             else if(ui.content.length == 0 && $('#lims_productcodeSearch').val().length == 13) {
                 // FIXED: pass raw barcode only; productSearch will append ?customer_id?qty
                 productSearch($('#lims_productcodeSearch').val());
@@ -2165,7 +2165,7 @@
         rowindex = $(this).closest('tr').index();
         edit();
     });
-     
+
     //Update product
     $('button[name="update_btn"]').on("click", function() {
         // Always coerce to numbers safely
@@ -2237,12 +2237,12 @@
     function validatePaymentMethod() {
         var paid_amount = $('input[name="paid_amount"]').val();
         var paymentMethod = $('select[name="paid_by_id"]').val();
-        
+
         if (!paid_amount || parseFloat(paid_amount) <= 0) {
             alert('Please enter a valid paid amount');
             return false;
         }
-        
+
         if (paymentMethod == 2) { // Gift Card
             var gift_card_id = $('select[name="gift_card_id_select"]').val() || $('input[name="gift_card_id"]').val();
             if (!gift_card_id) {
@@ -2250,7 +2250,7 @@
                 return false;
             }
         }
-        
+
         if (paymentMethod == 4) { // Cheque
             var cheque_no = $('input[name="cheque_no"]').val();
             if (!cheque_no) {
@@ -2258,13 +2258,13 @@
                 return false;
             }
         }
-        
+
         // Validate split payment methods
         var splitValidationPassed = true;
         $('select[name="paid_by_id_select[]"]').each(function() {
             let splitMethod = $(this).val();
             let row = $(this).closest('.payment-row');
-            
+
             if (splitMethod == 4) { // Cheque
                 let cheque_no = row.find('input[name="split_cheque_no[]"]').val();
                 if (!cheque_no) {
@@ -2273,7 +2273,7 @@
                     return false;
                 }
             }
-            
+
             if (splitMethod == 2) { // Gift Card
                 let gift_card_id = row.find('select[name="split_gift_card_id[]"]').val();
                 if (!gift_card_id) {
@@ -2283,11 +2283,11 @@
                 }
             }
         });
-        
+
         if (!splitValidationPassed) {
             return false;
         }
-        
+
         if (paymentMethod == 6) { // Deposit
             var customer_id = $('#customer_id').val();
             if (!customer_id) {
@@ -2300,7 +2300,7 @@
                 return false;
             }
         }
-        
+
         if (paymentMethod == 7) { // Points
             var customer_id = $('#customer_id').val();
             if (!customer_id) {
@@ -2319,7 +2319,7 @@
                 return false;
             }
         }
-        
+
         if (paymentMethod == 8) { // Mobile Money
             var mobile_operator = $('#mobile_money_operator').val() || $('input[name="selected_mobile_op"]').val();
             var mobile_number = $('input[name="mobile_number"]').val();
@@ -2332,7 +2332,7 @@
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -2388,7 +2388,7 @@
             let methodValue = $(this).val();
             row.find('.cheque-split').toggle(methodValue === '4');
             row.find('.giftcard-split').toggle(methodValue === '2');
-            
+
             // Clear cheque number when toggling away from cheque
             if (methodValue !== '4') {
                 row.find('input[name="split_cheque_no[]"]').val('');
@@ -2458,7 +2458,7 @@
             $('.selectpicker').selectpicker('refresh');
             toggleGlobalMobileMoneyFields();
         });
-        
+
     });
     function getSelectedPaymentMethods() {
         let methods = [];
@@ -2470,7 +2470,7 @@
             let val = $(this).val();
             if (val) methods.push(parseInt(val));
         });
-       
+
 
         return methods;
     }
@@ -2480,7 +2480,7 @@
         $('.selectpicker').selectpicker('refresh');
         $('div.qc').hide();
         $('.mobile_money').hide();
-        
+
         giftCard();
     });
 
@@ -2688,7 +2688,7 @@
         });
         hiddenField.value = dropdown.value;
     });
-        
+
     $(document).on('submit', '.payment-form', function(e) {
         $('#payment-error-alert').addClass('d-none');
         $("table.order-list tbody .qty").each(function(index) {
@@ -2701,7 +2701,7 @@
         if (rownumber < 0) {
             alert("Please insert product to order table!")
             e.preventDefault();
-            return; 
+            return;
         }
         else if(parseFloat($('input[name="total_qty"]').val()) <= 0) {
             alert('Product quantity is 0');
@@ -2740,10 +2740,10 @@
     function productSearch(data) {
         var code_match = data.match(/Code:\s*([^|]+)/);
         console.log(code_match);
-        
+
         // FIXED: extract code before ? or space so barcode strings don't get corrupted
         var searchProductCode = code_match ? code_match[1].trim() : data.split('?')[0].split(' ')[0];
-         
+
         if (searchProductCode.length < 1) {
             alert('Please insert product code!');
             return;
@@ -2757,7 +2757,7 @@
         });
         var ajaxData = searchProductCode + '?' + $('#customer_id').val() + '?' + (parseFloat(pre_qty) + 1);
         console.log(ajaxData);
-        
+
         $.ajax({
             type: 'GET',
             async: false,
@@ -2772,12 +2772,12 @@
                     alert(response.error);
                     return;
                 }
-                
+
                 var flag = 1;
                 if (pre_qty > 0) {
                     var qty = response[15];
                     $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                    
+
                     // FIXED: uses GLOBAL product_code array (was shadowed by local var before)
                     pos = product_code.indexOf(response[1]);
                     if (pos < 0) {
@@ -2948,7 +2948,7 @@
                         </div>`;
                 $("#editModal .modal-element").append(htmlText);
             }
-        } 
+        }
 
         populatePriceOption();
         //$("#product-cost").text(cost[rowindex]);
@@ -3333,7 +3333,7 @@
         $(".cheque").hide();
         $(".gift-card").hide();
         $(".mobile_money_fields").hide();
-        
+
         $('input[name="cheque_no"]').attr('required', false);
     }
 
@@ -3463,4 +3463,3 @@
 
 <script type="text/javascript" src="https://js.stripe.com/v3/"></script>
 @endpush
-

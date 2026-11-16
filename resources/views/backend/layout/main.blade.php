@@ -77,8 +77,8 @@
 
   <body class="@if($theme == 'dark')dark-mode dripicons-brightness-low @endif  @if(Route::current()->getName() == 'sale.pos') pos-page @endif" onload="myFunction()">
     <div id="loader"></div>
-      
-    <!-- Side Navbar --> 
+
+    <!-- Side Navbar -->
     <nav class="side-navbar">
         <!-- Brand stays fixed at top -->
         <div class="brand-big mb-0">
@@ -219,12 +219,12 @@
           </ul>
 
 
-   
-            
-   
 
 
-          
+
+
+
+
         </nav>
       </header>
       @endif
@@ -311,7 +311,7 @@
                           <input type="file" name="image" class="form-control">
                       </div>
                         <div class="col-md-6 form-group">
-                          <label>Parent Category</label> 
+                          <label>Parent Category</label>
                           <div class="input-group flex-nowrap">
                             <select name="parent_id" class="form-control selectpicker" id="parent">
                                 <option value="">Select {{trans('file.parent')}}</option>
@@ -326,7 +326,7 @@
                             </div>
                       </div>
                       <div class="col-md-6 form-group">
-                          <label>Department</label> 
+                          <label>Department</label>
                           <div class="input-group flex-nowrap">
                             <select name="department_id" class="form-control selectpicker" id="parent">
                                 <option value="">Select Department</option>
@@ -413,7 +413,7 @@
                       </div>
 
 
-                     
+
                   </div>
 
 
@@ -604,9 +604,9 @@
                         <div class="col-md-6 form-group">
                             <label>{{trans('file.Choose Your Date')}}</label>
                             <div class="">
-                              <input 
-                                  type="date" 
-                                  class="form-control" 
+                              <input
+                                  type="date"
+                                  class="form-control"
                                   name="start_date" required
                               />
                             </div>
@@ -614,14 +614,14 @@
                         <div class="col-md-6 form-group">
                             <label>{{trans('file.Choose Your Date')}}</label>
                             <div class="input-group">
-                              <input 
-                                  type="date" 
-                                  class="form-control" 
+                              <input
+                                  type="date"
+                                  class="form-control"
                                   name="end_date" required
                               />
                             </div>
                         </div>
-                                   
+
                       </div>
                       <div class="form-group">
                           <button type="submit" class="btn btn-primary">{{trans('file.submit')}}</button>
@@ -771,8 +771,8 @@
                 <div class="modal-body">
                   <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
                     {!! Form::open(['route' => 'report.supplier', 'method' => 'post']) !!}
-                   
-                        
+
+
                         <!-- use a model to get all unique company names -->
                         <div class="form-group">
                             <label>Company *</label>
@@ -780,7 +780,7 @@
                                 <option value="">Loading companies...</option>
                             </select>
                         </div>
-                    
+
 
                       <input type="hidden" name="start_date" value="{{date('Y-m-d')}}" />
                       <input type="hidden" name="end_date" value="{{date('Y-m-d')}}" />
@@ -846,6 +846,8 @@
 
         <script type="text/javascript" src="<?php echo asset('vendor/datatable/sum().js') ?>"></script>
         <script type="text/javascript" src="<?php echo asset('vendor/datatable/dataTables.checkboxes.min.js') ?>"></script>
+
+        <!--Fix the CDN to Local-->
         <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.6/js/dataTables.fixedHeader.min.js"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
         <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/responsive.bootstrap.min.js"></script>
@@ -868,27 +870,26 @@
               }
           });
       });
+      $('#side-main-menu').on('click', 'a[data-toggle="collapse"]', function () {
+          var target = $(this).attr('href');
+          // Close any other open dropdown, but not the one just clicked
+          // and not a nested child of the one just clicked
+          $('#side-main-menu ul.collapse.show').each(function () {
+              var $open = $(this);
+              if (!$(target).closest($open).length && !$open.is(target)) {
+                  $open.collapse('hide');
+              }
+          });
+      });
     </script>
-    // <script>
-    //     if ('serviceWorker' in navigator ) {
-    //         window.addEventListener('load', function() {
-    //             navigator.serviceWorker.register('/salepro/service-worker.js').then(function(registration) {
-    //                 // Registration was successful
-    //                 console.log('ServiceWorker registration successful with scope: ', registration.scope);
-    //             }, function(err) {
-    //                 // registration failed :(
-    //                 console.log('ServiceWorker registration failed: ', err);
-    //             });
-    //         });
-    //     }
-    // </script>
+
     <script type="text/javascript">
         var theme = <?php echo json_encode($theme); ?>;
         if(theme == 'dark') {
             $('body').addClass('dark-mode');
             $('#switch-theme i').addClass('dripicons-brightness-low');
         }
-        else { 
+        else {
             $('body').removeClass('dark-mode');
             $('#switch-theme i').addClass('dripicons-brightness-max');
         }

@@ -18,6 +18,8 @@
         $adjustment_active             = $role_has_permissions_list->where('name', 'adjustment')->first();
         $damage_stock_active           = $role_has_permissions_list->where('name', 'damage-stock')->first();
         $product_history_active        = $role_has_permissions_list->where('name', 'product_history')->first();
+        $transfer_permission_active = $role_has_permissions_list->where('name', 'transfers-index')->first();
+        $transfer_import_active  = $role_has_permissions_list->where('name', 'transfers-import')->first();
     ?>
     @if($category_permission_active || $index_permission_active || $print_barcode_active || $stock_count_active || $adjustment_active || $damage_stock_active || $product_history_active)
     <li><a href="#product" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-list"></i><span> {{__('file.product')}}s</span></a>
@@ -44,9 +46,18 @@
             @if($damage_stock_active)
             <li id="damage-stock-menu"><a href="{{route('damage-stock.index')}}">Damage Stock List</a></li>
             @endif
+            @if($transfer_permission_active)
+            <li id="transfer-list-menu"><a href="{{route('transfers.index')}}">{{trans('file.Transfer List')}}</a></li>
+            @endif
+            @if($transfer_import_active)
+            <li id="transfer-import-menu"><a href="{{url('transfers/transfer_by_csv')}}">{{trans('file.Import Transfer By CSV')}}</a></li>
+            @endif
         </ul>
     </li>
     @endif
+
+
+
 
     <!-- ══════════════════════════════════════════════════════════════════
          3. PURCHASES  (Add Purchase REMOVED, Import kept)
@@ -54,6 +65,7 @@
     <?php
         $index_permission_active = $role_has_permissions_list->where('name', 'purchases-index')->first();
         $purchase_import_active  = $role_has_permissions_list->where('name', 'purchases-import')->first();
+        $purchase_return_index_permission_active   = $role_has_permissions_list->where('name', 'purchase-return-index')->first();
     ?>
     @if($index_permission_active)
     <li><a href="#purchase" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-card"></i><span> {{trans('file.Purchase')}}s</span></a>
@@ -62,9 +74,14 @@
             @if($purchase_import_active)
             <li id="purchase-import-menu"><a href="{{url('purchases/purchase_by_csv')}}">{{trans('file.Import Purchase By CSV')}}</a></li>
             @endif
+            @if($purchase_return_index_permission_active)
+            <li id="purchase-return-menu"><a href="{{route('return-purchase.index')}}">{{trans('file.Purchase Returns')}}</a></li>
+            @endif
         </ul>
     </li>
     @endif
+
+
 
     <!-- ══════════════════════════════════════════════════════════════════
          4. SALES / POS  (Add Sale REMOVED)
@@ -77,6 +94,7 @@
         $sale_add_permission_active        = $role_has_permissions_list->where('name', 'sales-add')->first();
         $sale_import_active                = $role_has_permissions_list->where('name', 'sales-import')->first();
         $hire_purchase_active              = $role_has_permissions_list->where('name', 'booking')->first();
+        $sale_return_index_permission_active      = $role_has_permissions_list->where('name', 'returns-index')->first();
     ?>
     @if($sale_index_permission_active || $gift_card_permission_active || $coupon_permission_active || $delivery_permission_active || $sale_add_permission_active)
     <li><a href="#sale" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-cart"></i><span> {{trans('file.Sale')}}s</span></a>
@@ -108,9 +126,14 @@
                     <li><a href="{{route('hire_purchase.overdue')}}">Overdue Installments</a></li>
                 </ul>
             </li>
+            @if($sale_return_index_permission_active)
+            <li id="sale-return-menu"><a href="{{route('return-sale.index')}}">{{trans('file.Sale Returns')}}</a></li>
+            @endif
         </ul>
     </li>
     @endif
+
+
 
     <!-- ══════════════════════════════════════════════════════════════════
          5. SALE EXCHANGE  (NEW)
@@ -163,40 +186,9 @@
     <!-- ══════════════════════════════════════════════════════════════════
          9. TRANSFERS  (Add Transfer REMOVED, Import kept)
          ══════════════════════════════════════════════════════════════════ -->
-    <?php
-        $index_permission_active = $role_has_permissions_list->where('name', 'transfers-index')->first();
-        $transfer_import_active  = $role_has_permissions_list->where('name', 'transfers-import')->first();
-    ?>
-    @if($index_permission_active)
-    <li><a href="#transfer" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-export"></i><span> {{trans('file.Transfer')}}s</span></a>
-        <ul id="transfer" class="collapse list-unstyled">
-            <li id="transfer-list-menu"><a href="{{route('transfers.index')}}">{{trans('file.Transfer List')}}</a></li>
-            @if($transfer_import_active)
-            <li id="transfer-import-menu"><a href="{{url('transfers/transfer_by_csv')}}">{{trans('file.Import Transfer By CSV')}}</a></li>
-            @endif
-        </ul>
-    </li>
-    @endif
 
-    <!-- ══════════════════════════════════════════════════════════════════
-         10. RETURNS  (Sale + Purchase)
-         ══════════════════════════════════════════════════════════════════ -->
-    <?php
-        $sale_return_index_permission_active      = $role_has_permissions_list->where('name', 'returns-index')->first();
-        $purchase_return_index_permission_active   = $role_has_permissions_list->where('name', 'purchase-return-index')->first();
-    ?>
-    @if($sale_return_index_permission_active || $purchase_return_index_permission_active)
-    <li><a href="#return" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-return"></i><span> {{trans('file.return')}}s</span></a>
-        <ul id="return" class="collapse list-unstyled">
-            @if($sale_return_index_permission_active)
-            <li id="sale-return-menu"><a href="{{route('return-sale.index')}}">{{trans('file.Sale')}}</a></li>
-            @endif
-            @if($purchase_return_index_permission_active)
-            <li id="purchase-return-menu"><a href="{{route('return-purchase.index')}}">{{trans('file.Purchase')}}</a></li>
-            @endif
-        </ul>
-    </li>
-    @endif
+
+
 
 
     <!-- ══════════════════════════════════════════════════════════════════
@@ -211,6 +203,7 @@
         $trial_balance_permission_active       = $role_has_permissions_list->where('name', 'trial-balance')->first();
         $general_ledger_permission_active      = $role_has_permissions_list->where('name', 'general-ledger')->first();
         $cash_flow_permission_active           = $role_has_permissions_list->where('name', 'cash-flow')->first();
+        $is_admin = \Auth::user()->roles->contains(fn($r) => $r->id <= 2);
     ?>
     @if($index_permission_active || $balance_sheet_permission_active || $account_statement_permission_active || $money_transfer_permission_active || $reconciliation_permission_active || $trial_balance_permission_active || $general_ledger_permission_active || $cash_flow_permission_active)
     <li class=""><a href="#account" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-briefcase"></i><span>{{trans('file.Accounting')}}</span></a>
@@ -239,9 +232,15 @@
             @if($account_statement_permission_active)
             <li id="account-statement-menu"><a id="account-statement" href="">{{trans('file.Account Statement')}}</a></li>
             @endif
+            @if($is_admin)
+            <li id="cash-register-menu"><a href="{{route('cashRegister.index')}}"> Cash Register</a></li>
+            @endif
         </ul>
     </li>
     @endif
+
+
+
 
     <!-- ══════════════════════════════════════════════════════════════════
          12. HRMIS  (Payroll threaded down → 5 sub-menus)
@@ -391,10 +390,7 @@
     <!-- ══════════════════════════════════════════════════════════════════
          14. CASH REGISTER  (NEW)
          ══════════════════════════════════════════════════════════════════ -->
-    @php $is_admin = \Auth::user()->roles->contains(fn($r) => $r->id <= 2); @endphp
-    @if($is_admin)
-    <li><a href="{{route('cashRegister.index')}}"> <i class="dripicons dripicons-wallet"></i><span>Cash Register</span></a></li>
-    @endif
+
 
     <!-- ══════════════════════════════════════════════════════════════════
          15. TABLES  (NEW — for restaurant/hotel POS)
@@ -482,9 +478,9 @@
     <li><a href="#communication" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-message"></i><span>Communication</span></a>
         <ul id="communication" class="collapse list-unstyled">
             @if($whatsapp_active || $is_admin)
-            <li><a href="{{route('whatsapp.settings')}}">WhatsApp Settings</a></li>
-            <li><a href="{{route('whatsapp.templates')}}">WhatsApp Templates</a></li>
-            <li><a href="{{route('whatsapp.send.page')}}">Send WhatsApp</a></li>
+            <li id="whatsapp-settings-menu"><a href="{{route('whatsapp.settings')}}">WhatsApp Settings</a></li>
+            <li id="whatsapp-templates-menu"><a href="{{route('whatsapp.templates')}}">WhatsApp Templates</a></li>
+            <li id="whatsapp-send-menu"><a href="{{route('whatsapp.send.page')}}">Send WhatsApp</a></li>
             @endif
             @if($is_admin)
             <li><a href="{{route('smstemplates.index')}}">SMS Templates</a></li>

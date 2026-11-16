@@ -10,7 +10,8 @@ class CustomerGroup extends Model
         "name", "percentage", "is_active"
     ];
 
-    public function customers(){
-        $this->hasMany(Customer::class);
+    public function customers()
+    {
+        return $this->hasMany(Customer::class);
     }
 }

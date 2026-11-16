@@ -1,70 +1,79 @@
-/**
- * Sidebar layout fix: fixed brand, single scrollbar, and menu styles.
- */
 
 /* =========================================================
-   BASE SIDEBAR LAYOUT (Brand + Flexbox)
+   SIDEBAR LAYOUT
    ========================================================= */
 
 nav.side-navbar {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 230px !important;
-  max-width: 230px !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  overflow: hidden !important; /* Nav itself doesn't scroll, inner menu does */
-  display: flex !important;
-  flex-direction: column !important;
-  z-index: 100 !important;
-  box-sizing: border-box !important;
-  transition: width 0.2s ease, opacity 0.2s ease !important;
-  background-color: #ecf0f4 !important;
-  background-image: none !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 230px !important;
+    max-width: 230px !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    box-sizing: border-box !important;
+    z-index: 1050 !important;
+
+    background: #ecf0f4 !important;
+    background-image: none !important;
+
+    transition: width 0.2s ease, opacity 0.2s ease !important;
 }
 
-/* Collapsed state */
+/* Collapsed sidebar */
 nav.side-navbar.shrink {
-  width: 0 !important;
-  max-width: 0 !important;
-  min-width: 0 !important;
-  opacity: 0 !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
+    width: 0 !important;
+    max-width: 0 !important;
+    min-width: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
 }
 
-/* Brand area: pinned to top, doesn't scroll */
+/* Brand section */
 nav.side-navbar .brand-big {
-  flex: 0 0 auto !important;
-  display: block !important;
-  width: 100% !important;
-  padding: 15px 18px !important;
-  box-sizing: border-box !important;
-  background-color: #ecf0f4 !important;
-  border-bottom: 1px solid #dce3eb !important;
-  z-index: 2;
+    flex: 0 0 auto !important;
+    display: block !important;
+    width: 100% !important;
+
+    padding: 15px 18px !important;
+    box-sizing: border-box !important;
+
+    background: #ecf0f4 !important;
+    border-bottom: 1px solid #dce3eb !important;
+
+    z-index: 2;
 }
 
-/* Wrapper for the menu: acts as flex container, no scrolling! */
+/* Sidebar scroll wrapper */
 nav.side-navbar .sidebar-scroll {
-  flex: 1 1 auto !important;
-  min-height: 0 !important; /* Critical for flexbox */
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important; /* Prevent double scroll */
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    overflow: hidden !important;
 }
 
-/* The actual menu list takes remaining space and scrolls */
+/* Main menu scrolling */
 nav.side-navbar #side-main-menu {
-  flex: 1 1 auto !important;
-  min-height: 0 !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-  overflow-x: hidden !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    -webkit-overflow-scrolling: touch;
 }
 
 /* =========================================================
@@ -72,310 +81,392 @@ nav.side-navbar #side-main-menu {
    ========================================================= */
 
 @media (min-width: 1200px) {
-  .page {
-    position: relative !important;
-    margin-left: 230px !important;
-    width: calc(100% - 230px) !important;
-    min-width: 0 !important;
-    z-index: 500 !important;
-    min-height: 100vh !important;
-  }
-  nav.side-navbar.shrink ~ .page {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
+    .page {
+        position: relative !important;
+        margin-left: 230px !important;
+        width: calc(100% - 230px) !important;
+        min-width: 0 !important;
+        min-height: 100vh !important;
+        z-index: 500 !important;
+    }
+
+    nav.side-navbar.shrink ~ .page {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
 }
 
 .page {
-  position: relative !important;
-  z-index: 500 !important;
-  min-height: 100vh !important;
+    position: relative !important;
+    z-index: 500 !important;
+    min-height: 100vh !important;
 }
 
 .page.active,
 .page.active-sm,
 .pos-page .page {
-  margin-left: 0 !important;
-  width: 100% !important;
+    margin-left: 0 !important;
+    width: 100% !important;
 }
 
 nav.navbar {
-  z-index: 1000 !important;
+    z-index: 1000 !important;
 }
 
 /* =========================================================
-   TABLET & MOBILE SIDEBAR AS OVERLAY DRAWER
+   TABLET AND MOBILE SIDEBAR
    ========================================================= */
 
 @media (max-width: 1199px) {
-  nav.side-navbar {
-    width: 280px !important;
-    max-width: 85vw !important;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-    z-index: 1050 !important;
-  }
-  nav.side-navbar.shrink {
-    width: 0 !important;
-    max-width: 0 !important;
-    box-shadow: none;
-  }
-  .page {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
+    nav.side-navbar {
+        width: 280px !important;
+        max-width: 85vw !important;
+        z-index: 1050 !important;
+        box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    }
+
+    nav.side-navbar.shrink {
+        width: 0 !important;
+        max-width: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .page {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
 }
 
 @media (max-width: 768px) {
-  nav.side-navbar { 
-    width: 280px !important;
-    max-width: 280px !important;
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
-    z-index: 1050 !important;
-    -webkit-overflow-scrolling: touch;
-  }
-  nav.side-navbar.shrink {
-    width: 0 !important;
-    max-width: 0 !important;
-  }
-  .page {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
+    nav.side-navbar {
+        width: 280px !important;
+        max-width: 280px !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    nav.side-navbar.shrink {
+        width: 0 !important;
+        max-width: 0 !important;
+    }
+
+    .page {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
 }
 
 /* =========================================================
-   SIDEBAR MENU VISUAL STYLES (Moved from inline <style>)
+   SIDEBAR MENU BASE
    ========================================================= */
 
 #side-main-menu {
-  background: #ffffff;
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  position: relative;
-  border-right: 1px solid #e0e0e0;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
-}
+    width: 100% !important;
+    box-sizing: border-box !important;
 
-#side-main-menu li {
-  margin: 0;
-  border: none;
-}
+    padding: 0 !important;
+    margin: 0 !important;
 
-#side-main-menu > li > a {
-  display: flex;
-  align-items: center;
-  padding: 16px 20px;
-  color: #1a1a2e;
-  text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  border-left: 4px solid transparent;
-}
+    list-style: none !important;
 
-#side-main-menu > li > a::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(102, 126, 234, 0.08);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  z-index: -1;
-}
+    position: relative;
 
-#side-main-menu > li > a:hover {
-  border-left-color: #0a382b;
-  padding-left: 24px;
-  color: #016b4d;
-}
+    background: #ffffff !important;
+    border-right: 1px solid #e0e0e0;
 
-#side-main-menu > li > a:hover::before {
-  opacity: 1;
-}
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
 
-#side-main-menu > li.active > a,
-#side-main-menu > li > a.active {
-  background: rgba(102, 126, 234, 0.12);
-  border-left-color: #033124;
-  color: #000a07;
-  font-weight: 600;
-}
-
-#side-main-menu i {
-  color: #028c65!important;
-  font-size: 18px;
-  margin-right: 14px;
-  min-width: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s ease;
-}
-
-#side-main-menu > li > a:hover i {
-  transform: translateX(4px);
-}
-
-#side-main-menu span {
-  flex: 1;
-  text-transform: capitalize;
-  letter-spacing: 0.3px;
-}
-
-/* Dropdown Arrow Indicator */
-#side-main-menu > li > a[data-toggle='collapse']::after {
-  content: '';
-  position: absolute;
-  right: 20px;
-  width: 6px;
-  height: 6px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: rotate(-45deg);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0.7;
-}
-
-#side-main-menu > li > a[aria-expanded='true']::after {
-  transform: rotate(45deg);
-}
-
-/* Submenu Styling */
-#side-main-menu .collapse {
-  background: #f8f9fa;
-  padding: 8px 0;
-  margin: 0;
-  list-style: none;
-  border-left: 2px solid #e0e0e0;
-  overflow: visible; /* Let parent handle scroll */
-  transition: all 0.3s ease;
-}
-
-#side-main-menu .collapse.show {
-  /* max-height removed so all items show */
-  padding: 8px 0;
-}
-
-#side-main-menu .collapse li {
-  margin: 0;
-}
-
-#side-main-menu .collapse li a {
-  display: block;
-  padding: 12px 20px 12px 50px;
-  color: #555555;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 400;
-  transition: all 0.2s ease;
-  position: relative;
-  border: none;
-}
-
-#side-main-menu .collapse li a::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 0;
-  background: #0a382b;
-  transition: height 0.3s ease;
-}
-
-#side-main-menu .collapse li a:hover {
-  background: #f0f1f7;
-  padding-left: 54px;
-  color: #0a382b;
-  font-weight: 500;
-}
-
-#side-main-menu .collapse li a:hover::before {
-  height: 24px;
-}
-
-#side-main-menu .collapse li a.active {
-  background: #e8ecf9;
-  color: #0a382b;
-  font-weight: 600;
-  padding-left: 54px;
-  border-left: 3px solid #0a382b;
-}
-
-#side-main-menu .collapse li a.active::before {
-  height: 24px;
-}
-
-/* Nested Collapse */
-#side-main-menu .collapse .collapse {
-  background: #f0f1f7;
-  border-left: 2px solid #d0d0e0;
-}
-
-#side-main-menu .collapse .collapse li a {
-  padding-left: 70px;
-  font-size: 13px;
-  color: #666666;
-}
-
-#side-main-menu .collapse .collapse li a:hover {
-  padding-left: 74px;
-  background: #e8ecf9;
-}
-
-#side-main-menu .collapse .collapse li a.active {
-  padding-left: 74px;
-}
-
-/* Scrollbar Styling for the main menu */
-#side-main-menu::-webkit-scrollbar {
-  width: 6px;
-}
-
-#side-main-menu::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#side-main-menu::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
-  border-radius: 3px;
-}
-
-#side-main-menu::-webkit-scrollbar-thumb:hover {
-  background: #999999;
-}
-
-/* Mobile Responsive Menu Adjustments */
-@media (max-width: 768px) {
-  #side-main-menu > li > a {
-    padding: 14px 16px;
-    font-size: 14px;
-  }
-
-  #side-main-menu .collapse li a {
-    padding: 10px 16px 10px 44px;
-  }
-
-  #side-main-menu > li > a:hover {
-    padding-left: 20px;
-  }
-}
-
-/* Scrollbar Styling for the main menu */
-#side-main-menu {
-    /* Firefox scrollbar color (thumb track) */
     scrollbar-color: #028c65 transparent;
     scrollbar-width: thin;
 }
 
+#side-main-menu ul,
+#side-main-menu li {
+    list-style: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+}
+
+#side-main-menu li {
+    padding: 0 !important;
+    border: none !important;
+}
+
+/* =========================================================
+   MAIN MENU ITEMS
+   ========================================================= */
+
+#side-main-menu > li > a {
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    box-sizing: border-box !important;
+
+    padding: 9px 18px !important;
+    min-height: 40px;
+
+    color: #1a1a2e !important;
+    background: transparent !important;
+
+    text-decoration: none !important;
+
+    font-size: 15px !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+
+    border-left: 4px solid transparent !important;
+    border-radius: 0 !important;
+
+    position: relative;
+
+    transition: background 0.2s ease,
+                color 0.2s ease !important;
+}
+
+/* Main menu hover */
+#side-main-menu > li > a:hover {
+    background: #f0f3f2 !important;
+    color: #016b4d !important;
+    border-left-color: #028c65 !important;
+}
+
+/* Main menu icons */
+#side-main-menu > li > a i {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    min-width: 24px !important;
+    margin-right: 14px !important;
+
+    font-size: 18px !important;
+    color: #028c65 !important;
+
+    transition: color 0.2s ease;
+}
+
+/* Main menu text */
+#side-main-menu > li > a span {
+    flex: 1 1 auto !important;
+    text-transform: capitalize;
+    letter-spacing: 0.3px;
+}
+
+/* =========================================================
+   MAIN MENU ACTIVE / OPEN STATE
+   ========================================================= */
+
+#side-main-menu > li.active > a,
+#side-main-menu > li.open > a,
+#side-main-menu > li.mm-active > a,
+#side-main-menu > li > a.active,
+#side-main-menu > li > a[aria-expanded="true"] {
+    background: #d9d9d9 !important;
+    color: #333333 !important;
+
+    font-weight: 600 !important;
+    border-left: 4px solid #028c65 !important;
+}
+
+/* Open parent icon */
+#side-main-menu > li.active > a i,
+#side-main-menu > li.open > a i,
+#side-main-menu > li.mm-active > a i,
+#side-main-menu > li > a[aria-expanded="true"] i {
+    color: #028c65 !important;
+}
+
+/* =========================================================
+   DROPDOWN ARROW
+   ========================================================= */
+
+#side-main-menu > li > a[data-toggle="collapse"]::after {
+    content: '';
+
+    position: absolute;
+    right: 20px;
+
+    width: 6px;
+    height: 6px;
+
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+
+    transform: rotate(-45deg);
+    transition: transform 0.2s ease;
+
+    opacity: 0.7;
+}
+
+#side-main-menu > li > a[aria-expanded="true"]::after {
+    transform: rotate(45deg);
+}
+
+/* =========================================================
+   IMPORTANT FIX:
+   ENTIRE EXPANDED SUBMENU BACKGROUND
+   ========================================================= */
+
+/* Every expanded submenu fills the full available width */
+#side-main-menu ul.collapse,
+#side-main-menu ul.collapsing,
+#side-main-menu ul.collapse.show {
+    width: 100% !important;
+    max-width: 100% !important;
+
+    box-sizing: border-box !important;
+
+    margin: 0 !important;
+    list-style: none !important;
+
+    border: none !important;
+    border-left: 3px solid #028c65 !important;
+
+    box-shadow: none !important;
+}
+
+/* Entire opened submenu gets the same background */
+#side-main-menu ul.collapse.show,
+#side-main-menu ul.collapsing {
+    background-color: #e5e7e7 !important;
+    padding: 3px 0 !important;
+}
+
+/* Keep the expanded menu background on all its list items */
+#side-main-menu ul.collapse.show > li {
+    width: 100% !important;
+    background-color: #e5e7e7 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Submenu links */
+#side-main-menu ul.collapse > li > a {
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    min-height: 32px !important;
+
+    box-sizing: border-box !important;
+
+    padding: 5px 15px 5px 30px !important;
+
+    color: #087d5b !important;
+    background-color: transparent !important;
+
+    text-decoration: none !important;
+
+    font-size: 14px !important;
+    font-weight: 400 !important;
+    line-height: 1.35 !important;
+
+    border: none !important;
+    border-left: 3px solid transparent !important;
+    border-radius: 0 !important;
+
+    transition: background 0.2s ease,
+                color 0.2s ease !important;
+}
+
+/* Submenu hover */
+#side-main-menu ul.collapse > li > a:hover {
+    background-color: #d5dcda !important;
+    color: #075c43 !important;
+
+    font-weight: 500 !important;
+}
+
+/* =========================================================
+   ACTIVE SUBMENU ITEM
+   ========================================================= */
+
+/* Support different menu active class structures */
+#side-main-menu ul.collapse > li.active > a,
+#side-main-menu ul.collapse > li.open > a,
+#side-main-menu ul.collapse > li.mm-active > a,
+#side-main-menu ul.collapse > li > a.active,
+#side-main-menu ul.collapse > li > a[aria-current="page"] {
+    background-color: #cbd5d1 !important;
+    color: #064d39 !important;
+
+    font-weight: 600 !important;
+
+    border-left: 3px solid #028c65 !important;
+}
+
+/* Active submenu should retain its background */
+#side-main-menu ul.collapse.show > li.active,
+#side-main-menu ul.collapse.show > li.mm-active {
+    background-color: #e5e7e7 !important;
+}
+
+/* =========================================================
+   NESTED SUBMENUS
+   ========================================================= */
+
+#side-main-menu ul.collapse ul.collapse.show,
+#side-main-menu ul.collapse ul.collapsing {
+    background-color: #dce2df !important;
+    border-left: 3px solid #b3c6be !important;
+
+    padding: 2px 0 !important;
+}
+
+#side-main-menu ul.collapse ul.collapse.show > li {
+    background-color: #dce2df !important;
+}
+
+#side-main-menu ul.collapse ul.collapse > li > a {
+    padding: 5px 12px 5px 42px !important;
+    font-size: 13px !important;
+    min-height: 30px !important;
+    color: #49635a !important;
+}
+
+#side-main-menu ul.collapse ul.collapse > li > a:hover {
+    background-color: #cbd5d1 !important;
+    color: #064d39 !important;
+}
+
+#side-main-menu ul.collapse ul.collapse > li.active > a,
+#side-main-menu ul.collapse ul.collapse > li > a.active {
+    background-color: #c1d0c9 !important;
+    color: #064d39 !important;
+    border-left: 3px solid #028c65 !important;
+    font-weight: 600 !important;
+}
+
+/* =========================================================
+   TIGHT MENU SPACING
+   ========================================================= */
+
+/* Main menu vertical spacing */
+nav.side-navbar #side-main-menu > li > a {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+/* Submenu vertical spacing */
+nav.side-navbar #side-main-menu ul.collapse > li > a {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    line-height: 1.3 !important;
+}
+
+/* Nested submenu spacing */
+nav.side-navbar #side-main-menu ul.collapse ul.collapse > li > a {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
 #side-main-menu::-webkit-scrollbar {
-    width: 8px; /* Slightly wider so black is visible */
+    width: 6px;
 }
 
 #side-main-menu::-webkit-scrollbar-track {
@@ -383,10 +474,30 @@ nav.navbar {
 }
 
 #side-main-menu::-webkit-scrollbar-thumb {
-    background: #028c65; /* Black scrollbar */
+    background: #028c65;
     border-radius: 4px;
 }
 
 #side-main-menu::-webkit-scrollbar-thumb:hover {
-    background: #333333; /* Dark grey on hover */
+    background: #016b4d;
+}
+
+/* =========================================================
+   MOBILE MENU ADJUSTMENTS
+   ========================================================= */
+
+@media (max-width: 768px) {
+    #side-main-menu > li > a {
+        padding: 8px 16px !important;
+        font-size: 14px !important;
+    }
+
+    #side-main-menu ul.collapse > li > a {
+        padding: 5px 12px 5px 26px !important;
+        font-size: 13px !important;
+    }
+
+    #side-main-menu > li > a:hover {
+        padding-left: 16px !important;
+    }
 }

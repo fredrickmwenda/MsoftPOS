@@ -101,6 +101,8 @@
 
     <script type="text/javascript" src="<?php echo asset('vendor/datatable/sum().js') ?>"></script>
     <script type="text/javascript" src="<?php echo asset('vendor/datatable/dataTables.checkboxes.min.js') ?>"></script>
+
+    <!--Fix the CDN-->
     <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.6/js/dataTables.fixedHeader.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
     <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/responsive.bootstrap.min.js"></script>
@@ -1040,7 +1042,7 @@
                       <li>
                         <a href="{{url('my-transactions/'.date('Y').'/'.date('m'))}}"><i class="dripicons-swap"></i> {{trans('file.My Transaction')}}</a>
                       </li>
-                      
+
                      @if(!Auth::user()->roles->contains(fn($role) => $role->id ==5))
                       <li>
                         <a href="{{url('holidays/my-holiday/'.date('Y').'/'.date('m'))}}"><i class="dripicons-vibrate"></i> {{trans('file.My Holiday')}}</a>

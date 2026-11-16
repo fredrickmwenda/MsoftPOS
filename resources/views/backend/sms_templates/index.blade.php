@@ -2,7 +2,7 @@
 @push('css')
     @include('backend.layout.partials.datatable_css')
 @endpush
- 
+
 @section('content')
 
 <section>
@@ -93,7 +93,7 @@
             <label>{{__('file.Content')}}*</label>
             <textarea type="text" name="content" rows="7" placeholder="You can set following dynamic tags for a template:
 [reference], [customer], [sale_status], [payment_status] [sale_total]
-Example: 
+Example:
 Hi [customer],
 Thanks for the order. Order reference: [reference]. Order status: [sale_status] Sale Total: [sale_total]. Payment status: [payment_status].
 " class="form-control"></textarea>
@@ -159,6 +159,7 @@ Thanks for the order. Order reference: [reference]. Order status: [sale_status] 
 @push('scripts')
     @include('backend.layout.partials.datatable_js')
 <script type="text/javascript">
+
     $.ajaxSetup({
         headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')

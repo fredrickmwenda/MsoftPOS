@@ -21,7 +21,7 @@ use Clickatell\Rest;
 use Clickatell\ClickatellException;
 
 class SettingController extends Controller
-{ 
+{
     use \App\Traits\CacheForget;
     use \App\Traits\TenantInfo;
 
@@ -66,7 +66,7 @@ class SettingController extends Controller
         'users',
         'currencies',
         'reward_point_settings',
-        'role_user', 
+        'role_user',
           // <-- ADD this pivot table
     ];
 
@@ -140,6 +140,9 @@ class SettingController extends Controller
         }
         else
             $general_setting->is_zatca = false;
+
+        $general_setting->ecommerce_enabled = isset($data['ecommerce_enabled']);
+
         $general_setting->company_name = $data['company_name'];
         $general_setting->vat_registration_number = $data['vat_registration_number'];
         $general_setting->currency = $data['currency'];
@@ -156,8 +159,8 @@ class SettingController extends Controller
         // $general_setting->default_margin_value = $data['profit_margin'];
         $general_setting->percentage_filter = (int) $data['percentage_filter'];
         // dd($general_setting->percentage_filter);
-        
-    
+
+
         $logo = $request->site_logo;
         if ($logo) {
             $this->fileDelete('logo/', $general_setting->site_logo);
@@ -187,7 +190,7 @@ class SettingController extends Controller
         $isStaff =Auth::user()->roles->contains(function ($role) {
             return $role->id > 2;
         });
-    
+
         if ($isStaff || !Auth::user()->hasPermissionTo('sale-percentage-filter')) {
             return response()->json([
                 'success' => false,

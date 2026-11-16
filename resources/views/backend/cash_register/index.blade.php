@@ -127,6 +127,9 @@
 
 @push('scripts')
 <script type="text/javascript">
+$("ul#account").siblings('a').attr('aria-expanded','true');
+$("ul#account").addClass("show");
+$("ul#account #cash-register-menu").addClass("active");
 
     function confirmClose() {
       if (confirm("Are you sure want to close?")) {

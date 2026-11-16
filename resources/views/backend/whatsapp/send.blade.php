@@ -116,9 +116,9 @@
     @endif
 
     <script type="text/javascript">
-        $("ul#whatsapp").siblings('a').attr('aria-expanded', 'true');
-        $("ul#whatsapp").addClass("show");
-        $("ul#whatsapp #whatsapp-send-menu").addClass("active");
+        $("ul#communication").siblings('a').attr('aria-expanded', 'true');
+        $("ul#communication").addClass("show");
+        $("ul#communication #whatsapp-send-menu").addClass("active");
         $(document).ready(function() {
 
             function toggleMessageAttachment() {

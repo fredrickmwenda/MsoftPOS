@@ -10,6 +10,7 @@
 | contains the "web" middleware group. Now create something great!
 |
 */
+use Illuminate\Http\Request;
 
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\ApprovalController;
@@ -101,18 +102,9 @@ Route::get('migrate', function() {
 });
 
 // Your original shop index
-Route::get('/', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.index');
-
-// The new View All Products page
-Route::get('/all-products', [\App\Http\Controllers\StorefrontController::class, 'viewAllProducts'])->name('all.products');
-
-// Single product details
-Route::get('/product/{id}', [\App\Http\Controllers\StorefrontController::class, 'show'])->name('products.show');
+// Route::get('/', [\App\Http\Controllers\StorefrontController::class, 'index'])->name('shop.index');
 
 
-
-Route::get('/contact-us', [ContactController::class, 'index'])->name('contact.us');
-Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.us.store');
 Route::get('clear',function() {
     Artisan::call('optimize:clear');
     return redirect()->back();
@@ -161,96 +153,70 @@ Route::controller(ClientAutoUpdateController::class)->group(function () {
 Route::get('/documentation', [HomeController::class, 'documentation']);
 //Auth::routes();
 
-// Disable the default /login routes that Auth::routes() registers
-Auth::routes([
-    'login'    => false,   // we register admin login manually below
-    'logout'   => false,   // we register logout manually below
-    'register' => false,   // customers use /customer/register, admin has no public registration
-    'reset'    => true,    // keep password reset routes
-    'verify'   => false,
-]);
 
 Route::get('delete-account', [\App\Http\Controllers\DeleteAccountRequestController::class, 'show'])->name('delete-account');
 Route::post('delete-account', [\App\Http\Controllers\DeleteAccountRequestController::class, 'submit'])->name('delete-account.submit');
 
-// ─── Admin login routes ───────────────────────────────────────────
-Route::get('admin',  [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
-Route::post('admin', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post');
-Route::post('admin/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
-
-// ─── Make /login behave as "not found" ────────────────────────────
-Route::get('/login',  function () { abort(404); });
-Route::post('/login', function () { abort(404); });
-
-
-// ==========================================
-// CUSTOMER PORTAL ROUTES (ADDED)
-// ==========================================
-// Customer Auth Routes
-Route::get('/customer/login', [CustomerAuthController::class, 'showLoginForm'])->name('customer.login');
-Route::post('/customer/login', [CustomerAuthController::class, 'login'])->name('customer.login.post');
-
-// Replace the old register route with these two:
-Route::get('/customer/register', [CustomerAuthController::class, 'showRegistrationForm'])->name('customer.register');
-Route::post('/customer/register', [CustomerAuthController::class, 'register'])->name('customer.register.post');
-
-Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('customer.logout');
-// Add to wishlist (Triggered by the heart icon)
-Route::post('/wishlist/add/{productId}', [WishlistController::class, 'store'])->name('wishlist.add');
-// Customer Protected Routes
-Route::middleware('auth:customer')->group(function () {
-
-    // Dashboard Route
-    Route::get('/customer/dashboard', [CustomerDashboardController::class, 'index'])->name('customer.dashboard');
-
-    // Wishlist Route
-   // Route::get('/customer/wishlist', [CustomerDashboardController::class, 'wishlist'])->name('customer.wishlist');
-
-    Route::get('/customer/wishlist', [WishlistController::class, 'index'])->name('customer.wishlist');
-    Route::get('/wishlist/remove/{id}', [WishlistController::class, 'destroy'])->name('wishlist.remove');
-
-        // ─── Order tracking (customer-facing) ──────────────────────────
-    Route::get('/customer/orders', [CustomerDashboardController::class, 'orders'])
-        ->name('customer.orders');
-
-    Route::get('/customer/orders/{sale}', [CustomerDashboardController::class, 'showOrder'])
-        ->name('customer.orders.show');
-
-    // Order confirmation page right after Paystack redirects back
-    Route::get('/customer/orders/{sale}/confirmation', [CustomerDashboardController::class, 'orderConfirmation'])
-        ->name('customer.orders.confirmation');
-
-});
+// // ─── Admin login routes ───────────────────────────────────────────
+Route::get('login',  [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+Route::post('login', [App\Http\Controllers\Auth\LoginController::class, 'login'])->name('login.post');
+Route::post('logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
 
 
 
 
-// Public
-Route::get('/policy',            [PolicyController::class, 'index'])->name('policy.index');
-Route::get('/policy/{policy}',   [PolicyController::class, 'show'])->name('policy.show');
 
-
-// Cart Routes
-Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-Route::post('/cart/add/{id}', [CartController::class, 'add'])->name('cart.add');
-Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
-Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
-
-// Checkout Route
-Route::post('/checkout', [CartController::class, 'checkout'])->name('checkout.process');
-Route::get('/checkout/paystack/callback', [CartController::class, 'paystackCallback'])->name('checkout.paystack.callback');
-// ==========================================
-
-
-// ─── Public order tracking (no auth — anyone with a reference can track) ──
-Route::get('/track-order', [CartController::class, 'trackOrder'])->name('track.order');
-Route::post('/track-order', [CartController::class, 'trackOrder'])->name('track.order.search');
 
 Route::group(['middleware' => 'auth'], function() {
     Route::controller(HomeController::class)->group(function () {
         Route::get('home', 'home');
     });
+});
+
+
+
+
+Route::middleware('ecommerce')->group(function () {
+
+    Route::get('/', [StorefrontController::class, 'index'])->name('shop.index');
+    Route::get('/all-products', [StorefrontController::class, 'viewAllProducts'])->name('all.products');
+    Route::get('/product/{id}', [StorefrontController::class, 'show'])->name('products.show');
+
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/add/{id}', [CartController::class, 'add'])->name('cart.add');
+    Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+    Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
+
+    Route::post('/checkout', [CartController::class, 'checkout'])->name('checkout.process');
+    Route::get('/checkout/paystack/callback', [CartController::class, 'paystackCallback'])->name('checkout.paystack.callback');
+
+    Route::get('/track-order', [CartController::class, 'trackOrder'])->name('track.order');
+    Route::post('/track-order', [CartController::class, 'trackOrder'])->name('track.order.search');
+
+    Route::get('/contact-us', [ContactController::class, 'index'])->name('contact.us');
+    Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.us.store');
+
+    // Customer auth + portal — hide the whole customer-facing side too
+    Route::get('/customer/login', [CustomerAuthController::class, 'showLoginForm'])->name('customer.login');
+    Route::post('/customer/login', [CustomerAuthController::class, 'login'])->name('customer.login.post');
+    Route::get('/customer/register', [CustomerAuthController::class, 'showRegistrationForm'])->name('customer.register');
+    Route::post('/customer/register', [CustomerAuthController::class, 'register'])->name('customer.register.post');
+
+
+    Route::middleware('auth:customer')->group(function () {
+        Route::get('/customer/dashboard', [CustomerDashboardController::class, 'index'])->name('customer.dashboard');
+        Route::get('/customer/wishlist', [WishlistController::class, 'index'])->name('customer.wishlist');
+        Route::post('/wishlist/add/{productId}', [WishlistController::class, 'store'])->name('wishlist.add');
+        Route::get('/wishlist/remove/{id}', [WishlistController::class, 'destroy'])->name('wishlist.remove');
+        Route::post('/customer/logout', [CustomerAuthController::class, 'logout'])->name('customer.logout');
+        Route::get('/customer/orders', [CustomerDashboardController::class, 'orders'])->name('customer.orders');
+        Route::get('/customer/orders/{sale}', [CustomerDashboardController::class, 'showOrder'])->name('customer.orders.show');
+        Route::get('/customer/orders/{sale}/confirmation', [CustomerDashboardController::class, 'orderConfirmation'])->name('customer.orders.confirmation');
+    });
+
+    Route::get('/policy',            [PolicyController::class, 'index'])->name('policy.index');
+    Route::get('/policy/{policy}',   [PolicyController::class, 'show'])->name('policy.show');
 });
 
 // ==========================================
@@ -426,6 +392,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
 
     Route::resource('discount-plans', DiscountPlanController::class);
     Route::resource('discounts', DiscountController::class);
+    Route::get('product-autocomplete', [DiscountController::class, 'productAutocomplete'])->name('product.autocomplete');
     Route::get('discounts/product-search/{code}', [DiscountController::class,'productSearch']);
 
 
@@ -542,6 +509,11 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     });
 
     Route::post('delivery/{id}/mark-delivered', [DeliveryController::class, 'markDelivered'])->name('delivery.markDelivered');
+    Route::post('delivery/update-status', [DeliveryController::class, 'updateStatus'])->name('delivery.updateStatus');
+    Route::post('delivery/record-payment', [DeliveryController::class, 'recordDeliveryPayment'])->name('delivery.recordPayment');
+
+
+
 
     Route::controller(DamageStockController::class)->group(function () {
         Route::get('damage-stock/getproduct/{id}',       'getProduct')         ->name('damage-stock.getproduct');
@@ -1001,9 +973,14 @@ Route::prefix('ai')->name('ai-assistant.')->middleware($middlewares)->group(func
         Route::post('deletebyselection', 'deleteBySelection')->name('exchange.deletebyselection');
     });
 
-    Route::resource('exchange', SaleExchangeController::class);
+    // Put this BEFORE the resource route
+    Route::get('exchange/product-search', [SaleExchangeController::class, 'productSearch'])
+        ->name('exchange.product-search');
+
+    // Move this up too, just in case
     Route::get('/sale-exchange/search', [SaleExchangeController::class, 'searchByReference'])->name('sale.exchange.search');
 
+    Route::resource('exchange', SaleExchangeController::class);
 
     Route::get('social-media',                [SocialMediaController::class, 'index'])->name('social-media.index');
     Route::post('social-media/store',         [SocialMediaController::class, 'store'])->name('social-media.store');

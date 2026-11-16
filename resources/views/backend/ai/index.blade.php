@@ -250,7 +250,11 @@
     $aiRendererVersion = is_file($aiRendererPath) ? filemtime($aiRendererPath) : null;
 @endphp
 <script src="{{ asset($asset_prefix . 'js/ai-renderer.js') }}{{ $aiRendererVersion ? '?v='.$aiRendererVersion : '' }}"></script>
+@push('scripts')
 <script>
+$("ul#ai-assistant").siblings('a').attr('aria-expanded','true');
+$("ul#ai-assistant").addClass("show");
+$("ul#ai-assistant #ai-conversation-menu").addClass("active");
 document.addEventListener('DOMContentLoaded', function() {
     const apiBase = "{{ route('ai-assistant.conversations.index') }}";
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -662,4 +666,5 @@ document.addEventListener('DOMContentLoaded', function() {
     elements.input.focus();
 });
 </script>
+@endpush
 @endsection

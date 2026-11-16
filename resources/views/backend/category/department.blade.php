@@ -107,28 +107,42 @@
     });
 
     // ----- Bulk hard delete -----
+    // ----- Bulk hard delete -----
     $(document).on('click', '#bulk-delete-btn', function () {
+        // Use the DataTables API to get selected rows safely
+        var table = $('#department-table').DataTable();
+        var selectedData = table.rows({ selected: true }).data();
         var ids = [];
-        $('#department-table tbody tr').each(function () {
-            if ($(this).find('.dt-checkboxes').is(':checked')) {
-                ids.push($(this).data('id'));
-            }
-        });
 
-        if (!ids.length) { alert('Please select at least one department.'); return; }
+        // Loop through the selected rows and extract the 'id'
+        for (var i = 0; i < selectedData.length; i++) {
+            ids.push(selectedData[i].id);
+        }
+
+        if (ids.length === 0) {
+            alert('Please select at least one department using the checkboxes.');
+            return;
+        }
+
         if (!confirm(ids.length + ' department(s) will be PERMANENTLY deleted. Continue?')) return;
 
-        $.post("{{ url('category-department/deletebySelection') }}", {
-            departmentIdArray: ids,
-            _token: "{{ csrf_token() }}"
-        }, function (res) {
-            alert(res);
-            location.reload();
-        }).fail(function (xhr) {
-            alert('Delete failed: ' + xhr.statusText);
+        $.ajax({
+            url: "{{ url('category-department/deletebySelection') }}",
+            type: "POST",
+            data: {
+                departmentIdArray: ids,
+                _token: "{{ csrf_token() }}"
+            },
+            success: function (res) {
+                alert(res);
+                location.reload();
+            },
+            error: function (xhr) {
+                console.error(xhr.responseText);
+                alert('Delete failed. Check the console.');
+            }
         });
     });
-
     // ----- Edit dialog (fixed action URL) -----
     $(document).on('click', '.open-EditCategoryDialog', function () {
         var id = $(this).data('id');
@@ -158,7 +172,7 @@
             { "data": "is_active" },
             { "data": "options" }
         ],
-        order: [[2, 'asc']],
+        order: [[0, 'desc']],
         'language': {
             'lengthMenu': '_MENU_ {{ trans("file.records per page") }}',
             "info": '<small>{{ trans("file.Showing") }} _START_ - _END_ (_TOTAL_)</small>',

@@ -61,7 +61,7 @@ class GiftCardController extends Controller
         $data['is_active'] = true;
         $data['created_by'] = Auth::id();
         $data['expense'] = 0;
-        GiftCard::create($data);
+        $giftCard = GiftCard::create($data);
 
         $accountingService = app(\App\Services\AccountingService::class);
         $result = $accountingService->recordGiftCardSale($giftCard, 'gift_card_created');

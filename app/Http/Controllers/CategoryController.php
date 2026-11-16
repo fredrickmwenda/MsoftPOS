@@ -41,8 +41,9 @@ class CategoryController extends Controller
     public function index()
     {
         if (Auth::user()->hasPermissionTo('category')) {
-            $lims_category_list   = DB::table('categories')->where('is_active', true)->orderBy('name')->get();
-            $lims_department_list = DB::table('category_departments')->where('is_active', true)->orderBy('name')->get();
+            $lims_category_list   = DB::table('categories')->where('is_active', true)->orderBy('id', 'desc')->get();
+            //dd($lims_category_list);
+            $lims_department_list = DB::table('category_departments')->where('is_active', true)->orderBy('id', 'desc')->get();
 
             return view('backend.category.create', compact('lims_category_list', 'lims_department_list'));
         }
@@ -85,7 +86,7 @@ class CategoryController extends Controller
             $nestedData['key'] = $key;
 
             if ($category->image)
-                $nestedData['name'] = '<img src="' . url('images/category', $category->image) . '" height="80" width="80"> ' . $category->name;
+                $nestedData['name'] = '<img src="' . url('public/images/category', $category->image) . '" height="80" width="80"> ' . $category->name;
             else
                 $nestedData['name'] = '<img src="' . url('images/zummXD2dvAtI.png') . '" height="80" width="80"> ' . $category->name;
 
@@ -154,8 +155,9 @@ class CategoryController extends Controller
             } else {
                 $imageName = $this->getTenantId() . '_' . $imageName . '.' . $ext;
             }
+            //not working fix
             $image->move('public/images/category', $imageName);
-            Image::make('public/images/category/' . $imageName)->fit(300, 300)->save();
+            Image::make('public/images/category/' . $imageName)->fit(300, 300) ->save(public_path('images/category/' . $imageName), 100);
             $lims_category_data['image'] = $imageName;
         }
 
@@ -172,7 +174,8 @@ class CategoryController extends Controller
                 $iconName = $this->getTenantId() . '_' . $iconName . '.' . $ext;
             }
             $icon->move('public/images/category/icons/', $iconName);
-            Image::make('public/images/category/icons/' . $iconName)->fit(100, 100)->save(); // FIXED path (was missing icons/)
+            Image::make('public/images/category/icons/' . $iconName)->fit(100, 100) ->save(public_path('images/category/icons/' . $imageName), 100);
+            // FIXED path (was missing icons/)
             $lims_category_data['icon'] = $iconName;
         }
 
@@ -197,17 +200,7 @@ class CategoryController extends Controller
         return redirect('category')->with('message', 'Category inserted successfully');
     }
 
-    public function edit($id)
-    {
-        $lims_category_data = DB::table('categories')->where('id', $id)->first();
 
-        if ($lims_category_data && $lims_category_data->parent_id) {
-            $lims_parent_data = DB::table('categories')->where('id', $lims_category_data->parent_id)->first();
-            $lims_category_data->parent = $lims_parent_data ? $lims_parent_data->name : '';
-        }
-
-        return response()->json($lims_category_data);
-    }
 
     public function update(Request $request)
     {
@@ -243,7 +236,7 @@ class CategoryController extends Controller
                 $imageName = $this->getTenantId() . '_' . $imageName . '.' . $ext;
             }
             $image->move('public/images/category', $imageName);
-            Image::make('public/images/category/' . $imageName)->fit(100, 100)->save();
+            Image::make('public/images/category/' . $imageName)->fit(100, 100)->save(public_path('images/category' . $imageName), 100);
             $input['image'] = $imageName;
         }
 
@@ -262,7 +255,7 @@ class CategoryController extends Controller
                 $iconName = $this->getTenantId() . '_' . $iconName . '.' . $ext;
             }
             $icon->move('public/images/category/icons/', $iconName);
-            Image::make('public/images/category/icons/' . $iconName)->fit(100, 100)->save();
+            Image::make('public/images/category/icons/' . $iconName)->fit(100, 100)->save(public_path('images/category/icons/' . $imageName), 100);
             $input['icon'] = $iconName;
         }
 
@@ -277,6 +270,19 @@ class CategoryController extends Controller
         return redirect('category')->with('message', 'Category updated successfully');
     }
 
+    public function edit($id)
+    {
+        $lims_category_data = DB::table('categories')->where('id', $id)->first();
+
+        if ($lims_category_data && $lims_category_data->parent_id) {
+            $lims_parent_data = DB::table('categories')->where('id', $lims_category_data->parent_id)->first();
+            $lims_category_data->parent = $lims_parent_data ? $lims_parent_data->name : '';
+        }
+
+        // department_id is already included in the response automatically by ->first()
+        return response()->json($lims_category_data);
+    }
+
     public function import(Request $request)
     {
         $upload = $request->file('file');
@@ -289,26 +295,45 @@ class CategoryController extends Controller
         $file = fopen($filePath, 'r');
         $header = fgetcsv($file);
         $escapedHeader = [];
+
         foreach ($header as $key => $value) {
             $lheader = strtolower($value);
             $escapedItem = preg_replace('/[^a-z]/', '', $lheader);
             array_push($escapedHeader, $escapedItem);
         }
+
         while ($columns = fgetcsv($file)) {
             if ($columns[0] == "")
                 continue;
             foreach ($columns as $key => $value) {
-                $value = preg_replace('/\D/', '', $value);
+                $value = preg_replace('/\D/', '', $value); // NOTE: This removes all non-numbers! See warning below.
             }
+
+            // Combine headers with row data
             $data = array_combine($escapedHeader, $columns);
+
             $category = Category::firstOrNew(['name' => $data['name'], 'is_active' => true]);
-            if ($data['parentcategory']) {
+
+            // Handle Parent Category
+            if (!empty($data['parentcategory'])) {
                 $parent_category = Category::firstOrNew(['name' => $data['parentcategory'], 'is_active' => true]);
                 $parent_id = $parent_category->id;
-            } else
+            } else {
                 $parent_id = null;
-
+            }
             $category->parent_id = $parent_id;
+
+            // Handle Department (NEW)
+            if (!empty($data['department'])) {
+                // Find or create the department based on the CSV column
+                $department = CategoryDepartment::firstOrCreate(
+                    ['name' => $data['department'], 'is_active' => true]
+                );
+                $category->department_id = $department->id;
+            } else {
+                $category->department_id = null;
+            }
+
             $category->is_active = true;
             $category->save();
         }
@@ -442,8 +467,8 @@ class CategoryController extends Controller
                 $imageName = $this->getTenantId() . '_' . $imageName . '.' . $ext;
             }
 
-            $image->move('public/images/category', $imageName);
-            Image::make('public/images/category/' . $imageName)->fit(300, 300)->save();
+            $image->move('public/images/category/department/', $imageName);
+            Image::make('public/images/category/department/' . $imageName)->fit(100, 100)->save();
 
             $department->image = $imageName;
         }
@@ -491,8 +516,8 @@ class CategoryController extends Controller
                 $imageName = $this->getTenantId() . '_' . $imageName . '.' . $ext;
             }
 
-            $image->move('public/images/category', $imageName);
-            Image::make('public/images/category/' . $imageName)->fit(100, 100)->save();
+            $image->move('public/images/category/department/', $imageName);
+            Image::make('public/images/category/department/' . $imageName)->fit(100, 100)->save();;
 
             $department->image = $imageName;
         }
@@ -530,33 +555,15 @@ class CategoryController extends Controller
 
         $data = [];
         foreach ($departments as $key => $department) {
+            $nestedData['id'] = $department->id; // <--- ADD THIS LINE
             $nestedData['key'] = $key + 1;
             $nestedData['name'] = '<img src="' .
-                ($department->image ? url('images/category', $department->image) : url('images/zummXD2dvAtI.png')) .
+                ($department->image ? url('public/images/category/department', $department->image) : url('images/zummXD2dvAtI.png')) .
                 '" height="80" width="80"> ' . e($department->name);
 
             $nestedData['is_active'] = $department->is_active ? 'Active' : 'Inactive';
 
-            $nestedData['options'] = '
-                <div class="btn-group">
-                    <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' . trans("file.action") . '
-                        <span class="caret"></span>
-                    </button>
-                    <ul class="dropdown-menu edit-options dropdown-menu-right dropdown-default" user="menu">
-                        <li>
-                            <button type="button" data-id="' . $department->id . '" class="open-EditCategoryDialog btn btn-link" data-toggle="modal" data-target="#editModal">
-                                <i class="dripicons-document-edit"></i> ' . trans("file.edit") . '
-                            </button>
-                        </li>
-                        <li class="divider"></li>' .
-                \Form::open(["route" => ["category-department.destroy", $department->id], "method" => "DELETE"]) . '
-                        <li>
-                            <button type="submit" class="btn btn-link" onclick="return confirmHardDelete()">
-                                <i class="dripicons-trash"></i> ' . trans("file.delete") . '
-                            </button>
-                        </li>' . \Form::close() . '
-                    </ul>
-                </div>';
+            // ... options ...
 
             $data[] = $nestedData;
         }
@@ -586,10 +593,22 @@ class CategoryController extends Controller
 
     public function deleteDepartmentBySelection(Request $request)
     {
+        // If the request is missing the array, default to an empty array
+        $ids = $request->input('departmentIdArray', []);
+
+        // If it's still not an array (e.g., single string), wrap it
+        if (!is_array($ids)) {
+            $ids = [$ids];
+        }
+
+        if (empty($ids)) {
+            return 'No departments selected for deletion.';
+        }
+
         $deleted = 0;
         $errors  = [];
 
-        foreach ($request['departmentIdArray'] as $id) {
+        foreach ($ids as $id) {
             try {
                 $this->hardDeleteDepartment($id);
                 $deleted++;
@@ -598,8 +617,9 @@ class CategoryController extends Controller
             }
         }
 
-        if (count($errors))
+        if (count($errors)) {
             return "Deleted {$deleted} department(s). Errors: " . implode(' | ', $errors);
+        }
 
         return 'Department deleted permanently!';
     }

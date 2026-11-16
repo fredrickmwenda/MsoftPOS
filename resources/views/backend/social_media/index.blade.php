@@ -159,6 +159,9 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
 <script>
+$("ul#setting").siblings('a').attr('aria-expanded','true');
+$("ul#setting").addClass("show");
+$("ul#setting #social-media-menu").addClass("active");
  $(function () {
     $.ajaxSetup({ headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') } });
 

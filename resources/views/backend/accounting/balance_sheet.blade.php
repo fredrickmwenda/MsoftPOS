@@ -159,6 +159,9 @@
 
 @push('scripts')
 <script type="text/javascript">
+$("ul#account").siblings('a').attr('aria-expanded','true');
+$("ul#account").addClass("show");
+$("ul#account #balance-sheet-menu").addClass("active");
     $(document).ready(function() {
         function loadReport() {
             $.ajax({

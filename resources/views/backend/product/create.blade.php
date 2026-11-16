@@ -1,6 +1,25 @@
 @extends('backend.layout.main')
 
 @section('content')
+@php
+    // Safety fallback — if the controller doesn't pass $variant_type_values
+    // (or the DB tables aren't loaded yet), we use the REAL values from the
+    // SQL imports so the "pick existing" dropdown always shows values.
+    // These match: jgrace_variant_types_import.sql + jgrace_variants_import.sql
+    $variant_type_values = $variant_type_values ?? collect([
+        (object)['id' => 1, 'name' => 'Color', 'values' => collect([
+            'White', 'Black', 'Blue', 'Pink', 'Yellow', 'Khikhi', 'Green',
+            'Wine', 'Mauve', 'Light green', 'Turquoise blue',
+            'White long', 'White short', 'Blue long', 'Blue short',
+            'Black long', 'Black short', 'Pink long', 'Wine long',
+            'Mauve long', 'Yellow long',
+        ])],
+        (object)['id' => 2, 'name' => 'Size', 'values' => collect([
+            'S', 'M', 'L', 'Xl', '2xl', '3xl', '4xl',
+        ])],
+    ]);
+@endphp
+
 <section class="forms">
     <div class="container-fluid">
         <div class="row">
@@ -326,7 +345,7 @@
                                         <label>{{trans('file.Initial Stock')}}</label>
                                         <p class="italic">{{trans('file.This feature will not work for product with variants and batches')}}</p>
                                     </div>
-                                  
+
                                 </div>
 
                                 <div class="col-md-4">
@@ -353,7 +372,7 @@
                                             When checked, this product appears in the customer-facing storefront.
                                             Uncheck to hide it from online sales.
                                         </small>
-                                    </div> 
+                                    </div>
                                 </div>
                                 <div class="col-md-6" id="initial-stock-section">
                                     <div class="table-responsive ml-2">
@@ -391,18 +410,49 @@
                                         <textarea name="product_details" class="form-control" rows="3"></textarea>
                                     </div>
                                 </div>
+
+                                {{-- ============================================================ --}}
+                                {{-- VARIANT SECTION                                              --}}
+                                {{--   Row 1 defaults to Color, Row 2 auto-selects Size          --}}
+                                {{--   "Pick existing" dropdown reads from variant-types-data    --}}
+                                {{--   JSON blob (populated by the controller from DB)          --}}
+                                {{-- ============================================================ --}}
                                 <div class="col-md-12 mt-3" id="variant-option">
                                     <h5><input name="is_variant" type="checkbox" id="is-variant" value="1">&nbsp; {{trans('file.This product has variant')}}</h5>
                                 </div>
                                 <div class="col-md-12" id="variant-section">
-                                    <div class="row" id="variant-input-section">
-                                        <div class="col-md-4 form-group mt-2">
-                                            <label>{{trans('file.Option')}} *</label>
-                                            <input type="text" name="variant_option[]" class="form-control variant-field" placeholder="Size, Color etc...">
-                                        </div>
-                                        <div class="col-md-6 form-group mt-2">
-                                            <label>{{trans('file.Value')}} *</label>
-                                            <input type="text" name="variant_value[]" class="type-variant form-control variant-field">
+
+                                    {{-- JSON blob: variant types + their values, read once by JS --}}
+                                    @php
+                                        $variant_types_json = $variant_type_values->map(function ($vt) {
+                                            return ['id' => $vt->id, 'name' => $vt->name, 'values' => $vt->values];
+                                        })->values();
+                                    @endphp
+                                    <script type="application/json" id="variant-types-data">{!! $variant_types_json->toJson() !!}</script>
+
+                                    <div id="variant-input-section">
+                                        {{-- First row — defaults to the first variant_type (Color) --}}
+                                        <div class="row variant-input-row">
+                                            <div class="col-md-4 form-group mt-2">
+                                                <label>{{trans('file.Option')}} * (Variant Type)</label>
+                                                <select name="variant_option[]" class="form-control variant-type-select">
+                                                    @foreach($variant_type_values as $vtype)
+                                                        <option value="{{ $vtype->name }}" data-type-id="{{ $vtype->id }}">
+                                                            {{ $vtype->name }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6 form-group mt-2">
+                                                <label>{{trans('file.Value')}} *</label>
+                                                <input type="text" name="variant_value[]" class="type-variant form-control variant-field" placeholder="{{trans('file.Enter variant value seperated by comma')}}">
+                                            </div>
+                                            <div class="col-md-2 form-group mt-2">
+                                                <label>&nbsp;</label>
+                                                <select class="form-control variant-value-picker">
+                                                    <option value="">-- pick existing --</option>
+                                                </select>
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-md-12 form-group">
@@ -416,6 +466,7 @@
                                                     <th>{{trans('file.Item Code')}}</th>
                                                     <th>{{trans('file.Additional Cost')}}</th>
                                                     <th>{{trans('file.Additional Price')}}</th>
+                                                    <th>{{trans('file.qty')}}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -423,6 +474,7 @@
                                         </table>
                                     </div>
                                 </div>
+
                                 <div class="col-md-12 mt-2" id="diffPrice-option">
                                     <h5><input name="is_diffPrice" type="checkbox" id="is-diffPrice" value="1">&nbsp; {{trans('file.This product has different price for different warehouse')}}</h5>
                                 </div>
@@ -563,7 +615,7 @@
     </div>
 </div>
 
-      
+
     </div>
 </section>
 
@@ -575,10 +627,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const productInput = document.getElementById('product_barcode');
     const boxInput = document.getElementById('box_barcode');
 
-    // Auto focus product barcode first
     productInput.focus();
 
-    // When a barcode is scanned (scanner sends Enter), move to box field
     productInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -586,7 +636,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Optional: when box barcode scanned, move to next input (like price)
     boxInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -594,7 +643,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Optional scan button (manual trigger for camera scanning)
     document.getElementById('scanProductBarcode').addEventListener('click', function() {
         alert('If using a barcode scanner, place cursor in field and scan.');
     });
@@ -639,6 +687,8 @@ document.addEventListener('DOMContentLoaded', function() {
     $("#start_date").hide();
     $("#last_date").hide();
     var variantPlaceholder = <?php echo json_encode(trans('file.Enter variant value seperated by comma')); ?>;
+    var variantOptionLabel = <?php echo json_encode(trans('file.Option')); ?>;
+    var variantValueLabel  = <?php echo json_encode(trans('file.Value')); ?>;
     var variantIds = [];
     var combinations = [];
     var oldCombinations = [];
@@ -646,6 +696,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var oldAdditionalPrice = [];
     var step;
     var numberOfWarehouse = <?php echo json_encode(count($lims_warehouse_list)) ?>;
+    var oldVariantQty = [];
 
     $('[data-toggle="tooltip"]').tooltip();
 
@@ -661,17 +712,229 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
 
-    $('.add-more-variant').on("click", function() {
-        var htmlText = '<div class="col-md-4 form-group mt-2"><label>Option *</label><input type="text" name="variant_option[]" class="form-control variant-field" placeholder="Size, Color etc..."></div><div class="col-md-6 form-group mt-2"><label>Value *</label><input type="text" name="variant_value[]" class="type-variant form-control variant-field"></div>';
-        $("#variant-input-section").append(htmlText);
-        $('.type-variant').tagsInput();
+    // ========================================================================
+    // START VARIANT RELATED JS
+    //   - Reads variant types + values from <script id="variant-types-data">
+    //   - Row 1 = Color (first type), Row 2 = Size (auto-advanced)
+    //   - "Pick existing" dropdown populated from the JSON blob
+    //   - Rows are BUILT FROM HTML (not cloned) so the type select value
+    //     is pre-selected in the markup and never gets reset on append.
+    // ========================================================================
+
+    // 1) Load variant types data from the Blade JSON blob
+    //    IMPORTANT: This is a FUNCTION, not an IIFE. We call it on DOM ready
+    //    because if the scripts push renders in the head, the
+    //    <script id="variant-types-data"> element isn't in the DOM yet when
+    //    this script first executes. By deferring to DOM ready, we guarantee
+    //    the element exists.
+    //
+    //    If the JSON blob is missing/empty/broken, we fall back to hardcoded
+    //    values so the pickers ALWAYS work.
+    var VARIANT_TYPES_FALLBACK = [
+        { id: 1, name: 'Color', values: [
+            'White','Black','Blue','Pink','Yellow','Khikhi','Green','Wine',
+            'Mauve','Light green','Turquoise blue','White long','White short',
+            'Blue long','Blue short','Black long','Black short','Pink long',
+            'Wine long','Mauve long','Yellow long',
+        ]},
+        { id: 2, name: 'Size', values: ['S','M','L','Xl','2xl','3xl','4xl'] },
+    ];
+    var variantTypesData = VARIANT_TYPES_FALLBACK; // start with fallback so it's never empty
+    function loadVariantTypesData() {
+        var el = document.getElementById('variant-types-data');
+        if (!el) {
+            console.warn('variant-types-data element not found — using fallback');
+            variantTypesData = VARIANT_TYPES_FALLBACK;
+            return true;
+        }
+        try {
+            var parsed = JSON.parse(el.textContent) || [];
+            if (parsed.length > 0) {
+                variantTypesData = parsed;
+                console.log('variantTypesData loaded from JSON:', variantTypesData.length, 'types');
+            } else {
+                console.warn('variant-types-data JSON is empty — using fallback');
+                variantTypesData = VARIANT_TYPES_FALLBACK;
+            }
+            return true;
+        } catch (e) {
+            console.error('Failed to parse variant-types-data:', e, '— using fallback');
+            variantTypesData = VARIANT_TYPES_FALLBACK;
+            return true;
+        }
+    }
+
+    // 2) Return the data object for a given type name
+    function getTypeData(typeName) {
+        for (var i = 0; i < variantTypesData.length; i++) {
+            if (variantTypesData[i].name === typeName) return variantTypesData[i];
+        }
+        return null;
+    }
+
+    // 3) Return the next variant type not already used by another row
+    function getNextAvailableType() {
+        if (variantTypesData.length === 0) return null;
+        var used = [];
+        $('.variant-type-select').each(function () {
+            var v = $(this).val();
+            if (v) used.push(v);
+        });
+        for (var i = 0; i < variantTypesData.length; i++) {
+            if (used.indexOf(variantTypesData[i].name) === -1) {
+                return variantTypesData[i];
+            }
+        }
+        return variantTypesData[0];
+    }
+
+    // 4) Build the <option> HTML for the variant type <select>, with the
+    //    correct one pre-selected. This avoids the clone + .val() problem
+    //    where the select value resets when appended to the DOM.
+    function buildTypeOptions(selectedName) {
+        var html = '';
+        for (var i = 0; i < variantTypesData.length; i++) {
+            var name = variantTypesData[i].name;
+            var sel = (name === selectedName) ? ' selected' : '';
+            html += '<option value="' + name + '"' + sel + '>' + name + '</option>';
+        }
+        return html;
+    }
+
+    // 5) Create a brand-new variant row from an HTML string.
+    //    The type select has the correct option pre-selected in the HTML.
+    function createVariantRow(selectedTypeName) {
+        if (!selectedTypeName && variantTypesData.length > 0) {
+            selectedTypeName = variantTypesData[0].name;
+        }
+        var rowHtml =
+            '<div class="row variant-input-row">' +
+                '<div class="col-md-4 form-group mt-2">' +
+                    '<label>' + variantOptionLabel + ' * (Variant Type)</label>' +
+                    '<select name="variant_option[]" class="form-control variant-type-select">' +
+                        buildTypeOptions(selectedTypeName) +
+                    '</select>' +
+                '</div>' +
+                '<div class="col-md-6 form-group mt-2">' +
+                    '<label>' + variantValueLabel + ' *</label>' +
+                    '<input type="text" name="variant_value[]" class="type-variant form-control variant-field" placeholder="' + variantPlaceholder + '">' +
+                '</div>' +
+                '<div class="col-md-2 form-group mt-2">' +
+                    '<label>&nbsp;</label>' +
+                    '<select class="form-control variant-value-picker">' +
+                        '<option value="">-- pick existing --</option>' +
+                    '</select>' +
+                '</div>' +
+            '</div>';
+        return $(rowHtml);
+    }
+
+    // 6) Fill the "-- pick existing --" dropdown for a given row
+    function fillVariantPicker($row) {
+        var typeName = $row.find('.variant-type-select').val();
+        var typeData = getTypeData(typeName);
+        var values   = typeData ? typeData.values : [];
+
+        var $picker = $row.find('.variant-value-picker');
+        $picker.empty().append('<option value="">-- pick existing --</option>');
+        for (var i = 0; i < values.length; i++) {
+            $picker.append($('<option/>', { value: values[i], text: values[i] }));
+        }
+
+        // If Bootstrap Select (selectpicker) has wrapped this element,
+        // refresh its UI so the new <option>s appear in the dropdown.
+        // This is safe to call even if selectpicker isn't initialized —
+        // the try/catch silently ignores errors.
+        try {
+            if ($picker.closest('.bootstrap-select').length > 0) {
+                $picker.selectpicker('refresh');
+            }
+        } catch (e) { /* selectpicker not loaded — ignore */ }
+    }
+
+    // 7) Bind events for a variant row (type change + picker change)
+    function bindVariantRow($row) {
+        // When the variant TYPE changes, refill the picker
+        $row.find('.variant-type-select')
+            .off('change.variant')
+            .on('change.variant', function () {
+                fillVariantPicker($row);
+            });
+
+        // When a value is picked from the dropdown, add it as a tag
+        $row.find('.variant-value-picker')
+            .off('change.variant')
+            .on('change.variant', function () {
+                var value = $(this).val();
+                if (!value) return;
+
+                var $input = $row.find('input.type-variant');
+                if ($input.data('tagsinput-init') !== undefined) {
+                    // tagsInput is initialized → use addTag()
+                    $input.addTag(value, { focus: false, unique: true });
+                } else {
+                    // Plain comma-separated fallback
+                    var current = $input.val();
+                    if (current) {
+                        var parts = current.split(',').map(function (s) { return s.trim(); });
+                        if (parts.indexOf(value) === -1) {
+                            $input.val(current + ',' + value);
+                        }
+                    } else {
+                        $input.val(value);
+                    }
+                    $input.trigger('change');
+                }
+                // Reset the picker so the same value can be picked again
+                $(this).val('');
+            });
+
+        // Fill the picker immediately for the current type
+        fillVariantPicker($row);
+    }
+
+    // 8) Initialize a variant row: set up tagsInput + bind events + fill picker
+    function initVariantRow($row) {
+        var $input = $row.find('input.type-variant');
+        $row.find('.tagsinput').remove();
+        $input.removeAttr('id').show();
+        $input.tagsInput();
+        bindVariantRow($row);
+    }
+
+    // 9) On DOM ready: FIRST load the data, THEN initialize all rows.
+    //    This guarantees variantTypesData is populated before any
+    //    fillVariantPicker() call runs.
+    $(function () {
+        loadVariantTypesData();
+        $('.variant-input-row').each(function () {
+            initVariantRow($(this));
+        });
     });
 
-    //start variant related js
-    $(function() {
-        $('.type-variant').tagsInput();
+    // 10) "Add More Variant" button — build a NEW row with the next type
+    //     pre-selected in the HTML (not cloned, not .val()-set after append)
+    $('.add-more-variant').on("click", function () {
+        var nextType = getNextAvailableType();
+        var typeName = nextType ? nextType.name : (variantTypesData[0] ? variantTypesData[0].name : 'Color');
+
+        // Build the row with the correct type pre-selected in the HTML
+        var $newRow = createVariantRow(typeName);
+
+        // Append to DOM FIRST
+        $("#variant-input-section").append($newRow);
+
+        // THEN initialize tagsInput on the input
+        var $input = $newRow.find('input.type-variant');
+        $input.tagsInput();
+
+        // THEN bind events + fill the picker
+        bindVariantRow($newRow);
     });
 
+    // ========================================================================
+    // tagsInput PLUGIN (unchanged — keeps the combination-building custom code)
+    // ========================================================================
     (function($) {
         var delimiter = [];
         var inputSettings = [];
@@ -726,55 +989,71 @@ document.addEventListener('DOMContentLoaded', function() {
                     variantIds.splice(index, 1, $(this).attr('id'));
                 });
 
-                //start custom code
-                first_variant_values = $('#'+variantIds[0]).val().split(_getDelimiter(delimiter[variantIds[0] ]));
-                combinations = first_variant_values;
-                step = 1;
-                while(step < variantIds.length) {
-                    var newCombinations = [];
-                    for (var i = 0; i < combinations.length; i++) {
-                        new_variant_values = $('#'+variantIds[step]).val().split(_getDelimiter(delimiter[variantIds[step] ]));
-                        for (var j = 0; j < new_variant_values.length; j++) {
-                            newCombinations.push(combinations[i]+'/'+new_variant_values[j]);
+                //start custom code — builds the cartesian combinations table
+                variantIds = [];
+                $(".type-variant").each(function() {
+                    var v = $(this).val();
+                    if(v && v.trim() !== '') {
+                        variantIds.push($(this).attr('id'));
+                    }
+                });
+
+                if(variantIds.length === 0) {
+                    $("table.variant-list tbody").remove();
+                }
+                else {
+                    first_variant_values = $('#'+variantIds[0]).val().split(_getDelimiter(delimiter[variantIds[0] ])).filter(function(v){ return v.trim() !== ''; });
+                    combinations = first_variant_values;
+                    step = 1;
+                    while(step < variantIds.length) {
+                        var newCombinations = [];
+                        new_variant_values = $('#'+variantIds[step]).val().split(_getDelimiter(delimiter[variantIds[step] ])).filter(function(v){ return v.trim() !== ''; });
+                        for (var i = 0; i < combinations.length; i++) {
+                            for (var j = 0; j < new_variant_values.length; j++) {
+                                newCombinations.push(combinations[i]+'/'+new_variant_values[j]);
+                            }
                         }
+                        combinations = newCombinations;
+                        step++;
                     }
-                    combinations = newCombinations;
-                    step++;
-                }
-                var rownumber = $('table.variant-list tbody tr:last').index();
-                if(rownumber > -1) {
-                    oldCombinations = [];
-                    oldAdditionalCost = [];
-                    oldAdditionalPrice = [];
-                    $(".variant-name").each(function(i) {
-                        oldCombinations.push($(this).text());
-                        oldAdditionalCost.push($('table.variant-list tbody tr:nth-child(' + (i + 1) + ')').find('.additional-cost').val());
-                        oldAdditionalPrice.push($('table.variant-list tbody tr:nth-child(' + (i + 1) + ')').find('.additional-price').val());
-                    });
-                }
-                $("table.variant-list tbody").remove();
-                var newBody = $("<tbody>");
-                for(i = 0; i < combinations.length; i++) {
-                    var variant_name = combinations[i];
-                    var item_code = variant_name+'-'+$("#code").val();
-                    var newRow = $("<tr>");
-                    var cols = '';
-                    cols += '<td class="variant-name">'+variant_name+'<input type="hidden" name="variant_name[]" value="' + variant_name + '" /></td>';
-                    cols += '<td><input type="text" class="form-control item-code" name="item_code[]" value="'+item_code+'" /></td>';
-                    //checking if this variant already exist in the variant table
-                    oldIndex = oldCombinations.indexOf(combinations[i]);
-                    if(oldIndex >= 0) {
-                        cols += '<td><input type="number" class="form-control additional-cost" name="additional_cost[]" value="'+oldAdditionalCost[oldIndex]+'" step="any" /></td>';
-                        cols += '<td><input type="number" class="form-control additional-price" name="additional_price[]" value="'+oldAdditionalPrice[oldIndex]+'" step="any" /></td>';
+                    var rownumber = $('table.variant-list tbody tr:last').index();
+                    if(rownumber > -1) {
+                        oldCombinations = [];
+                        oldAdditionalCost = [];
+                        oldAdditionalPrice = [];
+                        oldVariantQty = [];
+                        $(".variant-name").each(function(i) {
+                            oldCombinations.push($(this).text());
+                            oldAdditionalCost.push($('table.variant-list tbody tr:nth-child(' + (i + 1) + ')').find('.additional-cost').val());
+                            oldAdditionalPrice.push($('table.variant-list tbody tr:nth-child(' + (i + 1) + ')').find('.additional-price').val());
+                            oldVariantQty.push($('table.variant-list tbody tr:nth-child(' + (i + 1) + ')').find('.variant-qty').val());
+                        });
                     }
-                    else {
-                        cols += '<td><input type="number" class="form-control additional-cost" name="additional_cost[]" value="" step="any" /></td>';
-                        cols += '<td><input type="number" class="form-control additional-price" name="additional_price[]" value="" step="any" /></td>';
+                    $("table.variant-list tbody").remove();
+                    var newBody = $("<tbody>");
+                    for(i = 0; i < combinations.length; i++) {
+                        var variant_name = combinations[i];
+                        var item_code = variant_name+'-'+$("#code").val();
+                        var newRow = $("<tr>");
+                        var cols = '';
+                        cols += '<td class="variant-name">'+variant_name+'<input type="hidden" name="variant_name[]" value="' + variant_name + '" /></td>';
+                        cols += '<td><input type="text" class="form-control item-code" name="item_code[]" value="'+item_code+'" /></td>';
+                        oldIndex = oldCombinations.indexOf(combinations[i]);
+                        if(oldIndex >= 0) {
+                            cols += '<td><input type="number" class="form-control additional-cost" name="additional_cost[]" value="'+oldAdditionalCost[oldIndex]+'" step="any" /></td>';
+                            cols += '<td><input type="number" class="form-control additional-price" name="additional_price[]" value="'+oldAdditionalPrice[oldIndex]+'" step="any" /></td>';
+                            cols += '<td><input type="number" class="form-control variant-qty" name="variant_qty[]" value="'+(oldVariantQty[oldIndex] || 0)+'" step="any" min="0" /></td>';
+                        }
+                        else {
+                            cols += '<td><input type="number" class="form-control additional-cost" name="additional_cost[]" value="" step="any" /></td>';
+                            cols += '<td><input type="number" class="form-control additional-price" name="additional_price[]" value="" step="any" /></td>';
+                            cols += '<td><input type="number" class="form-control variant-qty" name="variant_qty[]" value="0" step="any" min="0" /></td>';
+                        }
+                        newRow.append(cols);
+                        newBody.append(newRow);
                     }
-                    newRow.append(cols);
-                    newBody.append(newRow);
+                    $("table.variant-list").append(newBody);
                 }
-                $("table.variant-list").append(newBody);
                 //end custom code
             });
             return false;
@@ -891,7 +1170,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     $.fn.tagsInput.importTags($(data.real_input), $(data.real_input).val());
                 }
 
-                // Stop here if interactive option is not chosen
                 if (!settings.interactive) return;
 
                 $(data.fake_input).val('');
@@ -936,7 +1214,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
 
-                // If a user types a delimiter create a new tag
                 $(data.fake_input).on('keypress', data, function(event) {
                     if (_checkDelimiter(event)) {
                         event.preventDefault();
@@ -954,7 +1231,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     $(this).data('pasted', true);
                 });
 
-                // If a user pastes the text check if it shouldn't be splitted into tags
                 $(data.fake_input).on('input', data, function(event) {
                     if (!$(this).data('pasted')) return;
 
@@ -979,7 +1255,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // Deletes last tag on backspace
                 data.removeWithBackspace && $(data.fake_input).on('keydown', function(event) {
                     if (event.keyCode == 8 && $(this).val() === '') {
                          event.preventDefault();
@@ -990,9 +1265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // Removes the error class when user changes the value of the fake input
                 $(data.fake_input).keydown(function(event) {
-                    // enter, alt, shift, esc, ctrl and arrows keys are ignored
                     if (jQuery.inArray(event.keyCode, [13, 37, 38, 39, 40, 27, 16, 17, 18, 225]) === -1) {
                         $(this).removeClass('error');
                     }
@@ -1098,7 +1371,7 @@ document.addEventListener('DOMContentLoaded', function() {
              return [];
          };
     })(jQuery);
-    //end of variant related js
+    //END OF VARIANT RELATED JS
 
     tinymce.init({
       selector: 'textarea',
@@ -1162,7 +1435,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     $('select[name="unit_id"]').on('change', function() {
-
         unitID = $(this).val();
         if(unitID) {
             populate_category(unitID);
@@ -1205,7 +1477,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     data: data
                 },
                 success: function(data) {
-                    //console.log(data);
                     var flag = 1;
                     $(".product-id").each(function() {
                         if ($(this).val() == data[8]) {
@@ -1233,12 +1504,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    //Change quantity or unit price
     $("#myTable").on('input', '.qty , .unit_price', function() {
         calculate_price();
     });
 
-    //Delete product
     $("table.order-list tbody").on("click", ".ibtnDel", function(event) {
         $(this).closest("tr").remove();
         calculate_price();
@@ -1289,30 +1558,24 @@ document.addEventListener('DOMContentLoaded', function() {
         return ((price - cost) / cost * 100).toFixed(2);
     }
 
-    // When cost changes
     $('input[name="cost"]').on("input", function () {
         let cost = parseFloat($(this).val()) || 0;
         let margin = parseFloat($('input[name="profit_margin"]').val()) || 0;
         let price = calculateProductPrice(cost, margin);
-
         $('input[name="price"]').val(price.toFixed(2)).trigger("change");
     });
 
-    // When profit margin changes
     $('input[name="profit_margin"]').on("input", function () {
         let margin = parseFloat($(this).val()) || 0;
         let cost = parseFloat($('input[name="cost"]').val()) || 0;
         let price = calculateProductPrice(cost, margin);
-
         $('input[name="price"]').val(price.toFixed(2)).trigger("change");
     });
 
-    // When price changes → recalc margin
     $('input[name="price"]').on("input", function () {
         let price = parseFloat($(this).val()) || 0;
         let cost = parseFloat($('input[name="cost"]').val()) || 0;
         let margin = calculateProfitMargin(cost, price);
-
         $('input[name="profit_margin"]').val(margin);
     });
 
@@ -1428,7 +1691,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
-    //dropzone portion
+
     Dropzone.autoDiscover = false;
 
     jQuery.validator.setDefaults({
@@ -1484,13 +1747,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 return false;
             }
         }
+        if ($("input[name='is_initial_stock']").is(":checked") && $("#is-variant").is(":checked")) {
+            var variantTotal = 0;
+            $("input[name='variant_qty[]']").each(function() {
+                variantTotal += parseFloat($(this).val()) || 0;
+            });
+
+            var stockTotal = 0;
+            $("input[name='stock[]']").each(function() {
+                stockTotal += parseFloat($(this).val()) || 0;
+            });
+
+            if (stockTotal !== variantTotal) {
+                alert('Initial stock (' + stockTotal + ') must equal the total variant quantity (' + variantTotal + ').');
+                return false;
+            }
+        }
         $("input[name='price']").prop('disabled',false);
         return true;
     }
-    
-    
-
- 
 
     myDropzone = new Dropzone('div#imageUpload', {
         addRemoveLinks: true,
@@ -1513,8 +1788,7 @@ document.addEventListener('DOMContentLoaded', function() {
         acceptedFiles: ".jpeg,.jpg,.png,.gif",
         init: function () {
             var myDropzone = this;
-             // Attach sortable only after Dropzone is ready
-            $(".dropzone").sortable({
+             $(".dropzone").sortable({
                 items: '.dz-preview',
                 cursor: 'grab',
                 opacity: 0.5,
@@ -1529,7 +1803,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         var displayName = $(el).text().trim();
 
                         queue.forEach(function (file) {
-                            // Guard checks
                             if (!file || typeof file !== 'object') return;
 
                             let uploadedName = '';
@@ -1545,7 +1818,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                     });
 
-                    // Only replace if there’s a valid new queue
                     if (newQueue.length > 0) {
                         myDropzone.files = newQueue;
                     }
@@ -1576,16 +1848,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             contentType: false,
                             processData: false,
                             success:function(response) {
-                                //console.log(response);
                                 location.href = '../products';
                             },
                             error: function(response) {
                                 console.log("AJAX error:", response.status, response.responseText);
 
-                                // Guard against non-JSON responses (500 errors return HTML)
                                 if (response.responseJSON && response.responseJSON.errors) {
                                     $.each(response.responseJSON.errors, function(field, messages) {
-                                        // Try to find a matching error span
                                         var $errorSpan = $('#' + field + '-error');
                                         if ($errorSpan.length) {
                                             $errorSpan.text(messages[0]);
@@ -1596,7 +1865,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 } else if (response.responseJSON && response.responseJSON.message) {
                                     alert(response.responseJSON.message);
                                 } else {
-                                    // 500 error or network error — show something
                                     alert('An error occurred. Status: ' + response.status + '\nCheck the browser console (F12) for details.');
                                     console.error('Full response:', response.responseText);
                                 }
@@ -1607,7 +1875,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             this.on('sending', function (file, xhr, formData) {
-                // Append all form inputs to the formData Dropzone will POST
                 var data = $("#product-form").serializeArray();
                 $.each(data, function (key, el) {
                     formData.append(el.name, el.value);
@@ -1617,86 +1884,45 @@ document.addEventListener('DOMContentLoaded', function() {
                     formData.append('file',file[0]);
             });
         },
-        // error: function (file, response) {
-        //     console.log(response);
-        //     if(response.errors.name) {
-        //       $("#name-error").text(response.errors.name);
-        //       this.removeAllFiles(true);
-        //     }
-        //     else if(response.errors.code) {
-        //       $("#code-error").text(response.errors.code);
-        //       this.removeAllFiles(true);
-        //     }
-        //     else {
-        //       try {
-        //           var res = JSON.parse(response);
-        //           if (typeof res.message !== 'undefined' && !$modal.hasClass('in')) {
-        //               $("#success-icon").attr("class", "fas fa-thumbs-down");
-        //               $("#success-text").html(res.message);
-        //               $modal.modal("show");
-        //           } else {
-        //               if ($.type(response) === "string")
-        //                   var message = response; //dropzone sends it's own error messages in string
-        //               else
-        //                   var message = response.message;
-        //               file.previewElement.classList.add("dz-error");
-        //               _ref = file.previewElement.querySelectorAll("[data-dz-errormessage]");
-        //               _results = [];
-        //               for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        //                   node = _ref[_i];
-        //                   _results.push(node.textContent = message);
-        //               }
-        //               return _results;
-        //           }
-        //       } catch (error) {
-        //           console.error("Dropzone parsing error:", error);
-        //       }
-        //     }
-        // },
         error: function (file, response) {
-    console.log("Dropzone Error Response:", response);
+            console.log("Dropzone Error Response:", response);
 
-    let errorMessage = '';
+            let errorMessage = '';
 
-    try {
-        // ✅ Case 1: Laravel validation error
-        if (response && typeof response === 'object' && response.errors) {
-            if (response.errors.name) {
-                errorMessage = response.errors.name[0];
-                $("#name-error").text(errorMessage);
-            } else if (response.errors.code) {
-                errorMessage = response.errors.code[0];
-                $("#code-error").text(errorMessage);
+            try {
+                if (response && typeof response === 'object' && response.errors) {
+                    if (response.errors.name) {
+                        errorMessage = response.errors.name[0];
+                        $("#name-error").text(errorMessage);
+                    } else if (response.errors.code) {
+                        errorMessage = response.errors.code[0];
+                        $("#code-error").text(errorMessage);
+                    }
+                    this.removeAllFiles(true);
+                }
+
+                else if (response && typeof response === 'object' && response.message) {
+                    errorMessage = response.message || "Server Error";
+                    $("#name-error").text(errorMessage);
+                }
+
+                else if (typeof response === 'string') {
+                    errorMessage = response;
+                }
+
+                if (errorMessage) {
+                    file.previewElement.classList.add("dz-error");
+                    const nodes = file.previewElement.querySelectorAll("[data-dz-errormessage]");
+                    nodes.forEach((node) => node.textContent = errorMessage);
+                }
+
+            } catch (err) {
+                console.error("Dropzone parsing error:", err);
             }
-            this.removeAllFiles(true);
-        }
-
-        // ✅ Case 2: Laravel server error (500)
-        else if (response && typeof response === 'object' && response.message) {
-            errorMessage = response.message || "Server Error";
-            $("#name-error").text(errorMessage);
-        }
-
-        // ✅ Case 3: Dropzone string response (e.g. file too large)
-        else if (typeof response === 'string') {
-            errorMessage = response;
-        }
-
-        // ✅ Display message in Dropzone preview
-        if (errorMessage) {
-            file.previewElement.classList.add("dz-error");
-            const nodes = file.previewElement.querySelectorAll("[data-dz-errormessage]");
-            nodes.forEach((node) => node.textContent = errorMessage);
-        }
-
-    } catch (err) {
-        console.error("Dropzone parsing error:", err);
-    }
-},
+        },
 
         successmultiple: function (file, response) {
             location.href = '../products';
-            //console.log(file, response);
         },
         completemultiple: function (file, response) {
             console.log(file, response, "completemultiple");

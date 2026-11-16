@@ -1,4 +1,4 @@
-@extends('backend.layout.main') 
+@extends('backend.layout.main')
 
 @section('content')
 @if(session()->has('message'))
@@ -7,6 +7,7 @@
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>{{ session()->get('not_permitted') }}</div>
 @endif
+
 @push('css')
 <style>
 .stock-header {
@@ -27,8 +28,6 @@
     margin-bottom: 24px;
     color: white;
 }
-
-
 
 .stock-header-content {
     display: flex;
@@ -126,14 +125,56 @@
     color:red;
     font-weight:600;
 }
+
+/* =========================================
+   PRINT STYLES
+   ========================================= */
+@media print {
+    /* Hide everything on the page */
+    body * {
+        visibility: hidden;
+    }
+
+    /* Make ONLY the print area and its contents visible */
+    #print-area, #print-area * {
+        visibility: visible;
+    }
+
+    /* Position the print area at the top left of the paper */
+    #print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* Hide elements explicitly marked to be excluded from print */
+    .no-print {
+        display: none !important;
+    }
+
+    /* Force table borders to be visible on paper */
+    .table-bordered th, .table-bordered td {
+        border: 1px solid #000 !important;
+    }
+
+    /* Remove badge background colors for clean printing */
+    .badge {
+        background-color: transparent !important;
+        color: #000 !important;
+        border: 1px solid #000;
+    }
+}
 </style>
 @endpush
 
 <section>
 <div class="stock-count-wrapper">
 
-
-    <div class="page-header-modern">
+    {{-- Header (Hidden on Print) --}}
+    <div class="page-header-modern no-print">
         <div class="stock-header-content">
             <div class="stock-header-left">
                 <h1 class="stock-header-title">
@@ -143,7 +184,7 @@
                 <p class="stock-header-subtitle">Count inventory and reconcile system stock</p>
             </div>
             <div class="stock-header-actions">
-                <button onclick="window.print()" class="btn-header">
+                <button onclick="printReport()" class="btn-header">
                     <i class="fa fa-print"></i> Print Report
                 </button>
                 <button onclick="refreshData()" class="btn-header">
@@ -153,53 +194,36 @@
         </div>
     </div>
 
-    {{-- Warehouse Selection --}}
-    <div class="card shadow-sm mt-4">
+    {{-- Warehouse Selection (Hidden on Print) --}}
+    <div class="card shadow-sm mt-4 no-print">
         <div class="card-body">
-
-            <h5 class="mb-4">
-                SELECT WAREHOUSE
-            </h5>
-
+            <h5 class="mb-4">SELECT WAREHOUSE</h5>
             <div class="row">
-
                 @foreach($lims_warehouse_list as $warehouse)
                 <div class="col-md-4 mb-3">
-
-                    <div class="warehouse-card"
-                         data-id="{{ $warehouse->id }}">
-
+                    <div class="warehouse-card" data-id="{{ $warehouse->id }}">
                         <div class="warehouse-icon">
                             <i class="fa fa-warehouse"></i>
                         </div>
-
                         <div>
                             <h5>{{ $warehouse->name }}</h5>
-                            <small>
-                                Inventory Location
-                            </small>
+                            <small>Inventory Location</small>
                         </div>
-
                     </div>
-
                 </div>
                 @endforeach
-
             </div>
-
         </div>
     </div>
 
-    {{-- Information Bar --}}
-    <div class="row mt-4">
+    {{-- Information Bar (Hidden on Print) --}}
+    <div class="row mt-4 no-print">
         <input type="hidden" id="warehouse_id">
 
         <div class="col-md-4">
             <div class="info-box">
                 <strong>Location:</strong>
-                <span id="selectedWarehouse">
-                    Select Warehouse
-                </span>
+                <span id="selectedWarehouse">Select Warehouse</span>
             </div>
         </div>
 
@@ -216,119 +240,86 @@
                 {{ now()->format('d M Y') }}
             </div>
         </div>
-
     </div>
 
     {{-- Count Section --}}
     <div class="card mt-4">
 
-        <div class="card-header">
+        {{-- Card Header (Hidden on Print) --}}
+        <div class="card-header no-print">
             <h4>Physical Inventory Count</h4>
         </div>
 
         <div class="card-body">
 
-            <div class="row mb-4">
-
+            {{-- Filters (Hidden on Print) --}}
+            <div class="row mb-4 no-print">
                 <div class="col-md-3">
-
                     <label>Product Category</label>
-
-                    <select id="category"
-                            class="form-control">
-                        
+                    <select id="category" class="form-control">
                         <option value="">Choose Category</option>
-
-
                         <option value="all">All Categories</option>
-
                         @foreach($lims_category_list as $category)
-                            <option value="{{ $category->id }}">
-                                {{ $category->name }}
-                            </option>
+                            <option value="{{ $category->id }}">{{ $category->name }}</option>
                         @endforeach
-
                     </select>
-
                 </div>
 
                 <div class="col-md-3">
                     <label>Batch No</label>
-
                     <select id="batch_no" class="form-control" disabled>
                         <option value="">Select Category First</option>
                     </select>
                 </div>
 
                 <div class="col-md-3">
-
                     <label>Search Product</label>
-
-                    <input type="text"
-                           class="form-control"
-                           id="searchProduct">
-
+                    <input type="text" class="form-control" id="searchProduct">
                 </div>
 
                 <div class="col-md-3">
-
                     <label>&nbsp;</label>
-
-                    <button class="btn btn-info btn-block"
-                            id="loadProducts">
-
-                        Load Products
-
-                    </button>
-
+                    <button class="btn btn-info btn-block" id="loadProducts">Load Products</button>
                 </div>
-
             </div>
 
-            <table class="table table-bordered">
+            {{-- PRINT AREA START --}}
+            <div id="print-area">
+                <h4 class="text-center mb-4" style="display: none;" id="print-title">
+                    Physical Inventory Count - <span id="print-warehouse-name"></span>
+                </h4>
 
-                <thead>
-
-                <tr>
-                    <th width="50">
-                        <input type="checkbox" id="checkAll">
-                    </th>
-                    <th>ID</th>
-                    <th>Product Name</th>
-                    <th>Expiry Date</th>
-                    <th>System Count</th>
-                    <th>Physical Count</th>
-                    <th>Variance</th>
-                    <th>Save</th>
-                </tr>
-
-
-                </thead>
-
-                <tbody id="productTable">
-
-                </tbody>
-
-            </table>
-
-            <thead>
-
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th width="50" class="no-print">
+                                <input type="checkbox" id="checkAll">
+                            </th>
+                            <th>ID</th>
+                            <th>Product Name</th>
+                            <th>Expiry Date</th>
+                            <th>System Count</th>
+                            <th>Physical Count</th>
+                            <th>Variance</th>
+                            <th class="no-print">Save</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTable">
+                        <!-- Data renders here -->
+                    </tbody>
+                </table>
+            </div>
+            {{-- PRINT AREA END --}}
 
         </div>
-
     </div>
 
 </div>
 </section>
-
-
-
-
-
 @endsection
+
 @push('scripts')
 <script>
-
     // Sidebar Active Menu
     $("ul#product").siblings('a').attr('aria-expanded', 'true');
     $("ul#product").addClass("show");
@@ -338,154 +329,75 @@
 
     $(document).ready(function () {
         let firstWarehouse = $('.warehouse-card').first();
-
         if (firstWarehouse.length) {
             firstWarehouse.trigger('click');
         }
     });
 
     // Warehouse Selection
-    // $(document).on('click', '.warehouse-card', function () {
-
-    //     $('.warehouse-card').removeClass('active');
-
-    //     $(this).addClass('active');
-
-    //     selectedWarehouse = $(this).data('id');
-
-    //     $('#warehouse_id').val(selectedWarehouse);
-
-    //     $('#selectedWarehouse').text(
-    //         $(this).find('h5').text()
-    //     );
-
-    //     $('#category').val('all');
-
-    //     loadProducts(
-    //         selectedWarehouse,
-    //         'all'
-    //     );
-    // });
-
     $(document).on('click', '.warehouse-card', function () {
-
         $('.warehouse-card').removeClass('active');
         $(this).addClass('active');
 
         selectedWarehouse = $(this).data('id');
-
         $('#warehouse_id').val(selectedWarehouse);
+        $('#selectedWarehouse').text($(this).find('h5').text());
 
-        $('#selectedWarehouse').text(
-            $(this).find('h5').text()
-        );
-
-        // Reload products if category already selected
         let categoryId = $('#category').val();
-
         if (categoryId !== '') {
             loadProducts(selectedWarehouse, categoryId);
         }
     });
 
-    
-   $(document).on('change', '#category', function () {
+    $(document).on('change', '#category', function () {
+        let categoryId = $(this).val();
 
-    let categoryId = $(this).val();
-
-    $('#batch_no')
-        .prop('disabled', true)
-        .html('<option value="">Loading...</option>');
-
-    $('#productTable').html('');
-
-    if (!selectedWarehouse) {
-        alert('Please select a warehouse first');
-        return;
-    }
-
-    if (categoryId === '') {
-        $('#batch_no')
-            .html('<option value="">Select Category First</option>')
-            .prop('disabled', true);
-
+        $('#batch_no').prop('disabled', true).html('<option value="">Loading...</option>');
         $('#productTable').html('');
-        return;
-    }
 
-    $.ajax({
-        url: "{{ route('stock-count.batches') }}",
-        type: "GET",
-        data: {
-            warehouse_id: selectedWarehouse,
-            category_id: categoryId
-        },
-
-        success: function (response) {
-
-            console.log(response);
-
-            let batches = response.data ?? response;
-
-            let options =
-                '<option value="">All Batches</option>';
-
-            batches.forEach(function (batch) {
-                options += `
-                    <option value="${batch.id}">
-                        ${batch.batch_no}
-                    </option>
-                `;
-            });
-
-            $('#batch_no')
-                .html(options)
-                .prop('disabled', false);
-
-            // LOAD PRODUCTS AFTER BATCHES HAVE LOADED
-            loadProducts(
-                selectedWarehouse,
-                categoryId,
-                ''
-            );
-        },
-
-        error: function (xhr) {
-
-            console.log(xhr.responseText);
-
-            $('#batch_no')
-                .html('<option value="">No Batches Found</option>')
-                .prop('disabled', true);
-
-            // Even if there are no batches, still load products
-            loadProducts(
-                selectedWarehouse,
-                categoryId,
-                ''
-            );
+        if (!selectedWarehouse) {
+            alert('Please select a warehouse first');
+            return;
         }
+
+        if (categoryId === '') {
+            $('#batch_no').html('<option value="">Select Category First</option>').prop('disabled', true);
+            $('#productTable').html('');
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('stock-count.batches') }}",
+            type: "GET",
+            data: {
+                warehouse_id: selectedWarehouse,
+                category_id: categoryId
+            },
+            success: function (response) {
+                let batches = response.data ?? response;
+                let options = '<option value="">All Batches</option>';
+                batches.forEach(function (batch) {
+                    options += `<option value="${batch.id}">${batch.batch_no}</option>`;
+                });
+                $('#batch_no').html(options).prop('disabled', false);
+                loadProducts(selectedWarehouse, categoryId, '');
+            },
+            error: function (xhr) {
+                console.log(xhr.responseText);
+                $('#batch_no').html('<option value="">No Batches Found</option>').prop('disabled', true);
+                loadProducts(selectedWarehouse, categoryId, '');
+            }
+        });
     });
-});
-
-
 
     $('#batch_no').on('change', function () {
         let categoryId = $('#category').val();
         let batchId = $(this).val();
-
-        loadProducts(
-            selectedWarehouse,
-            categoryId,
-            batchId
-        );
+        loadProducts(selectedWarehouse, categoryId, batchId);
     });
-
-  
 
     // Manual Load Button
     $('#loadProducts').on('click', function () {
-
         let categoryId = $('#category').val();
         let batchId = $('#batch_no').val();
 
@@ -493,29 +405,16 @@
             alert('Please select a warehouse first');
             return;
         }
-
         if (!categoryId) {
             alert('Please select a category');
             return;
         }
-
-        loadProducts(
-            selectedWarehouse,
-            categoryId,
-            batchId
-        );
+        loadProducts(selectedWarehouse, categoryId, batchId);
     });
 
     // Load Products Function
-    function loadProducts( warehouseId,categoryId,batchId = '') {
-
-        $('#productTable').html(`
-            <tr>
-                <td colspan="8" class="text-center">
-                    Loading products...
-                </td>
-            </tr>
-        `);
+    function loadProducts(warehouseId, categoryId, batchId = '') {
+        $('#productTable').html(`<tr><td colspan="8" class="text-center">Loading products...</td></tr>`);
 
         $.ajax({
             url: "{{ route('stock-count.products') }}",
@@ -525,261 +424,151 @@
                 category_id: categoryId,
                 batch_id: batchId
             },
-
             success: function (products) {
-
                 let html = '';
-
                 if (products.length === 0) {
-                    html = `
-                        <tr>
-                            <td colspan="8" class="text-center">
-                                No products found
-                            </td>
-                        </tr>
-                    `;
-
+                    html = `<tr><td colspan="8" class="text-center">No products found</td></tr>`;
                     $('#productTable').html(html);
                     return;
                 }
 
                 products.forEach((product) => {
-
-                    let expiry =
-                        product.expiry_date
-                            ? product.expiry_date
-                            : 'N/A';
-
-                    let systemQty =
-                        parseFloat(
-                            product.system_qty
-                        ).toFixed(2);
+                    let expiry = product.expiry_date ? product.expiry_date : 'N/A';
+                    let systemQty = parseFloat(product.system_qty).toFixed(2);
 
                     html += `
                     <tr>
-
-                        <td>
-                            <input
-                                type="checkbox"
-                                class="product-check"
-                                value="${product.id}">
+                        <td class="no-print">
+                            <input type="checkbox" class="product-check" value="${product.id}">
                         </td>
-
                         <td>${product.id}</td>
-
                         <td>
                             <strong>${product.name}</strong>
                             <br>
                             <small>${product.code}</small>
-                            ${product.batch_no
-                                ? `<br><span class="badge badge-info">${product.batch_no}</span>`
-                                : ''
-                            }
+                            ${product.batch_no ? `<br><span class="badge badge-info">${product.batch_no}</span>` : ''}
                         </td>
-
                         <td>${expiry}</td>
-
                         <td>${systemQty}</td>
-
                         <td>
-                            <input
-                                type="number"
-                                step="1"
-                                min="0"
-                                class="form-control physical-count"
+                            <input type="number" step="1" min="0" class="form-control physical-count"
                                 data-system="${systemQty}"
                                 data-product="${product.id}"
                                 data-batch="${product.batch_id ?? ''}"
                                 value="0">
                         </td>
-
                         <td class="variance"></td>
-
-                        <td>
-                            <button
-                                class="btn btn-success save-row"
-                                data-product="${product.id}"
-                                data-batch="${product.batch_id ?? ''}">
+                        <td class="no-print">
+                            <button class="btn btn-success save-row" data-product="${product.id}" data-batch="${product.batch_id ?? ''}">
                                 <i class="fa fa-save"></i>
                             </button>
                         </td>
-
                     </tr>`;
                 });
 
                 $('#productTable').html(html);
             },
-
             error: function () {
-
-                $('#productTable').html(`
-                    <tr>
-                        <td colspan="8"
-                            class="text-center text-danger">
-                            Failed to load products
-                    </td>
-                    </tr>
-                `);
+                $('#productTable').html(`<tr><td colspan="8" class="text-center text-danger">Failed to load products</td></tr>`);
             }
         });
     }
 
-
-
     // Live Variance Calculation
     $(document).on('keyup change', '.physical-count', function () {
-
         let row = $(this).closest('tr');
-
-        let systemQty = parseFloat(
-            $(this).data('system')
-        ) || 0;
-
-        let physicalQty = parseFloat(
-            $(this).val()
-        ) || 0;
-
+        let systemQty = parseFloat($(this).data('system')) || 0;
+        let physicalQty = parseFloat($(this).val()) || 0;
         let variance = physicalQty - systemQty;
-
         let varianceCell = row.find('.variance');
 
-        varianceCell.removeClass(
-            'text-success text-danger text-secondary'
-        );
+        varianceCell.removeClass('text-success text-danger text-secondary');
 
         if (variance > 0) {
-            varianceCell
-                .addClass('text-success')
-                .html('+' + variance);
-        }
-        else if (variance < 0) {
-            varianceCell
-                .addClass('text-danger')
-                .html(variance);
-        }
-        else {
-            varianceCell
-                .addClass('text-secondary')
-                .html('0');
+            varianceCell.addClass('text-success').html('+' + variance);
+        } else if (variance < 0) {
+            varianceCell.addClass('text-danger').html(variance);
+        } else {
+            varianceCell.addClass('text-secondary').html('0');
         }
     });
 
     // Product Search
     $('#searchProduct').on('keyup', function () {
-
-        let value = $(this)
-            .val()
-            .toLowerCase();
-
+        let value = $(this).val().toLowerCase();
         $('#productTable tr').filter(function () {
-
-            $(this).toggle(
-                $(this)
-                    .text()
-                    .toLowerCase()
-                    .indexOf(value) > -1
-            );
-
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
         });
-
     });
 
     // Save Single Row
     $(document).on('click', '.save-row', function () {
-
         let button = $(this);
-
         let row = button.closest('tr');
-
         let productId = button.data('product');
-
         let physicalQty = row.find('.physical-count').val();
-
         let variance = row.find('.variance').text().trim();
 
-
-
-        console.log(variance);
-
         $.ajax({
-
             url: "{{ route('stock-count.save') }}",
-
             type: "POST",
-
             data: {
-
                 _token: "{{ csrf_token() }}",
-
                 warehouse_id: selectedWarehouse,
-
                 product_id: productId,
-
                 physical_qty: physicalQty,
-
                 variance: variance
-
             },
-
             beforeSend: function () {
-
                 button.prop('disabled', true);
-
-                button.html(
-                    '<i class="fa fa-spinner fa-spin"></i>'
-                );
+                button.html('<i class="fa fa-spinner fa-spin"></i>');
             },
-
             success: function (response) {
-
                 row.find('.variance')
-                .removeClass('text-danger text-success')
-                .addClass('text-success')
-                .html('Saved');
+                    .removeClass('text-danger text-success')
+                    .addClass('text-success')
+                    .html('Saved');
 
-                row.find('.physical-count')
-                .attr('data-system', physicalQty);
-
-                button.html(
-                    '<i class="fa fa-check"></i>'
-                );
+                row.find('.physical-count').attr('data-system', physicalQty);
+                button.html('<i class="fa fa-check"></i>');
 
                 setTimeout(function () {
-
-                    button.html(
-                        '<i class="fa fa-save"></i>'
-                    );
-
+                    button.html('<i class="fa fa-save"></i>');
                     button.prop('disabled', false);
-
                 }, 1500);
-
             },
-
             error: function (xhr) {
-
-                alert(
-                    xhr.responseJSON?.message ??
-                    'Failed to save stock'
-                );
-
-                button.html(
-                    '<i class="fa fa-save"></i>'
-                );
-
+                alert(xhr.responseJSON?.message ?? 'Failed to save stock');
+                button.html('<i class="fa fa-save"></i>');
                 button.prop('disabled', false);
             }
         });
-
     });
 
     $(document).on('change', '#checkAll', function () {
-        $('.product-check').prop(
-            'checked',
-            $(this).prop('checked')
-        );
+        $('.product-check').prop('checked', $(this).prop('checked'));
     });
 
+    // =========================================
+    // PRINT FUNCTIONALITY
+    // =========================================
+    function printReport() {
+        let warehouseName = $('#selectedWarehouse').text().trim();
+        if (warehouseName === 'Select Warehouse' || warehouseName === '') {
+            warehouseName = 'All Warehouses';
+        }
+
+        // Set the title and show it just before printing
+        $('#print-warehouse-name').text(warehouseName);
+        $('#print-title').show();
+
+        // Trigger the print dialog
+        window.print();
+
+        // Hide the title again after the dialog closes so it doesn't mess up your UI
+        setTimeout(function() {
+            $('#print-title').hide();
+        }, 500);
+    }
 </script>
 @endpush
-

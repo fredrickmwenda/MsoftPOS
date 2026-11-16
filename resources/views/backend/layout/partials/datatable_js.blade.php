@@ -20,6 +20,8 @@
 
 <script type="text/javascript" src="{{ asset($asset_prefix . 'vendor/datatable/sum().js') }}"></script>
 <script type="text/javascript" src="{{ asset($asset_prefix . 'vendor/datatable/dataTables.checkboxes.min.js') }}"></script>
+
+<!--Fix the CDN to Local-->
 <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.6/js/dataTables.fixedHeader.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/dataTables.responsive.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.2.3/js/responsive.bootstrap.min.js"></script>

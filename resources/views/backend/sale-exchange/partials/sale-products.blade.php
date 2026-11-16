@@ -3,7 +3,7 @@
         $product = DB::table('products')->find($product_sale->product_id);
         if (!$product) continue;
 
-        $qty = $product_sale->qty - $product_sale->return_qty;
+        $qty = $product_sale->qty - ($product_sale->return_qty ?? 0);
         $tax = DB::table('taxes')->where('rate', $product_sale->tax_rate)->first();
         $unit = DB::table('units')->find($product_sale->sale_unit_id);
 
@@ -11,6 +11,22 @@
         $stockDisplay = '';
         if (Auth::user()->role_id <= 2) {
             $stockDisplay = "<span class='text-muted'>| In Stock: {$qty}</span>";
+        }
+
+        // Unit conversion lists (base unit + children) for the edit-modal unit selector
+        $unitNames = [];
+        $unitOperators = [];
+        $unitValues = [];
+        if ($product->type == 'standard' && $unit) {
+            $units = DB::table('units')->where(function($q) use ($product) {
+                $q->where('base_unit', $product->unit_id)
+                  ->orWhere('id', $product->unit_id);
+            })->get();
+            foreach ($units as $u) {
+                $unitNames[] = $u->unit_name;
+                $unitOperators[] = $u->operator;
+                $unitValues[] = $u->operation_value;
+            }
         }
     @endphp
 
@@ -30,6 +46,7 @@
             <input type="hidden" class="product-id" name="product_id[]" value="{{ $product->id }}">
             <input type="hidden" class="product_type" name="product_type[]" value="{{ $product->type ?? 'standard' }}">
             <input type="hidden" name="product_sale_id[]" value="{{ $product_sale->id }}">
+            <input type="hidden" name="product_batch_id[]" value="{{ $product_sale->product_batch_id ?? '' }}">
 
             {{-- Batch/IMEI Display --}}
             @if($product_sale->product_batch_id)
@@ -57,7 +74,7 @@
                     step="any"
                     value="{{ $qty }}"
                     max="{{ $qty }}"
-                    onchange="checkQuantity(this.value, true, 'table.return-order-list')">
+                    data-orig-qty="{{ $qty }}">
                 <span class="input-group-btn">
                     <button type="button" class="btn btn-default plus ml-1" style="padding:5px 8px">
                         <i class="ti ti-plus"></i>
@@ -92,7 +109,6 @@
                 name="is_exchange[]"
                 class="exchange-checkbox"
                 value="{{ $product->code }}"
-                onchange="recalculateAll()"
                 style="width:18px;height:18px;cursor:pointer"
                 title="Check to include in exchange">
         </td>
@@ -102,6 +118,15 @@
 
         <input type="hidden" class="sale-unit"
             name="sale_unit[]" value="{{ $unit->unit_name ?? 'n/a' }}">
+
+        <input type="hidden" class="sale-unit-names"
+            value="{{ implode(',', $unitNames) }},">
+
+        <input type="hidden" class="sale-unit-operator"
+            value="{{ implode(',', $unitOperators) }},">
+
+        <input type="hidden" class="sale-unit-operation-value"
+            value="{{ implode(',', $unitValues) }},">
 
         <input type="hidden" class="net_unit_price"
             name="net_unit_price[]" value="{{ $product_sale->net_unit_price }}">
@@ -126,25 +151,5 @@
 
         <input type="hidden" class="imei-number"
             name="imei_number[]" value="{{ $product_sale->imei_number ?? '' }}">
-
-        {{-- Unit Conversion Fields --}}
-        @php
-            $unitNames = [];
-            $unitOperators = [];
-            $unitValues = [];
-            if ($product->type == 'standard' && $unit) {
-                $units = DB::table('units')->where(function($q) use ($product) {
-                    $q->where('base_unit', $product->unit_id)
-                      ->orWhere('id', $product->unit_id);
-                })->get();
-                foreach ($units as $u) {
-                    $unitNames[] = $u->unit_name;
-                    $unitOperators[] = $u->operator;
-                    $unitValues[] = $u->operation_value;
-                }
-            }
-        @endphp
-        <input type="hidden" class="sale-unit-operator" value="{{ implode(',', $unitOperators) }},">
-        <input type="hidden" class="sale-unit-operation-value" value="{{ implode(',', $unitValues) }},">
     </tr>
 @endforeach

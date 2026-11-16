@@ -46,7 +46,7 @@
 
         <div id="report-content" class="table-responsive mb-5 pb-5">
             <div class="dataTables_wrapper">
-                
+
                 <table id="trial-balance-table" class="table table-hover dataTable">
                     <thead>
                         <tr>
@@ -98,6 +98,9 @@
 
 @push('scripts')
 <script type="text/javascript">
+$("ul#account").siblings('a').attr('aria-expanded','true');
+$("ul#account").addClass("show");
+$("ul#account #trial-balance-menu").addClass("active");
     $(document).ready(function() {
 
         function loadReport() {

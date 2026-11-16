@@ -26,7 +26,7 @@ class UserController extends Controller
 
     public function index()
     {
-        
+
         if(Auth::user()->hasPermissionTo('users-index')){
             // Get all permission names from all assigned roles
             $all_permission = Auth::user()->getAllPermissions();
@@ -63,33 +63,39 @@ class UserController extends Controller
         return $id;
     }
 
-   
+
     public function store(Request $request)
     {
-        //dd($request->all());
-        // 1. Basic validation
         $this->validate($request, [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'position' => 'required|string|max:255',
             'name' => [
+                'required',
+                'string',
                 'max:255',
-                Rule::unique('users')->where(function ($query) {
+                Rule::unique('users', 'name')->where(function ($query) {
                     return $query->where('is_deleted', false);
                 }),
             ],
             'email' => [
+                'required',
                 'email',
                 'max:255',
                 Rule::unique('users')->where(function ($query) {
                     return $query->where('is_deleted', false);
                 }),
             ],
-            'roles' => 'required|array|min:1',               // <-- multi-role
-            'roles.*' => 'exists:roles,id',                  // adjust table name if needed
+            'password' => 'required|string',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,id',
         ]);
 
-        // 2. If customer role (id=5) is selected, validate customer fields
+        // Customer role validation
         if (in_array(5, $request->roles)) {
             $this->validate($request, [
                 'phone_number' => [
+                    'required',
                     'max:255',
                     Rule::unique('customers')->where(function ($query) {
                         return $query->where('is_active', 1);
@@ -99,35 +105,51 @@ class UserController extends Controller
         }
 
         $data = $request->all();
+
+        // Keep compatibility with existing email templates
+        $data['name'] = $request->name;
+
         $message = 'User created successfully';
 
-        // Mail logic (unchanged)
+        // Mail logic
         $mail_setting = MailSetting::latest()->first();
+
         if ($mail_setting) {
             $this->setMailInfo($mail_setting);
+
             try {
-                Mail::to($data['email'])->send(new UserDetails($data));
+                Mail::to($request->email)->send(new UserDetails($data));
             } catch (\Exception $e) {
                 $message = 'User created successfully. Please setup your <a href="setting/mail_setting">mail setting</a> to send mail.';
             }
         }
 
-        // Build user data (no role_id)
-        $userData = $request->only(['name', 'email', 'phone_number']);
-        $userData['is_active'] = $request->has('is_active') ? true : false;
-        $userData['is_deleted'] = false;
-        $userData['password'] = bcrypt($request->password);
-        $userData['phone'] = $request->phone_number;
-        if($request->has('company_name')) {
+        // Save user
+        $userData = [
+            'first_name' => $request->first_name,
+            'last_name'  => $request->last_name,
+            'position'   => $request->position,
+
+            // name is stored in the existing name column
+            'name'       => $request->name,
+
+            'email'      => $request->email,
+            'password'   => bcrypt($request->password),
+            'phone'      => $request->phone_number,
+            'is_active'  => $request->has('is_active'),
+            'is_deleted' => false,
+        ];
+
+        if ($request->has('company_name')) {
             $userData['company_name'] = $request->company_name;
         }
 
         $user = User::create($userData);
 
-        // Attach the selected roles
+        // Attach roles
         $user->roles()->attach($request->roles);
 
-        // Handle customer creation if role 5 is present
+        // Customer creation
         if (in_array(5, $request->roles)) {
             Customer::create([
                 'name'         => $request->customer_name ?? $user->name,
@@ -140,6 +162,82 @@ class UserController extends Controller
 
         return redirect('user')->with('message1', $message);
     }
+
+    // public function store(Request $request)
+    // {
+
+    //     $this->validate($request, [
+    //         'name' => [
+    //             'max:255',
+    //             Rule::unique('users')->where(function ($query) {
+    //                 return $query->where('is_deleted', false);
+    //             }),
+    //         ],
+    //         'email' => [
+    //             'email',
+    //             'max:255',
+    //             Rule::unique('users')->where(function ($query) {
+    //                 return $query->where('is_deleted', false);
+    //             }),
+    //         ],
+    //         'roles' => 'required|array|min:1',               // <-- multi-role
+    //         'roles.*' => 'exists:roles,id',                  // adjust table name if needed
+    //     ]);
+
+    //     // 2. If customer role (id=5) is selected, validate customer fields
+    //     if (in_array(5, $request->roles)) {
+    //         $this->validate($request, [
+    //             'phone_number' => [
+    //                 'max:255',
+    //                 Rule::unique('customers')->where(function ($query) {
+    //                     return $query->where('is_active', 1);
+    //                 }),
+    //             ],
+    //         ]);
+    //     }
+
+    //     $data = $request->all();
+    //     $message = 'User created successfully';
+
+    //     // Mail logic (unchanged)
+    //     $mail_setting = MailSetting::latest()->first();
+    //     if ($mail_setting) {
+    //         $this->setMailInfo($mail_setting);
+    //         try {
+    //             Mail::to($data['email'])->send(new UserDetails($data));
+    //         } catch (\Exception $e) {
+    //             $message = 'User created successfully. Please setup your <a href="setting/mail_setting">mail setting</a> to send mail.';
+    //         }
+    //     }
+
+    //     // Build user data (no role_id)
+    //     $userData = $request->only(['name', 'email', 'phone_number']);
+    //     $userData['is_active'] = $request->has('is_active') ? true : false;
+    //     $userData['is_deleted'] = false;
+    //     $userData['password'] = bcrypt($request->password);
+    //     $userData['phone'] = $request->phone_number;
+    //     if($request->has('company_name')) {
+    //         $userData['company_name'] = $request->company_name;
+    //     }
+
+    //     $user = User::create($userData);
+
+    //     // Attach the selected roles
+    //     $user->roles()->attach($request->roles);
+
+    //     // Handle customer creation if role 5 is present
+    //     if (in_array(5, $request->roles)) {
+    //         Customer::create([
+    //             'name'         => $request->customer_name ?? $user->name,
+    //             'phone_number' => $user->phone,
+    //             'email'        => $user->email,
+    //             'user_id'      => $user->id,
+    //             'is_active'    => true,
+    //         ]);
+    //     }
+
+    //     return redirect('user')->with('message1', $message);
+    // }
 
     public function edit($id)
     {
@@ -154,67 +252,157 @@ class UserController extends Controller
             return redirect()->back()->with('not_permitted', 'Sorry! You are not allowed to access this module');
     }
 
- 
+
 
     public function update(Request $request, $id)
     {
-        if (!env('USER_VERIFIED'))
-            return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
+        if (!env('USER_VERIFIED')) {
+            return redirect()->back()->with(
+                'not_permitted',
+                'This feature is disable for demo!'
+            );
+        }
 
-        // Validate
+        $user = User::findOrFail($id);
+
         $this->validate($request, [
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'position' => 'required|string|max:255',
+
             'name' => [
+                'required',
+                'string',
                 'max:255',
-                Rule::unique('users')->ignore($id)->where(function ($query) {
-                    return $query->where('is_deleted', false);
-                }),
+                Rule::unique('users', 'name')
+                    ->ignore($id)
+                    ->where(function ($query) {
+                        return $query->where('is_deleted', false);
+                    }),
             ],
+
             'email' => [
+                'required',
                 'email',
                 'max:255',
-                Rule::unique('users')->ignore($id)->where(function ($query) {
-                    return $query->where('is_deleted', false);
-                }),
+                Rule::unique('users')
+                    ->ignore($id)
+                    ->where(function ($query) {
+                        return $query->where('is_deleted', false);
+                    }),
             ],
+
             'roles' => 'sometimes|array',
             'roles.*' => 'exists:roles,id',
         ]);
 
-        $user = User::findOrFail($id);
-        $input = $request->except('password', 'roles'); // roles handled separately
-        if (!isset($input['is_active']))
+        // Map form fields to database columns
+        $input = $request->except(
+            'password',
+            'roles',
+            'name'
+        );
+
+        $input['name'] = $request->name;
+
+        if (!$request->has('is_active')) {
             $input['is_active'] = false;
-        if (!empty($request->password))
+        } else {
+            $input['is_active'] = true;
+        }
+
+        // Only update password when provided
+        if (!empty($request->password)) {
             $input['password'] = bcrypt($request->password);
+        }
 
         $user->update($input);
 
-        // Sync roles
+        // Synchronize roles
         if ($request->has('roles')) {
             $user->roles()->sync($request->roles);
 
-            // Customer logic
             if (in_array(5, $request->roles)) {
                 Customer::updateOrCreate(
                     ['user_id' => $user->id],
                     [
-                        'name'         => $request->customer_name ?? $user->name,
+                        'name' => $request->customer_name ?? $user->name,
                         'phone_number' => $request->phone_number ?? $user->phone,
-                        'email'        => $user->email,
-                        'is_active'    => $input['is_active'] ?? true,
+                        'email' => $user->email,
+                        'is_active' => $input['is_active'],
                     ]
                 );
             } else {
-                // Optionally delete or deactivate customer if role removed
                 Customer::where('user_id', $user->id)->delete();
             }
         }
 
-        // If you had cached something related to role, you can forget it
-        // cache()->forget('user_role'); // adjust if needed
-
-        return redirect('user')->with('message2', 'Data updated successfully');
+        return redirect('user')->with(
+            'message2',
+            'Data updated successfully'
+        );
     }
+
+
+    // public function update(Request $request, $id)
+    // {
+    //     if (!env('USER_VERIFIED'))
+    //         return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
+
+    //     // Validate
+    //     $this->validate($request, [
+    //         'name' => [
+    //             'max:255',
+    //             Rule::unique('users')->ignore($id)->where(function ($query) {
+    //                 return $query->where('is_deleted', false);
+    //             }),
+    //         ],
+    //         'email' => [
+    //             'email',
+    //             'max:255',
+    //             Rule::unique('users')->ignore($id)->where(function ($query) {
+    //                 return $query->where('is_deleted', false);
+    //             }),
+    //         ],
+    //         'roles' => 'sometimes|array',
+    //         'roles.*' => 'exists:roles,id',
+    //     ]);
+
+    //     $user = User::findOrFail($id);
+    //     $input = $request->except('password', 'roles'); // roles handled separately
+    //     if (!isset($input['is_active']))
+    //         $input['is_active'] = false;
+    //     if (!empty($request->password))
+    //         $input['password'] = bcrypt($request->password);
+
+    //     $user->update($input);
+
+    //     // Sync roles
+    //     if ($request->has('roles')) {
+    //         $user->roles()->sync($request->roles);
+
+    //         // Customer logic
+    //         if (in_array(5, $request->roles)) {
+    //             Customer::updateOrCreate(
+    //                 ['user_id' => $user->id],
+    //                 [
+    //                     'name'         => $request->customer_name ?? $user->name,
+    //                     'phone_number' => $request->phone_number ?? $user->phone,
+    //                     'email'        => $user->email,
+    //                     'is_active'    => $input['is_active'] ?? true,
+    //                 ]
+    //             );
+    //         } else {
+    //             // Optionally delete or deactivate customer if role removed
+    //             Customer::where('user_id', $user->id)->delete();
+    //         }
+    //     }
+
+    //     // If you had cached something related to role, you can forget it
+    //     // cache()->forget('user_role'); // adjust if needed
+
+    //     return redirect('user')->with('message2', 'Data updated successfully');
+    // }
 
     public function superadminProfile($id)
     {
@@ -296,7 +484,7 @@ class UserController extends Controller
             ->whereDoesntHave('roles', function ($query) {
                 $query->where('id', 5);
             })->get();
-        
+
         $html = '';
         foreach($notification_users as $user){
             $html .='<option value="'.$user->id.'">'.$user->name . ' (' . $user->email. ')'.'</option>';
@@ -308,7 +496,7 @@ class UserController extends Controller
     public function allUsers()
     {
         $lims_user_list = DB::table('users')->where('is_active', true)->get();
-        
+
         $html = '';
         foreach($lims_user_list as $user){
             $html .='<option value="'.$user->id.'">'.$user->name . ' (' . $user->phone. ')'.'</option>';

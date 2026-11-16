@@ -84,4 +84,13 @@
         </div>
     </div>
 </section>
+@push('scripts')
+<script type="text/javascript">
+$("ul#account").siblings('a').attr('aria-expanded','true');
+$("ul#account").addClass("show");
+$("ul#account #general-ledger-menu").addClass("active");
+
+</script>
+@endpush
+
 @endsection

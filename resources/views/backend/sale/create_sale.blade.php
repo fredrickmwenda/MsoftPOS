@@ -1,4 +1,4 @@
-@extends('backend.layout.top-header') 
+@extends('backend.layout.top-header')
 @section('content')
 @if($errors->has('phone_number'))
 <div class="alert alert-danger alert-dismissible text-center">
@@ -25,7 +25,7 @@
             padding: 0 !important;
             background: white !important;
             height: 100%;
-            min-height: 100vh;  
+            min-height: 100vh;
             padding-bottom: 0 !important;
         }
 
@@ -44,7 +44,7 @@
             padding: 12px 24px !important;
         }
 
-   
+
 
         .container-fluid {
             padding: 0 !important;
@@ -102,9 +102,9 @@
             padding: 0 !important;
         }
 
-        
+
         #product-table td p {
-              color:green !important;  
+              color:green !important;
         }
         #product-table td {
             background-color:#e6f5ff !important;
@@ -378,10 +378,10 @@
         @else
         <a href="{{url('/')}}"><h1 class="d-inline">{{$general_setting->site_title}}</h1></a>
         @endif
-        
+
       <a  href="#" class="menu-btn float-end" onclick="$('.side-navbar').addClass('shrink');"><i class="fa fa-times text-danger"> </i></a>
-      
-      
+
+
     </span>
 
     @include('backend.layout.sidebar')
@@ -621,7 +621,7 @@
                         @if(in_array("deposit",$options))
                         <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="deposit-btn"><i class="fa fa-university"></i> {{trans('file.Deposit')}}</button>
                         @endif
-                        
+
                         @if(in_array("mobile_money",$options))
                         <button type="button" class="pos-payment-btn pos-payment-btn--method payment-btn" data-toggle="modal" data-target="#add-payment" id="mobile_money-btn"><i class="fa fa-mobile"></i> Mobile Money</button>
                         @endif
@@ -728,7 +728,7 @@
                 // Determine default selected customer
                 $selectedCustomerId = $lims_sale_data->customer_id ?? $lims_pos_setting_data->customer_id ?? null;
 
-         
+
             @endphp
 
             <select required name="customer_id" id="customer_id"
@@ -822,7 +822,7 @@
                                         </div>
                                     </div>
                                 </div>
-                               
+
                                 <div class="form-group">
                                     <div class="table-responsive">
                                         <table id="myTable" class="table table-hover table-striped order-list table-fixed">
@@ -1038,13 +1038,13 @@
                                 </div>
                             </div>
                         </div>
-                   
+
                         <div class="payment-amount">
                             <h2>{{trans('file.grand total')}} <span id="grand-total">{{number_format((float)$lims_sale_data->grand_total, $general_setting->decimal, '.', '')}}</span></h2>
                         </div>
-                    
+
                     <div class="payment-options"></div>
-                
+
                     <div id="toggle-filters"
                             style="
                                 position: fixed;
@@ -1064,7 +1064,7 @@
                             ">
                             <i class="fa fa-shopping-cart" style="font-size: 24px; color: #333;"></i>
                     </div>
-             
+
                     <!-- order_discount modal -->
                     <div id="order-discount" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                         <div role="document" class="modal-dialog">
@@ -1210,8 +1210,8 @@
                                                         </div>
                                                         <div class="card-errors" role="alert"></div>
                                                     </div>
-                                                    
-                                                    
+
+
                                                     <div class="form-group col-md-12 mobile_money_fields">
                                                         <label>{{trans('Mobile Money')}} *</label>
                                                         <select id="mobile_money_operator" name="mobile-op" class="form-control" data-live-search="true" data-live-search-style="begins" title="Mobile money operator">
@@ -1226,8 +1226,8 @@
                                                         <label>{{trans('Mobile Number')}} *</label>
                                                         <input type="number" name="mobile_number" class="form-control">
                                                     </div>
-                                                    
-                                                    
+
+
                                                     <div class="form-group col-md-12 gift-card">
                                                         <label> {{trans('file.Gift Card')}} *</label>
                                                         <input type="hidden" name="gift_card_id">
@@ -1272,7 +1272,7 @@
                                             </div>
                                         </div>
                                     </div>
-                              
+
                             </div>
                         </div>
                     </div>
@@ -1283,12 +1283,12 @@
             <!-- product list -->
             <div class="col-md-5 order-1 order-md-3 d-none transition-all" id="filter-column">
 
-                
-                
-           
+
+
+
             </div>
             <!-- product edit modal -->
-            <!-- product edit modal --> 
+            <!-- product edit modal -->
             <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                 <div role="document" class="modal-dialog">
                     <div class="modal-content">
@@ -1328,7 +1328,7 @@
                                             $tax_rate_all[] = $tax->rate;
                                         }
                                         ?>
-                     
+
                                     <div id="edit_unit" class="col-md-4 form-group">
                                         <label>{{trans('file.Product Unit')}}</label>
                                         <select name="edit_unit" class="form-control selectpicker">
@@ -1341,8 +1341,8 @@
                     </div>
                 </div>
             </div>
-                                   
-                        
+
+
             <!-- add customer modal -->
             <div id="addCustomer" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                 <div role="document" class="modal-dialog">
@@ -1392,7 +1392,7 @@
                 </div>
             </div>
 
-            
+
             <!-- recent transaction modal -->
             <div id="recentTransaction" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
                 <div role="document" class="modal-dialog">
@@ -1640,13 +1640,13 @@
                                           <td>{{trans('file.Credit Card Payment')}}:</td>
                                           <td class="credit_card_payment text-right"></td>
                                         </tr>
-                                        
+
                                         <tr>
                                             <td>{{trans('Mobile Money payment')}}:</td>
                                             <td class="mobile_payment text-right"></td>
                                           </tr>
                                         <tr>
-                                        
+
                                           <td>{{trans('file.Cheque Payment')}}:</td>
                                           <td class="cheque_payment text-right"></td>
                                         </tr>
@@ -1754,6 +1754,98 @@
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
         }
     });
+
+   /* ============================================================
+  CUSTOMER DISPLAY — broadcast + window launcher
+  ============================================================ */
+   const displayChannel = new BroadcastChannel('pos_dual_screen');
+   let customerDisplayWindow = null;
+
+   // ---------- Open / focus the display window ----------
+   $('#launch-customer-display').on('click', function (e) {
+       e.preventDefault();
+       if (customerDisplayWindow && !customerDisplayWindow.closed) {
+           customerDisplayWindow.focus();
+           syncDisplayState();
+           return;
+       }
+       customerDisplayWindow = window.open(
+           '{{ route("customer.display") }}',
+           'CustomerDisplay',
+           'width=1100,height=800,menubar=no,toolbar=no,location=no,status=no,resizable=yes,scrollbars=no'
+       );
+       // give the new window time to load, then push current state
+       setTimeout(syncDisplayState, 1200);
+   });
+
+   // ---------- Helpers ----------
+   function broadcastToDisplay(type, payload) {
+       try {
+           displayChannel.postMessage(Object.assign({ type: type }, payload || {}));
+       } catch (e) { /* ignore */ }
+   }
+
+   function isDisplayOpen() {
+       return customerDisplayWindow && !customerDisplayWindow.closed;
+   }
+
+   function syncDisplayState() {
+       if (!isDisplayOpen()) return;
+       if ($('table.order-list tbody tr').length > 0) {
+           broadcastCartUpdate();
+       } else {
+           broadcastToDisplay('cart_clear');
+       }
+   }
+
+   function broadcastCartUpdate() {
+       if (!isDisplayOpen()) return;
+
+       const items = [];
+       $('table.order-list tbody tr').each(function () {
+           const row     = $(this);
+           // product name lives in first cell's <strong>
+           const name    = row.find('td:first-child strong').first().text().trim()
+                       || row.find('td:first-child').text().trim();
+           const code    = row.find('.product-code').val() || '';
+           const qty     = parseFloat(row.find('.qty').val())   || 0;
+           const sub     = parseFloat(row.find('.sub-total').text()) || 0;
+           items.push({ name: name, code: code, qty: qty, subtotal: sub });
+       });
+
+       const totals = {
+           items:      parseFloat($('input[name="total_qty"]').val())      || 0,
+           subtotal:   parseFloat($('input[name="total_price"]').val())    || 0,
+           tax:        parseFloat($('input[name="total_tax"]').val())      || 0,
+           discount:   parseFloat($('input[name="total_discount"]').val()) || 0,
+           grandTotal: parseFloat($('input[name="grand_total"]').val())    || 0,
+           ref:        $('#reference-no').val() || '',
+           customer:   $('#customer_id option:selected').text() || ''
+       };
+
+       broadcastToDisplay('cart_update', { items: items, totals: totals });
+   }
+
+   function broadcastPaymentStart() {
+       if (!isDisplayOpen()) return;
+       const amount      = parseFloat($('#grand-total').text()) || 0;
+       const method      = ($('select[name="paid_by_id"] option:selected').text() || 'Cash').trim();
+       const paying      = parseFloat($('input[name="paying_amount"]').val()) || 0;
+       const changeAmt   = Math.max(0, paying - amount);
+
+       broadcastToDisplay('payment_start', {
+           amount: amount,
+           method: method,
+           change: changeAmt
+       });
+   }
+
+   // ---------- Listen for display_ready (display refreshed / became visible) ----------
+   displayChannel.addEventListener('message', function (ev) {
+       if (ev.data && ev.data.type === 'display_ready') {
+           syncDisplayState();
+       }
+   });
     var public_key = <?php echo json_encode($lims_pos_setting_data->stripe_public_key) ?>;
     var valid;
 
@@ -1943,7 +2035,7 @@ document.getElementById("toggle-filters").addEventListener("click", function () 
         filterCol.classList.remove("d-none");
         mainCol.classList.remove("col-md-10", "col-lg-10");
         mainCol.classList.add("col-md-5", "col-lg-5");
- 
+
     } else {
         // Hide filter column (expand main to 10 cols)
         filterCol.classList.add("d-none");
@@ -2139,16 +2231,16 @@ function validatePaymentMethod() {
     var paid_amount = $('input[name="paid_amount"]').val();
     var paid_by_id = $('input[name="paid_by_id"]').val();
     var paid_by_id_select = $('select[name="paid_by_id_select"]').val();
-    
+
     // Get the selected payment method
     var paymentMethod = paid_by_id_select || paid_by_id;
-    
+
     // Validate paid amount
     if (!paid_amount || parseFloat(paid_amount) <= 0) {
         alert('Please enter a valid paid amount');
         return false;
     }
-    
+
     // Check each payment method for required fields
     if (paymentMethod == 2) { // Gift Card
         var gift_card_id = $('select[name="gift_card_id_select"]').val() || $('input[name="gift_card_id"]').val();
@@ -2157,9 +2249,9 @@ function validatePaymentMethod() {
             return false;
         }
     }
-    
+
     // Credit Card (3): Stripe validates card details on form submit via checkout.js
-    
+
     if (paymentMethod == 4) { // Cheque
         var cheque_no = $('input[name="cheque_no"]').val();
         if (!cheque_no) {
@@ -2167,7 +2259,7 @@ function validatePaymentMethod() {
             return false;
         }
     }
-    
+
     if (paymentMethod == 6) { // Deposit
         var customer_id = $('#customer_id').val();
         if (!customer_id) {
@@ -2180,7 +2272,7 @@ function validatePaymentMethod() {
             return false;
         }
     }
-    
+
     if (paymentMethod == 7) { // Points
         var customer_id = $('#customer_id').val();
         if (!customer_id) {
@@ -2199,22 +2291,22 @@ function validatePaymentMethod() {
             return false;
         }
     }
-    
+
     if (paymentMethod == 8) { // Mobile Money
         var mobile_operator = $('#mobile_money_operator').val() || $('input[name="selected_mobile_op"]').val();
         var mobile_number = $('input[name="mobile_number"]').val();
-        
+
         if (!mobile_operator) {
             alert('Please select a mobile money operator');
             return false;
         }
-        
+
         if (!mobile_number) {
             alert('Please enter a mobile number');
             return false;
         }
     }
-    
+
     // Check split payments if any
     var splitPayments = $('input[name="split_amount[]"]');
     if (splitPayments.length > 0) {
@@ -2222,13 +2314,13 @@ function validatePaymentMethod() {
         var mainPaid = parseFloat(paid_amount) || 0;
         var totalPaid = totalSplit + mainPaid;
         var payingAmount = parseFloat($('input[name="paying_amount"]').val()) || 0;
-        
+
         if (totalPaid > payingAmount) {
             alert('Total paid (main + split) cannot be greater than paying amount');
             return false;
         }
     }
-    
+
     return true;
 }
 
@@ -2289,7 +2381,7 @@ else{
 }
 
 $(document).ready(function () {
-    
+
     // Remove payment row
     $(document).on("click", ".remove-payment", function () {
         $(this).closest(".payment-row").remove();
@@ -2303,7 +2395,7 @@ $(document).ready(function () {
 
         // Update change
         change(payingAmount, totalPaid);
-        
+
         // Update payment fields visibility after removal
         updateSplitPaymentFields();
     });
@@ -2355,10 +2447,10 @@ $('body').on('click', function(e){
 $('select[name="paid_by_id_select"]').on('change', function() {
     var paymentMethod = $(this).val();
     $('input[name="paid_by_id"]').val(paymentMethod);
-    
+
     // First hide all payment method fields
     hideAllPaymentFields();
-    
+
     // Then show the selected one
     showPaymentFieldsByMethod(paymentMethod);
 });
@@ -2379,7 +2471,7 @@ function hideAllPaymentFields() {
 function showPaymentFieldsByMethod(method) {
     // Check if there are split payments
     var hasSplitPayments = $('select[name="paid_by_id[]"]').length > 0;
-    
+
     switch(parseInt(method)) {
         case 1: // Cash
             $('div.qc').show();
@@ -2410,7 +2502,7 @@ function showPaymentFieldsByMethod(method) {
             mobile_money();
             break;
     }
-    
+
     // If there are split payments, show their fields too
     if (hasSplitPayments) {
         $('select[name="paid_by_id[]"]').each(function() {
@@ -2456,7 +2548,7 @@ $('select[name="biller_id"]').on('change', function() {
 //                     'Product Name: ' + product_name[index] +
 //                     ' | Price: ' + product_warehouse_price[index] +
 //                     ' | Qty: ' + product_qty[index] +
-//                     ' | Shelf: ' + product_shelf[index] 
+//                     ' | Shelf: ' + product_shelf[index]
 //                 );
 //         });
 //     });
@@ -2487,7 +2579,7 @@ lims_productcodeSearch.autocomplete({
             var productCode = extractProductCode(fullData);
             $(this).autocomplete("close");
             productSearch(productCode + '?' + $('#customer_id').val() + '?' + 1);
-        } 
+        }
         else if(ui.content.length == 0 && $('#lims_productcodeSearch').val().length == 13) {
             productSearch($('#lims_productcodeSearch').val()+'?'+$('#customer_id').val()+'?'+1);
         }
@@ -2721,17 +2813,17 @@ $(".payment-btn").on("click", function() {
     $('input[name="paid_amount"]').val($("#grand-total").text());
     $('input[name="paying_amount"]').val($("#grand-total").text());
     $('.qc').data('initial', 1);
-    
+
     // Hide all payment method fields initially
     hideAllPaymentFields();
-    
+
     // Set default payment method to Cash (if not already set)
     var currentMethod = $('select[name="paid_by_id_select"]').val();
     if (!currentMethod) {
         $('select[name="paid_by_id_select"]').val(1); // Set to Cash
         $('select[name="paid_by_id_select"]').selectpicker('refresh');
     }
-    
+
     // Show the selected payment method fields
     showPaymentFieldsByMethod(currentMethod || 1);
 });
@@ -2807,16 +2899,16 @@ function updateSplitPaymentFields() {
         var val = $(this).val();
         if(val) splitMethods.push(parseInt(val));
     });
-    
+
     // Hide all payment method fields first
     hideAllPaymentFields();
-    
+
     // Show main payment method fields
     var mainMethod = $('select[name="paid_by_id_select"]').val();
     if(mainMethod) {
         showPaymentFieldsByMethod(mainMethod);
     }
-    
+
     // Show all split payment method fields
     splitMethods.forEach(function(method) {
         showPaymentFieldsByMethod(method);
@@ -3140,7 +3232,7 @@ function addNewProduct(data){
     cols += '<input type="hidden" class="imei-number" name="imei_number[]" />';
 
     //set product price variable
-   
+
 
 
     newRow.append(cols);
@@ -3216,13 +3308,13 @@ function edit(){
 
     var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
     pos = product_code.indexOf(row_product_code);
-    
+
     // Get wholesale price from hidden input
     var wholesale_price = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.wholesale_price').val();
-    
+
     // Populate price_option select
-  
-    
+
+
     if(product_type[pos] == 'standard'){
         unitConversion();
         temp_unit_name = (unit_name[rowindex]).split(',');
@@ -3261,7 +3353,7 @@ function edit(){
     }
 
     // Select the current price
-    $('select[name="price_option"]').val(normal);  
+    $('select[name="price_option"]').val(normal);
     $('.selectpicker').selectpicker('refresh');
 
 }
@@ -3456,7 +3548,7 @@ function calculateRowProductData(quantity) {
         rate = 0;
         tax_rate[rowindex] = 0;
     }
-    
+
     if(product_discount[rowindex]){
         if (tax_method[rowindex] == 1) {
             var net_unit_price = row_product_price - product_discount[rowindex];
@@ -3478,7 +3570,7 @@ function calculateRowProductData(quantity) {
         var sub_total_unit = row_product_price;
         var net_unit_price = (100 / (100 + rate)) * sub_total_unit;
         var tax = (sub_total_unit - net_unit_price) * quantity;
-        var sub_total = sub_total_unit * quantity;      
+        var sub_total = sub_total_unit * quantity;
 
     }
 

@@ -13,7 +13,7 @@ class DiscountController extends Controller
 {
     public function index()
     {
-        
+
         if(Auth::user()->hasPermissionTo('discount_plan')) {
             $lims_discount_all = Discount::with('discountPlans')->orderBy('id', 'desc')->get();
             return view('backend.discount.index', compact('lims_discount_all'));
@@ -26,6 +26,32 @@ class DiscountController extends Controller
     {
         $lims_discount_plan_list = DiscountPlan::where('is_active', true)->get();
         return view('backend.discount.create', compact('lims_discount_plan_list'));
+    }
+
+
+    public function productAutocomplete(Request $request)
+    {
+        $term = $request->get('term');
+
+        $lims_product_data = Product::where('is_active', true)
+            ->where(function($q) use ($term) {
+                $q->where('name', 'LIKE', $term . '%')
+                  ->orWhere('code', 'LIKE', $term . '%');
+            })
+            ->select('id', 'name', 'code')
+            ->take(10)
+            ->get();
+
+        $results = [];
+        foreach ($lims_product_data as $product) {
+            $results[] = [
+                'id'   => $product->id,
+                'label' => $product->name . ' (' . $product->code . ')', // shown in dropdown
+                'name' => $product->name,
+                'code' => $product->code,
+            ];
+        }
+        return response()->json($results);
     }
 
     public function productSearch($code)

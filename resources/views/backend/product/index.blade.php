@@ -422,7 +422,7 @@
                         'next': '<i class="dripicons-chevron-right"></i>'
                 }
             },
-            order:[['2', 'asc']],
+            order:[['2', 'desc']],
             'columnDefs': [
                 {
                     "orderable": false,

@@ -1418,6 +1418,7 @@ class RoleController extends Controller
             'pos_setting',
             'hrm_setting',
             'reward_point_setting',
+            'social-media',
             'stock_count',
             'adjustment',
             'product_history',

@@ -2071,8 +2071,12 @@ public function saleData(Request $request)
         // dd($id);
         if(Auth::user()->hasPermissionTo('sales-edit')) {
             $permissions = Auth::user()->getAllPermissions();
-            foreach ($permissions as $permission)
-                $all_permission[] = $permission->name;
+
+            $all_permission = [];
+            foreach ($permissions as $permission) {
+                // Handle both Permission objects and plain name strings
+                $all_permission[] = is_object($permission) ? $permission->name : $permission;
+            }
             if(empty($all_permission))
                 $all_permission[] = 'dummy text';
             $lims_biller_list = Biller::where('is_active', true)->get();
@@ -2156,7 +2160,7 @@ public function saleData(Request $request)
 
             //dd all values returned in compact
             //dd(compact('currency_list', 'lims_biller_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_tax_list', 'lims_sale_data','lims_product_sale_data', 'lims_pos_setting_data', 'lims_brand_list', 'lims_category_list', 'lims_coupon_list', 'lims_product_list', 'product_number', 'lims_customer_group_all', 'lims_reward_point_setting_data', 'options', 'custom_fields', 'recent_sale', 'recent_draft', 'role', 'all_permission'));
-            return view('backend.sale.create_sale',compact('currency_list', 'lims_biller_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_tax_list', 'lims_sale_data','lims_product_sale_data', 'lims_pos_setting_data', 'lims_brand_list', 'lims_category_list', 'lims_coupon_list', 'lims_product_list', 'product_number', 'lims_customer_group_all', 'lims_reward_point_setting_data', 'options', 'custom_fields', 'recent_sale', 'recent_draft', 'role', 'all_permission', 'deposit', 'points'));
+            return view('backend.sale.create_sale',compact('currency_list', 'lims_biller_list', 'lims_customer_list', 'lims_warehouse_list', 'lims_tax_list', 'lims_sale_data','lims_product_sale_data', 'lims_pos_setting_data', 'lims_brand_list', 'lims_category_list', 'lims_coupon_list', 'lims_product_list', 'product_number', 'lims_customer_group_all', 'lims_reward_point_setting_data', 'options', 'custom_fields', 'recent_sale', 'recent_draft', 'all_permission', 'deposit', 'points'));
         }
         else
 

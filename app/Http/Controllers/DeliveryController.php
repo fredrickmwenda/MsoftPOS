@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Http\Controllers;
 
 use App\Models\BlackListCustomer;
@@ -36,9 +37,11 @@ class DeliveryController extends Controller
             });
 
              if ($isStaff && config('staff_access') == 'own')
-                 $lims_delivery_all = Delivery::orderBy('id', 'desc')->where('user_id', Auth::id())->get();
+                 $lims_delivery_all = Delivery::with('sale', 'user')->orderBy('id', 'desc')->where('user_id', Auth::id())->get();
              else
-                 $lims_delivery_all = Delivery::orderBy('id', 'desc')->get();
+                 $lims_delivery_all = Delivery::with('sale', 'user')->orderBy('id', 'desc')->get();
+
+            //dd($lims_delivery_all);
 
              $lims_courier_list = Courier::where('is_active', true)->get();
              return view('backend.delivery.index', compact('lims_delivery_all', 'lims_courier_list'));
@@ -316,6 +319,7 @@ class DeliveryController extends Controller
                         ?? Account::where('is_active', true)->value('id'),
                     'payment_reference' => 'cod-' . date('Ymd') . '-' . $sale->id,
                     'amount' => $sale->grand_total,
+                    'change' => 0,
                     'paying_method' => 'Pay on Delivery',
                     'payment_note' => 'Cash collected at delivery',
                 ]);
@@ -324,6 +328,186 @@ class DeliveryController extends Controller
 
         return redirect()->route('delivery.index')
             ->with('message', 'Order marked as delivered.');
+    }
+
+    /**
+     * Quick status update from the Deliver button on the delivery index page.
+     * Allowed statuses: 2 = Delivering (courier dispatched), 3 = Delivered, 0 = Customer Unavailable.
+     * When Delivered and the related sale_status is not completed, the response tells the
+     * page to open the payment modal so the customer can settle the balance.
+     */
+    public function updateStatus(Request $request)
+    {
+        $data = $request->validate([
+            'delivery_id'  => 'required|integer|exists:deliveries,id',
+            'status'       => 'required|in:0,2,3',
+            'delivered_by' => 'nullable|string|max:191',
+            'recieved_by'  => 'nullable|string|max:191',
+            'note'         => 'nullable|string|max:1000',
+        ]);
+
+        $lims_delivery_data = Delivery::findOrFail($data['delivery_id']);
+        $lims_delivery_data->status = (int) $data['status'];
+        if (isset($data['delivered_by']))
+            $lims_delivery_data->delivered_by = $data['delivered_by'];
+        if (isset($data['recieved_by']))
+            $lims_delivery_data->recieved_by = $data['recieved_by'];
+        if (isset($data['note']))
+            $lims_delivery_data->note = $data['note'];
+        $lims_delivery_data->save();
+
+        $lims_sale_data = Sale::find($lims_delivery_data->sale_id);
+        $lims_customer_data = Customer::find($lims_sale_data->customer_id);
+
+        // Blacklist handling for Customer Unavailable, same rule as the full update() method
+        $customer = Customer::where('email', $lims_customer_data->email)->first();
+        if ((int) $data['status'] === 0) {
+            if (isset($customer->id)) {
+                $check = BlackListCustomer::where([
+                    ['customer_id', $customer->id],
+                    ['delivery_id', $data['delivery_id']]
+                ])->first();
+                if (!isset($check->id)) {
+                    BlackListCustomer::create([
+                        'delivery_id' => $data['delivery_id'],
+                        "customer_id" => $customer->id,
+                        "total_delivery_missed" => 1,
+                        "last_delivery_miss_date" => date('Y-m-d')
+                    ]);
+                }
+            }
+        } else {
+            BlackListCustomer::where([
+                ['customer_id', $customer->id ?? 0],
+                ['delivery_id', $data['delivery_id']]
+            ])->delete();
+        }
+
+        // Notify the customer exactly like update() does (Packing status is skipped)
+        $message = 'Delivery status updated successfully';
+        $mail_setting = MailSetting::latest()->first();
+        if ((int) $data['status'] !== 0 && $lims_customer_data->email && $mail_setting) {
+            $mail_data['email'] = $lims_customer_data->email;
+            $mail_data['customer'] = $lims_customer_data->name;
+            $mail_data['sale_reference'] = $lims_sale_data->reference_no;
+            $mail_data['delivery_reference'] = $lims_delivery_data->reference_no;
+            $mail_data['status'] = $data['status'];
+            $mail_data['address'] = $lims_delivery_data->address;
+            $mail_data['delivered_by'] = $data['delivered_by'] ?? $lims_delivery_data->delivered_by;
+            $this->setMailInfo($mail_setting);
+            try{
+                Mail::to($mail_data['email'])->send(new DeliveryDetails($mail_data));
+            }
+            catch(\Exception $e){
+                $message = 'Delivery status updated successfully. Please setup your <a href="setting/mail_setting">mail setting</a> to send mail.';
+            }
+        }
+
+        // On Delivered: check sale_status; if not completed the customer must make the payment
+        $requires_payment = false;
+        $sale_payload = null;
+        if ((int) $data['status'] === 3) {
+            $returned_amount = DB::table('returns')->where('sale_id', $lims_sale_data->id)->sum('grand_total');
+            $balance = round((float) $lims_sale_data->grand_total - (float) $returned_amount - (float) $lims_sale_data->paid_amount, 2);
+
+            if ((int) $lims_sale_data->sale_status !== 1) {
+                if ($balance > 0) {
+                    $requires_payment = true;
+                    $sale_payload = [
+                        'id' => $lims_sale_data->id,
+                        'reference_no' => $lims_sale_data->reference_no,
+                        'customer' => $lims_customer_data->name,
+                        'grand_total' => (float) $lims_sale_data->grand_total,
+                        'paid_amount' => (float) $lims_sale_data->paid_amount,
+                        'balance' => $balance,
+                        'grand_total_formatted' => number_format((float) $lims_sale_data->grand_total, config('decimal')),
+                        'paid_formatted' => number_format((float) $lims_sale_data->paid_amount, config('decimal')),
+                        'balance_formatted' => number_format($balance, config('decimal')),
+                    ];
+                } else {
+                    // Nothing left to collect: complete the sale right away
+                    $lims_sale_data->sale_status = 1;
+                    $lims_sale_data->payment_status = 4;
+                    $lims_sale_data->save();
+                    $message .= ' No payment required, sale marked as completed.';
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'requires_payment' => $requires_payment,
+            'sale' => $sale_payload
+        ]);
+    }
+
+    /**
+     * Records the payment collected at delivery. Once the sale is fully paid
+     * the sale_status is marked completed (1) and payment_status paid (4).
+     */
+    public function recordDeliveryPayment(Request $request)
+    {
+        $data = $request->validate([
+            'delivery_id'   => 'required|integer|exists:deliveries,id',
+            'amount'        => 'required|numeric|min:0.01',
+            'paying_method' => 'required|string|in:Cash,Mobile Money,Credit Card,Cheque,Other',
+            'payment_note'  => 'nullable|string|max:1000',
+        ]);
+
+        $lims_delivery_data = Delivery::findOrFail($data['delivery_id']);
+        $lims_sale_data = Sale::findOrFail($lims_delivery_data->sale_id);
+
+        $returned_amount = DB::table('returns')->where('sale_id', $lims_sale_data->id)->sum('grand_total');
+        $balance = round((float) $lims_sale_data->grand_total - (float) $returned_amount - (float) $lims_sale_data->paid_amount, 2);
+
+        if ($balance <= 0)
+            return response()->json(['success' => false, 'message' => 'This sale has no outstanding balance.'], 422);
+
+        if ((float) $data['amount'] > $balance)
+            return response()->json(['success' => false, 'message' => 'The amount exceeds the outstanding balance of ' . number_format($balance, config('decimal')) . '.'], 422);
+
+        DB::transaction(function () use ($data, $lims_sale_data, $returned_amount) {
+            Payment::create([
+                'sale_id' => $lims_sale_data->id,
+                'user_id' => Auth::id() ?? $lims_sale_data->user_id,
+                'account_id' => Account::where('is_default', true)->value('id')
+                    ?? Account::where('is_active', true)->value('id'),
+                'payment_reference' => 'dr-' . date("Ymd") . '-' . date("his"),
+                'amount' => $data['amount'],
+                'change' => 0,
+                'paying_method' => $data['paying_method'],
+                'payment_note' => $data['payment_note'] ?? 'Collected at delivery',
+            ]);
+
+            $lims_sale_data->paid_amount = (float) $lims_sale_data->paid_amount + (float) $data['amount'];
+            $new_balance = round((float) $lims_sale_data->grand_total - (float) $returned_amount - (float) $lims_sale_data->paid_amount, 2);
+            if ($new_balance <= 0.009) {
+                // Fully collected: clear float drift and complete the sale
+                $lims_sale_data->paid_amount = (float) $lims_sale_data->grand_total - (float) $returned_amount;
+                $lims_sale_data->payment_status = 4; // Paid
+                $lims_sale_data->sale_status = 1;    // Completed
+            } else {
+                $lims_sale_data->payment_status = 3; // Partial
+            }
+            $lims_sale_data->save();
+        });
+
+        $lims_sale_data->refresh();
+        $new_balance = round((float) $lims_sale_data->grand_total - (float) $returned_amount - (float) $lims_sale_data->paid_amount, 2);
+
+        if ((int) $lims_sale_data->sale_status === 1)
+            $message = 'Payment recorded successfully. Sale marked as completed.';
+        else
+            $message = 'Payment recorded successfully. Remaining balance: ' . number_format(max($new_balance, 0), config('decimal'));
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'sale_status' => (int) $lims_sale_data->sale_status,
+            'payment_status' => (int) $lims_sale_data->payment_status,
+            'balance' => $new_balance
+        ]);
     }
 
 

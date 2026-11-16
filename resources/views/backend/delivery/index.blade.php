@@ -40,7 +40,7 @@
                                         ->toArray();
 
                     if((int) $delivery->status === 0)
-                        $status = 'Awaiting payment';
+                        $status = 'Customer Unavailable';
                     elseif((int) $delivery->status === 1)
                         $status = trans('file.Packing');
                     elseif((int) $delivery->status === 2)
@@ -52,7 +52,8 @@
 
                     $barcode = \DNS2D::getBarcodePNG($delivery->reference_no, 'QRCODE');
                 ?>
-                <tr class="delivery-link" data-barcode="{{$barcode}}" data-delivery='["{{date($general_setting->date_format, strtotime($delivery->created_at->toDateString()))}}", "{{$delivery->reference_no}}", "{{$delivery->sale->reference_no}}", "{{$status}}", "{{$delivery->id}}", "{{$delivery->sale->customer->name}}", "{{$delivery->sale->customer->phone_number}}", "{{ addslashes($delivery->address) }}", "{{$delivery->sale->customer->city}}", "{{$delivery->note}}", "{{$delivery->user->name}}", "{{$delivery->delivered_by}}", "{{$delivery->recieved_by}}"]'>
+                <tr class="delivery-link" data-barcode="{{$barcode}}"
+                     data-delivery='["{{date($general_setting->date_format, strtotime($delivery->created_at->toDateString()))}}", "{{$delivery->reference_no}}", "{{$delivery->sale->reference_no}}", "{{$status}}", "{{$delivery->id}}", "{{$delivery->sale->customer->name}}", "{{$delivery->sale->customer->phone_number}}", "{{ addslashes($delivery->address) }}", "{{$delivery->sale->customer->city}}", "{{$delivery->note}}", "{{$delivery->user->name ?? 'null'}}", "{{$delivery->delivered_by}}", "{{$delivery->recieved_by}}"]'>
                     <td>{{$key}}</td>
                     <td>{{ $delivery->reference_no }}</td>
                     <td>{{ $customer_sale[0]->reference_no }}</td>
@@ -70,13 +71,14 @@
                     @elseif($delivery->status == 2)
                     <td><div class="badge badge-primary">{{$status}}</div></td>
                     @elseif((int) $delivery->status === 0)
-                        <td><div class="badge badge-warning">{{$status}}</div></td>
+                        <td><div class="badge badge-danger">{{$status}}</div></td>
                     @elseif((int) $delivery->status === 4)
                         <td><div class="badge badge-danger">{{$status}}</div></td>
                     @else
                     <td><div class="badge badge-success">{{$status}}</div></td>
                     @endif
                     <td>
+                        <button type="button" class="btn btn-primary btn-sm deliver-action" data-id="{{$delivery->id}}" data-status="{{$delivery->status}}" data-sale-ref="{{$customer_sale[0]->reference_no}}" data-customer="{{$customer_sale[0]->name}}"><i class="fa fa-truck"></i> Deliver</button>
                         <div class="btn-group">
                             <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{trans('file.action')}}
                               <span class="caret"></span>
@@ -225,6 +227,115 @@
 
 @endsection
 
+<!-- Deliver Modal : quick status update (Delivering / Delivered / Customer Unavailable) -->
+<div id="deliver-modal" tabindex="-1" role="dialog" aria-labelledby="deliverModalLabel" aria-hidden="true" class="modal fade text-left">
+    <div role="document" class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="deliverModalLabel" class="modal-title"><i class="fa fa-truck"></i> Deliver — <span id="deliver-sale-ref"></span></h5>
+                <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+            </div>
+            <form id="deliver-form" method="POST" action="delivery/update-status">
+                @csrf
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>{{trans('file.customer')}}</label>
+                        <p id="deliver-customer" class="font-weight-bold mb-0"></p>
+                    </div>
+                    <div class="form-group">
+                        <label>{{trans('file.Status')}} *</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" id="deliver-status-delivering" value="2" required>
+                            <label class="form-check-label" for="deliver-status-delivering">{{trans('file.Delivering')}} (courier dispatched)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" id="deliver-status-delivered" value="3" required>
+                            <label class="form-check-label" for="deliver-status-delivered">{{trans('file.Delivered')}}</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="status" id="deliver-status-unavailable" value="0" required>
+                            <label class="form-check-label" for="deliver-status-unavailable">Customer Unavailable</label>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>{{trans('file.Delivered By')}}</label>
+                            <input type="text" name="delivered_by" class="form-control">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>{{trans('file.Recieved By')}}</label>
+                            <input type="text" name="recieved_by" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>{{trans('file.Note')}}</label>
+                        <textarea rows="2" name="note" class="form-control"></textarea>
+                    </div>
+                    <input type="hidden" name="delivery_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa fa-check"></i> Save Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Collect Payment Modal : shown after Delivered when sale_status is not completed -->
+<div id="payment-modal" tabindex="-1" role="dialog" aria-labelledby="paymentModalLabel" aria-hidden="true" class="modal fade text-left">
+    <div role="document" class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="paymentModalLabel" class="modal-title"><i class="fa fa-money"></i> Collect Payment — <span id="pay-sale-ref"></span></h5>
+                <button type="button" data-dismiss="modal" aria-label="Close" class="close"><span aria-hidden="true"><i class="dripicons-cross"></i></span></button>
+            </div>
+            <form id="payment-form" method="POST" action="delivery/record-payment">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fa fa-exclamation-circle"></i> This sale is not completed yet. Please collect the payment from the customer to complete it.
+                    </div>
+                    <table class="table table-bordered mb-3">
+                        <tbody>
+                            <tr><th>{{trans('file.customer')}}</th><td id="pay-customer"></td></tr>
+                            <tr><th>{{trans('file.grand total')}}</th><td id="pay-total"></td></tr>
+                            <tr><th>Paid Amount</th><td id="pay-paid"></td></tr>
+                            <tr><th class="text-danger"><strong>Balance Due</strong></th><td class="text-danger"><strong id="pay-balance"></strong></td></tr>
+                        </tbody>
+                    </table>
+                    <div class="row">
+                        <div class="col-md-6 form-group">
+                            <label>Amount *</label>
+                            <input type="number" name="amount" id="pay-amount" class="form-control" step="0.01" min="0.01" required>
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label>Paying Method *</label>
+                            <select name="paying_method" class="form-control" required>
+                                <option value="Cash">Cash</option>
+                                <option value="Mobile Money">Mobile Money</option>
+                                <option value="Credit Card">Credit Card</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Payment Note</label>
+                        <textarea rows="2" name="payment_note" class="form-control" placeholder="e.g. Cash collected at delivery"></textarea>
+                    </div>
+                    <input type="hidden" name="delivery_id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success"><i class="fa fa-money"></i> Save Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @push('scripts')
 <script type="text/javascript">
 
@@ -338,6 +449,91 @@
                 $('.selectpicker').selectpicker('refresh');
           });
           $("#edit-delivery").modal('show');
+        });
+    });
+
+    // ----- Deliver button : quick status update (Delivering / Delivered / Customer Unavailable) -----
+    function showFlash(message) {
+        var html = '<div class="alert alert-success alert-dismissible text-center show-flash"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + message + '</div>';
+        $('section').first().before(html);
+    }
+
+    $(document).on('click', '.deliver-action', function() {
+        var btn = $(this);
+        var currentStatus = String(btn.data('status'));
+
+        $('#deliver-modal input[name="delivery_id"]').val(btn.data('id'));
+        $('#deliver-sale-ref').text(btn.data('saleRef'));
+        $('#deliver-customer').text(btn.data('customer'));
+        $('#deliver-modal input[name="delivered_by"]').val('');
+        $('#deliver-modal input[name="recieved_by"]').val('');
+        $('#deliver-modal textarea[name="note"]').val('');
+
+        // Preselect a sensible next status: Packing -> Delivering, Delivering -> Delivered
+        var defaultStatus = (currentStatus === '2' || currentStatus === '3') ? '3' : '2';
+        $('#deliver-modal input[type="radio"][name="status"]').prop('checked', false);
+        $('#deliver-modal input[type="radio"][name="status"][value="' + defaultStatus + '"]').prop('checked', true);
+
+        $('#deliver-modal').modal('show');
+    });
+
+    $('#deliver-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var submitBtn = form.find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: form.attr('action'),
+            data: form.serialize(),
+            success: function(res) {
+                submitBtn.prop('disabled', false);
+                if (res.requires_payment && res.sale) {
+                    // Delivered but sale not completed -> ask the customer to pay on this page
+                    $('#pay-sale-ref').text(res.sale.reference_no);
+                    $('#pay-customer').text(res.sale.customer);
+                    $('#pay-total').text(res.sale.grand_total_formatted);
+                    $('#pay-paid').text(res.sale.paid_formatted);
+                    $('#pay-balance').text(res.sale.balance_formatted);
+                    $('#pay-amount').val(res.sale.balance).attr('max', res.sale.balance);
+                    $('#payment-form input[name="delivery_id"]').val($('#deliver-modal input[name="delivery_id"]').val());
+                    $('#deliver-modal').modal('hide');
+                    setTimeout(function(){ $('#payment-modal').modal('show'); }, 300);
+                } else {
+                    $('#deliver-modal').modal('hide');
+                    showFlash(res.message);
+                    setTimeout(function(){ window.location.reload(); }, 1200);
+                }
+            },
+            error: function(xhr) {
+                submitBtn.prop('disabled', false);
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong!';
+                alert(msg);
+            }
+        });
+    });
+
+    // ----- Collect payment on delivery, then the sale gets completed once fully paid -----
+    $('#payment-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var submitBtn = form.find('button[type="submit"]');
+        submitBtn.prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: form.attr('action'),
+            data: form.serialize(),
+            success: function(res) {
+                submitBtn.prop('disabled', false);
+                $('#payment-modal').modal('hide');
+                showFlash(res.message);
+                setTimeout(function(){ window.location.reload(); }, 1200);
+            },
+            error: function(xhr) {
+                submitBtn.prop('disabled', false);
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong!';
+                alert(msg);
+            }
         });
     });
 

@@ -43,7 +43,7 @@
                                 </div>
                                 <div class="col-md-9 form-group product-selection">
                                 	<label>{{trans('file.Select Product')}} *</label>
-                                	<input type="text" name="product_code" id="product-code" class="form-control" placeholder="{{trans('file.Type product code seperated by comma')}}">
+                                	<input type="text" id="product-code" class="form-control" placeholder="{{trans('file.Type product name or code')}}" autocomplete="off">
                                 </div>
                                 <div class="col-md-9 form-group product-selection">
                                 	<div class="table-responsive ml-2">
@@ -121,22 +121,38 @@
     $("ul#setting #discount-menu").addClass("active");
     $(".product-selection").hide();
 
-    $("input[name='product_code']").on("input", function () {
-        if($(this).val().indexOf(',') > -1){
-            var code = $(this).val().slice(0, -1);
-            $.get('product-search/' + code, function(data) {
-		        var newRow = $("<tr>");
-	            var cols = '';
-	            var rowindex = $("table#product-table tbody tr:last").index();
-	            console.log(rowindex);
-	            cols += '<td><input type="hidden" name="product_list[]" value="'+ data[0] +'" />'+(rowindex+2)+'</td>';
-	            cols += '<td>'+ data[1] +'</td>';
-	            cols += '<td>'+ data[2] +'</td>';
-	            cols += '<td><button type="button" class="pbtnDel btn btn-sm btn-danger">X</button></td>';
-	            newRow.append(cols);
-	            $("table#product-table tbody").append(newRow);
-		    });
-            $(this).val('');
+    // Autocomplete: fires after 1 character, narrows down as you type
+    $("#product-code").autocomplete({
+        source: function(request, response) {
+            $.ajax({
+                url: "{{ route('product.autocomplete') }}",
+                dataType: "json",
+                data: { term: request.term },
+                success: function(data) {
+                    response(data);
+                }
+            });
+        },
+        minLength: 1,
+        select: function(event, ui) {
+            // Prevent duplicate products in the table
+            var exists = false;
+            $("input[name='product_list[]']").each(function() {
+                if ($(this).val() == ui.item.id) exists = true;
+            });
+            if (!exists) {
+                var newRow = $("<tr>");
+                var cols = '';
+                var rowindex = $("table#product-table tbody tr:last").index();
+                cols += '<td><input type="hidden" name="product_list[]" value="'+ ui.item.id +'" />'+(rowindex+2)+'</td>';
+                cols += '<td>'+ ui.item.name +'</td>';
+                cols += '<td>'+ ui.item.code +'</td>';
+                cols += '<td><button type="button" class="pbtnDel btn btn-sm btn-danger">X</button></td>';
+                newRow.append(cols);
+                $("table#product-table tbody").append(newRow);
+            }
+            $(this).val(''); // clear input for the next search
+            return false;    // keep the dropdown label out of the input
         }
     });
 

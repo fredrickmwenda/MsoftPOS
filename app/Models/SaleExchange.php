@@ -8,4 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class SaleExchange extends Model
 {
     use HasFactory;
+    public $guarded = [];
+    public $table = 'sale_exchanges';
 }

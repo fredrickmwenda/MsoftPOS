@@ -67,6 +67,7 @@ class Kernel extends HttpKernel
         'common' => \App\Http\Middleware\Common::class,
         'superadminauth' => \App\Http\Middleware\SuperAdminAuth::class,
         'cors' => \App\Http\Middleware\Cors::class,
+        'ecommerce' => \App\Http\Middleware\EcommerceEnabled::class,
     ];
 
     /**

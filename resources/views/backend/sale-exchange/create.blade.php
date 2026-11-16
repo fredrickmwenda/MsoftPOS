@@ -47,9 +47,19 @@
         if (!isset($authUser) || !$authUser) {
             $authUser = Auth::user()->roles->min('id') ?? 999;
         }
+
+        // Tax lists shared by the edit modal and the page script
+        $tax_name_all = ['No Tax'];
+        $tax_rate_all = [0];
+        foreach ($lims_tax_list as $tax) {
+            $tax_name_all[] = $tax->name;
+            $tax_rate_all[] = (float) $tax->rate;
+        }
     @endphp
 
     @push('css')
+        {{-- jQuery UI for the autocomplete dropdown (same as discount pages) --}}
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
         <style>
             @media print {
                 .hidden-print {
@@ -57,44 +67,22 @@
                 }
             }
 
-            #product-results-container {
-                background: #f5f6f7;
-                position: absolute;
-                overflow: hidden;
+            .ui-autocomplete {
                 max-height: 300px;
                 overflow-y: auto;
-                padding-top: 10px;
-                top: 40px;
-                width: 100%;
-                z-index: 999
-            }
-
-            #sale_product-results-container {
-                background: #f5f6f7;
-                position: absolute;
-                overflow: hidden;
-                max-height: 300px;
-                overflow-y: auto;
-                padding-top: 10px;
-                top: 40px;
-                width: 100%;
-                z-index: 999
-            }
-
-            #product-results-container .product-img,
-            #sale_product-results-container .product-img {
-                border-radius: 3px;
-                color: #7c5cc4;
+                overflow-x: hidden;
+                z-index: 9999 !important;
                 font-size: 13px;
-                padding-top: 7px;
-                padding-bottom: 7px;
-                text-align: left
             }
 
-            #product-results-container .product-img:hover,
-            #sale_product-results-container .product-img:hover {
-                background-color: #7c5cc4;
-                color: #FFF
+            .ui-menu-item .ui-menu-item-wrapper {
+                padding: 7px 10px;
+            }
+
+            .ui-menu-item .ui-menu-item-wrapper.ui-state-active {
+                background: #7c5cc4 !important;
+                border-color: #7c5cc4 !important;
+                color: #fff !important;
             }
 
             /* ===== RETURN PRODUCT ROW STYLING ===== */
@@ -120,7 +108,7 @@
                     <div class="card">
                         <div class="card-header d-flex align-items-center">
                             <h4>{{ __('file.Sale Exchange') }}</h4>
-                        </div> 
+                        </div>
                         <div class="card-body">
                             <p class="italic">
                                 <small>{{ __('file.The field labels marked with are required input fields') }}.</small>
@@ -173,7 +161,7 @@
                                                             </option>
                                                         @endforeach
                                                     </select>
-                                                    
+
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
@@ -241,13 +229,13 @@
 
                                                 <label>{{ __('file.Return Select Product') }}</label>
 
-                                                <div class="search-box form-group mb-2" style="position:relative">
+                                                <div class="search-box form-group mb-2">
                                                     <div class="input-group pos">
 
                                                         <input style="border: 1px solid #7c5cc4;" type="text"
-                                                            name="sale_product_code_name" id="sale-product-search-input"
+                                                            id="sale-product-search-input"
                                                             placeholder="Scan/Search product by name/code/IMEI"
-                                                            class="form-control" />
+                                                            class="form-control" autocomplete="off" />
 
                                                         <button type="button" class="btn btn-primary"
                                                             onclick="barcodeSale()">
@@ -259,13 +247,6 @@
                                                             </svg>
                                                         </button>
 
-                                                    </div>
-
-                                                    <div id="sale_product-results-container"></div>
-
-                                                    <div id="no-results-message-sale"
-                                                        style="background-color:#f5f6f7;color:#666;margin-top:5px;padding:3px 5px;display:none;">
-                                                        No results found
                                                     </div>
                                                 </div>
                                             </div>
@@ -306,12 +287,12 @@
 
                                                 <label>{{ __('file.New Select Product') }}</label>
 
-                                                <div class="search-box form-group mb-2" style="position:relative">
+                                                <div class="search-box form-group mb-2">
                                                     <div class="input-group pos">
                                                         <input style="border: 1px solid #7c5cc4;" type="text"
-                                                            name="product_code_name" id="product-search-input"
+                                                            id="product-search-input"
                                                             placeholder="Scan/Search product by name/code/IMEI"
-                                                            class="form-control" />
+                                                            class="form-control" autocomplete="off" />
                                                         <button type="button" class="btn btn-primary"
                                                             onclick="barcodeNew()">
                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16"
@@ -321,11 +302,6 @@
                                                                     d="M3 4.5a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0zm2 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5zm3 0a.5.5 0 0 1 1 0v7a.5.5 0 0 1-1 0z" />
                                                             </svg>
                                                         </button>
-                                                    </div>
-                                                    <div id="product-results-container"></div>
-                                                    <div id="no-results-message"
-                                                        style="background-color: #f5f6f7;color: #666; margin-top: 5px;padding: 3px 5px; display: none;">
-                                                        No results found
                                                     </div>
                                                 </div>
                                             </div>
@@ -354,29 +330,22 @@
 
                                         <div class="row">
                                             <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_qty"
-                                                        value="{{ @$lims_sale_data->total_qty }}" /></div>
+                                                <div class="form-group"><input type="hidden" name="total_qty" /></div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_discount"
-                                                        value="{{ @$lims_sale_data->total_discount }}" /></div>
+                                                <div class="form-group"><input type="hidden" name="total_discount" /></div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_tax"
-                                                        value="{{ @$lims_sale_data->total_tax }}" /></div>
+                                                <div class="form-group"><input type="hidden" name="total_tax" /></div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_price"
-                                                        value="{{ @$lims_sale_data->total_price }}" /></div>
+                                                <div class="form-group"><input type="hidden" name="total_price" /></div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-group">
-                                                    <input type="hidden" name="item"
-                                                        value="{{ @$lims_sale_data->item }}" />
-                                                    <input type="hidden" name="order_tax"
-                                                        value="{{ @$lims_sale_data->order_tax }}" />
+                                                    <input type="hidden" name="item" />
+                                                    <input type="hidden" name="order_tax" />
                                                 </div>
-                                               
                                             </div>
                                             <div class="col-md-2">
                                                 @if (@$lims_sale_data->coupon_id)
@@ -386,46 +355,15 @@
                                                         );
                                                     @endphp
                                                     <input type="hidden" name="coupon_active" value="1" />
-                                                    <input type="hidden" name="coupon_type"
-                                                        value="{{ $coupon_data->type }}" />
-                                                    <input type="hidden" name="coupon_amount"
-                                                        value="{{ $coupon_data->amount }}" />
-                                                    <input type="hidden" name="coupon_minimum_amount"
-                                                        value="{{ $coupon_data->minimum_amount }}" />
-                                                    <input type="hidden" name="coupon_discount"
-                                                        value="{{ @$lims_sale_data->coupon_discount }}">
+                                                    <input type="hidden" name="coupon_type" value="{{ $coupon_data->type }}" />
+                                                    <input type="hidden" name="coupon_amount" value="{{ $coupon_data->amount }}" />
+                                                    <input type="hidden" name="coupon_minimum_amount" value="{{ $coupon_data->minimum_amount }}" />
+                                                    <input type="hidden" name="coupon_discount" value="{{ @$lims_sale_data->coupon_discount }}">
                                                 @else
                                                     <input type="hidden" name="coupon_active" value="0" />
                                                 @endif
                                                 <div class="form-group">
-                                                    <input type="hidden" name="grand_total"
-                                                        value="{{ @$lims_sale_data->grand_total }}" />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="row">
-                                            <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_qty" /></div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_discount" />
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_tax" /></div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="total_price" /></div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-group"><input type="hidden" name="item" /><input
-                                                        type="hidden" name="order_tax" /></div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-group">
-                                                    <input type="hidden" name="grand_total"
-                                                        class="exchage_grand_total" />
+                                                    <input type="hidden" name="grand_total" class="exchage_grand_total" />
                                                     <input type="hidden" name="change_sale_status" value="0">
                                                 </div>
                                             </div>
@@ -579,8 +517,10 @@
                                     <div class="form-group">
                                         <label>{{ __('file.Price Option') }}</label>
                                         <div class="input-group">
-                                            <select class="form-control selectpicker" name="price_option"
-                                                class="price-option"></select>
+                                            <select class="form-control" name="price_option" id="price_option">
+                                                <option value="default">Default Price</option>
+                                                <option value="custom">Custom Price</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </div>
@@ -589,25 +529,17 @@
                                     <input type="number" name="edit_unit_price" class="form-control numkey"
                                         step="any">
                                 </div>
-                                <?php
-                                $tax_name_all[] = 'No Tax';
-                                $tax_rate_all[] = 0;
-                                foreach ($lims_tax_list as $tax) {
-                                    $tax_name_all[] = $tax->name;
-                                    $tax_rate_all[] = $tax->rate;
-                                }
-                                ?>
                                 <div class="col-md-4 form-group">
                                     <label>{{ __('file.Tax Rate') }}</label>
-                                    <select name="edit_tax_rate" class="form-control selectpicker">
-                                        @foreach ($tax_name_all as $key => $name)
+                                    <select name="edit_tax_rate" class="form-control">
+                                        @foreach (($tax_name_all ?? []) as $key => $name)
                                             <option value="{{ $key }}">{{ $name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div id="edit_unit" class="col-md-4 form-group">
                                     <label>{{ __('file.Product Unit') }}</label>
-                                    <select name="edit_unit" class="form-control selectpicker"></select>
+                                    <select name="edit_unit" class="form-control"></select>
                                 </div>
                             </div>
                             <button type="button" name="update_btn"
@@ -620,1327 +552,819 @@
     </section>
 
     <section id="print-layout"></section>
-
-    <div style="width:100%;max-width:350px;position:fixed;top:5%;left:50%;transform:translateX(-50%);z-index:999">
-        <button type="button" class="btn btn-danger" id="closeScannerBtn" style="display:none"> X </button>
-        <div id="reader" style="width:100%;"></div>
-    </div>
 @endsection
 
 @push('scripts')
     <script src="https://unpkg.com/html5-qrcode"></script>
+    {{-- jQuery UI for autocomplete (same dropdown widget as the discount pages) --}}
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script>
-        const doneTypingInterval = 300;
+        /* =====================================================================
+           Sale Exchange — page logic (rewritten, row-driven)
+           - Every table row owns its own hidden inputs & data (no parallel
+             arrays), so server-rendered "Order Product" rows work correctly.
+           - "Return Select Product" & "New Select Product" use jQuery UI
+             autocomplete (dropdown from the first character, narrows as
+             you type) hitting the same exchange/product-search endpoint.
+           - Edit modal (Order Product click) fully functional, including the
+             Price Option selector (Default / Wholesale / Custom).
+           ===================================================================== */
 
-        const $newProductInput = $('#product-search-input');
-        const $newProductResults = $('#product-results-container');
-        const $saleProductInput = $('#sale-product-search-input');
-        const $saleProductResults = $('#sale_product-results-container');
-        const $noResults = $('#no-results-message');
-        const $noResultsSale = $('#no-results-message-sale');
+        var decimal = {{ $general_setting->decimal ?? 2 }};
+        var without_stock = '{{ $general_setting->without_stock ?? 'no' }}';
+        var authUser = {{ $authUser ?? 999 }};
+        var currency = @json($currency ?? null);
+        if (!currency || typeof currency !== 'object') { currency = { id: 1, exchange_rate: 1 }; }
+        if (!currency.exchange_rate) { currency.exchange_rate = 1; }
+        var customer_group_rate = 0;
+        var currentEditRow = null;
+        var rowindex = 0; /* kept for compatibility */
 
-        function clearResults(type = 'new') {
-            if (type === 'return') {
-                $saleProductResults.empty().css('padding', '0');
-                $noResultsSale.hide();
-            } else {
-                $newProductResults.empty().css('padding', '0');
-                $noResults.hide();
-            }
+        var tax_name_all = @json($tax_name_all ?? []) || [];
+        var tax_rate_all = @json($tax_rate_all ?? []) || [];
+
+        var MSG_OUT_OF_STOCK = @json(__('file.Out of Stock!'));
+        var MSG_IN_STOCK = @json(__('file.In Stock'));
+        var MSG_EMBEDDED = @json(__('file.This product has been added using the weight scale machine.'));
+
+        /* ---------------- helpers ---------------- */
+        function num(v) { var n = parseFloat(v); return isNaN(n) ? 0 : n; }
+        function fmt(v) { return num(v).toFixed(decimal); }
+        function parseFormattedNumber(str) { if (!str) return 0; return parseFloat(String(str).replace(/,/g, '').trim()) || 0; }
+        function parseCsv(list) {
+            return String(list === null || list === undefined ? '' : list)
+                .split(',').map(function (s) { return s.trim(); }).filter(function (s) { return s !== ''; });
+        }
+        function escapeHtml(s) { return $('<div/>').text(s === null || s === undefined ? '' : String(s)).html(); }
+        function escapeAttr(s) { return escapeHtml(s).replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+
+        /* ---------------- unit helpers ---------------- */
+        function rowUnitData($row) {
+            var names = parseCsv($row.find('.sale-unit-names').val());
+            var operators = parseCsv($row.find('.sale-unit-operator').val());
+            var values = parseCsv($row.find('.sale-unit-operation-value').val());
+            var current = $.trim($row.find('.sale-unit').val() || '');
+            var idx = names.indexOf(current);
+            if (idx < 0) idx = 0;
+            return {
+                names: names, operators: operators, values: values, index: idx,
+                operator: operators[idx] || '*', value: num(values[idx]) || 1
+            };
+        }
+        function unitDisplayPrice(basePrice, unit) {
+            return unit.operator === '/' ? basePrice / unit.value : basePrice * unit.value;
+        }
+        function unitToBasePrice(unitPrice, unit) {
+            return unit.operator === '/' ? unitPrice * unit.value : unitPrice / unit.value;
         }
 
-        $(document).ready(function() {
-            calculateTotal();
-            $('#product-search-input').focus();
-            let typingTimer;
+        /* ---------------- row calculations ---------------- */
+        function updateRowCalc($row) {
+            if (!$row || !$row.length) return;
+            var qty = num($row.find('.qty').val());
+            var basePrice = num($row.data('base-price'));
+            var unit = rowUnitData($row);
+            var unitPrice = unitDisplayPrice(basePrice, unit);
+            var discountPerUnit = num($row.data('discount-per-unit'));
+            var rate = num($row.find('.tax-rate').val());
+            var method = String($row.find('.tax-method').val() || '1');
+            var netUnitPrice, tax, subTotal;
 
-            function searchProducts(search, type = 'new') {
-                let $resultsContainer, $noResultsMsg;
-                if (type === 'return') {
-                    $resultsContainer = $saleProductResults;
-                    $noResultsMsg = $noResultsSale;
-                } else {
-                    $resultsContainer = $newProductResults;
-                    $noResultsMsg = $noResults;
-                }
-
-                $resultsContainer.css('padding', '0 10px 15px');
-                $resultsContainer.html(
-                    '<div class="loader" title="4" style="border:none;min-height:300px"><svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="24px" height="30px" viewBox="0 0 24 30" style="enable-background:new 0 0 50 50;" xml:space="preserve"><rect x="0" y="0" width="4" height="10" fill="#333"><animateTransform attributeType="xml" attributeName="transform" type="translate" values="0 0; 0 20; 0 0" begin="0" dur="0.6s" repeatCount="indefinite"></animateTransform></rect><rect x="10" y="0" width="4" height="10" fill="#333"><animateTransform attributeType="xml" attributeName="transform" type="translate" values="0 0; 0 20; 0 0" begin="0.2s" dur="0.6s" repeatCount="indefinite"></animateTransform></rect><rect x="20" y="0" width="4" height="10" fill="#333"><animateTransform attributeType="xml" attributeName="transform" type="translate" values="0 0; 0 20; 0 0" begin="0.4s" dur="0.6s" repeatCount="indefinite"></animateTransform></rect></svg></div>'
-                );
-                $noResultsMsg.hide();
-
-                var warehouse_id = $('#warehouse_id').val();
-                if (!warehouse_id) {
-                    alert('Please select warehouse');
-                    return;
-                }
-
-                $.ajax({
-                    url: '{{ url('/sales/search') }}',
-                    type: 'GET',
-                    data: {
-                        warehouse_id: warehouse_id,
-                        search: search
-                    },
-                    success: function(data) {
-                        $resultsContainer.empty();
-                        if (data.length > 0) {
-                            $noResultsMsg.hide();
-                            data.forEach(function(product) {
-                                let productHtml = '',
-                                    displayStock = '';
-                                if (authUser > 2) {
-                                    displayStock = '';
-                                } else {
-                                    displayStock =
-                                        ` | ${product.qty} {{ __('file.In Stock') }} `;
-                                }
-                                var batch_id = product.product_batch_id ? product
-                                    .product_batch_id : '';
-
-                                if (product.is_imei == '1' || product.is_imei === 1 || product
-                                    .is_imei === true) {
-                                    let imeiNumbersArray = [],
-                                        exists = false;
-                                    $('.imei-number').each(function() {
-                                        let val = $(this).val();
-                                        if (val) {
-                                            imeiNumbersArray = val.split(",");
-                                            if (imeiNumbersArray.includes(product
-                                                    .imei_number)) {
-                                                exists = true;
-                                                return;
-                                            }
-                                        }
-                                    });
-                                    if (!exists && product.imei_number.length > 0) {
-                                        productHtml =
-                                            `<div class="product-img" data-code="${product.code}" data-qty="${product.qty}" data-imei="${product.imei_number}" data-embedded="${product.is_embeded}" data-batch="${batch_id}" data-type="${type}" data-price="${product.price}">${product.name} (${product.code}) | ${product.price} | IMEI: ${product.imei_number}</div>`;
-                                    } else {
-                                        $noResultsMsg.show();
-                                    }
-                                } else if (product.product_batch_id != null) {
-                                    if (parseInt(product.qty) > 0) {
-                                        if (product.expired_date == 0) {
-                                            product.expired_date = "{{ __('file.expired') }}";
-                                            var expired = "expired";
-                                        }
-                                        productHtml =
-                                            `<div class="product-img ${expired}" data-code="${product.code}" data-qty="${product.qty}" data-imei="${product.is_imei}" data-embedded="${product.is_embeded}" data-type="${type}" data-batch="${batch_id}" data-price="${product.price}">${product.name} (${product.code}) - ${product.expired_date} | ${product.price} ${displayStock}</div>`;
-                                    }
-                                } else {
-                                    productHtml =
-                                        `<div class="product-img" data-code="${product.code}" data-qty="${product.qty}" data-imei="${product.is_imei}" data-embedded="${product.is_embeded}" data-type="${type}" data-batch="${batch_id}" data-price="${product.price}">${product.name} (${product.code}) | ${product.price} ${displayStock}</div>`;
-                                }
-                                $resultsContainer.append(productHtml);
-                            });
-                            $('.product-img').on('click', function() {
-                                clearResults(type);
-                            });
-                            if (data.length === 1 && click === 0) {
-                                if (type == 'return') {
-                                    $('#sale_product-results-container .product-img').first().trigger(
-                                        'click');
-                                } else {
-                                    $('#product-results-container .product-img').first().trigger(
-                                        'click');
-                                }
-                                clearResults(type);
-                                click = 1;
-                            }
-                        } else {
-                            clearResults(type);
-                            $noResultsMsg.show();
-                        }
-                    },
-                    error: function() {
-                        $noResultsMsg.text("Error searching products.").show();
-                    }
-                });
+            if (method === '2') { /* tax inclusive */
+                var grossUnit = unitPrice - discountPerUnit;
+                netUnitPrice = (100 / (100 + rate)) * grossUnit;
+                tax = (grossUnit - netUnitPrice) * qty;
+                subTotal = grossUnit * qty;
+            } else { /* tax exclusive */
+                netUnitPrice = unitPrice - discountPerUnit;
+                tax = netUnitPrice * qty * (rate / 100);
+                subTotal = netUnitPrice * qty + tax;
             }
 
-            var click = 0;
-            $newProductInput.on('input', function() {
-                const value = $(this).val().trim();
-                if (value.length >= 3) {
-                    click = 0;
-                    clearTimeout(typingTimer);
-                    typingTimer = setTimeout(() => searchProducts(value, 'new'), doneTypingInterval);
-                } else {
-                    clearResults('new');
-                }
-            });
-            $newProductInput.on('paste', function(e) {
-                const pastedData = (e.originalEvent || e).clipboardData.getData('text');
-                if (pastedData.length >= 3) {
-                    click = 0;
-                    searchProducts(pastedData.trim(), 'new');
-                }
-            });
-            $saleProductInput.on('input', function() {
-                const value = $(this).val().trim();
-                if (value.length >= 3) {
-                    click = 0;
-                    clearTimeout(typingTimer);
-                    typingTimer = setTimeout(() => searchProducts(value, 'return'), doneTypingInterval);
-                } else {
-                    clearResults('return');
-                }
-            });
-            $saleProductInput.on('paste', function(e) {
-                const pastedData = (e.originalEvent || e).clipboardData.getData('text');
-                if (pastedData.length >= 3) {
-                    click = 0;
-                    searchProducts(pastedData.trim(), 'return');
-                }
-            });
-            $(document).on('click', function(e) {
-                if (!$(e.target).closest('#product-results-container, #product-search-input').length) {
-                    clearResults('new');
-                }
-                if (!$(e.target).closest('#sale_product-results-container, #sale-product-search-input')
-                    .length) {
-                    clearResults('return');
-                }
-            });
-        });
-    </script>
-
-    <script>
-        const closeScannerBtn = document.getElementById("closeScannerBtn");
-        const html5Qrcode = new Html5Qrcode('reader');
-        let currentScannerType = 'new';
-
-        function barcodeNew() {
-            currentScannerType = 'new';
-            startScanner();
+            $row.find('.net_unit_price').val(fmt(netUnitPrice));
+            $row.find('.discount-value').val(fmt(discountPerUnit * qty));
+            $row.find('.tax-value').val(fmt(tax));
+            $row.find('.tax-rate').val(fmt(rate));
+            $row.find('.product-price').text(fmt(unitPrice));
+            $row.find('.discount').text(fmt(discountPerUnit));
+            $row.find('.tax').text(fmt(tax));
+            $row.find('.sub-total').text(fmt(subTotal));
+            $row.find('.subtotal-value').val(fmt(subTotal));
         }
 
-        function barcodeSale() {
-            currentScannerType = 'return';
-            startScanner();
+        function isReturnRow($row) {
+            return $row.closest('table').hasClass('return-order-list');
         }
 
-        function startScanner() {
-            const qrCodeSuccessCallback = (decodedText) => {
-                if (decodedText) {
-                    if (currentScannerType === 'return') {
-                        document.getElementById('sale-product-search-input').value = decodedText;
-                    } else {
-                        document.getElementById('product-search-input').value = decodedText;
-                    }
-                    html5Qrcode.stop();
-                    closeScannerBtn.style.display = "none";
+        function pendingReturnBaseQty($row) {
+            var pid = String($row.find('.product-id').val() || '');
+            var pcode = String($row.find('.product-code').val() || '');
+            var total = 0;
+            $('table.return-order-list tbody tr').each(function () {
+                var $r = $(this);
+                if (!$r.find('.exchange-checkbox').is(':checked')) return;
+                if (String($r.find('.product-id').val() || '') === pid ||
+                    String($r.find('.product-code').val() || '') === pcode) {
+                    var q = num($r.find('.qty').val());
+                    var unit = rowUnitData($r);
+                    total += unit.operator === '/' ? q / unit.value : q * unit.value;
                 }
-            };
-            const config = {
-                fps: 30,
-                qrbox: {
-                    width: 300,
-                    height: 100
-                }
-            };
-            html5Qrcode.start({
-                facingMode: "environment"
-            }, config, qrCodeSuccessCallback);
-            closeScannerBtn.style.display = "inline-block";
-        }
-        closeScannerBtn.addEventListener("click", function() {
-            closeScannerBtn.style.display = "none";
-            html5Qrcode.stop();
-        });
-    </script>
-
-    <script type="text/javascript">
-        @if (config('database.connections.saleprosaas_landlord'))
-            @if (isset($numberOfInvoice))
-                numberOfInvoice = <?php echo json_encode($numberOfInvoice); ?>;
-                $.ajax({
-                    type: 'GET',
-                    async: false,
-                    url: '{{ route('package.fetchData', $general_setting->package_id) }}',
-                    success: function(data) {
-                        if (data['number_of_invoice'] > 0 && data['number_of_invoice'] <= numberOfInvoice) {
-                            localStorage.setItem("message",
-                                "You don't have permission to create another invoice as you already exceed the limit! Subscribe to another package if you wants more!"
-                            );
-                            location.href = "{{ route('sales.index') }}";
-                        }
-                    }
-                });
-            @endif
-        @endif
-
-        // ✅ FIX: $general_setting and $currency are now fetched in the @php block at top
-        // ✅ FIX: authUser uses roles->min('id') instead of Auth::user()->role_id
-        var currency = <?php echo json_encode($currency); ?>;
-        var currencyChange = false;
-        var without_stock = <?php echo json_encode($general_setting->without_stock); ?>;
-        var authUser = <?php echo json_encode($authUser); ?>;
-        var decimal = <?php echo json_encode($general_setting->decimal); ?>;
-        var exchangeValue = 0,
-            newProductsTotal = 0;
-        $('#currency').val(currency['id']);
-
-        $('#currency').change(function() {
-            var rate = $(this).find(':selected').data('rate');
-            $('#exchange_rate').val(rate);
-            currency['exchange_rate'] = rate;
-            $("table.order-list tbody .qty").each(function(index) {
-                rowindex = index;
-                currencyChange = true;
-                cur_product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) +
-                    ') .product-id').val();
-                qty = $(this).val();
-                $.get('/product-price/' + cur_product_id, function(response) {
-                    checkDiscount(qty, true, 'table.order-list', response.price);
-                });
             });
-        });
+            return total;
+        }
 
-        function setCustomerGroupRate(id) {
-            if (!id) {
-                customer_group_rate = 0;
+        /* quantity clamping / stock guard for one row */
+        function enforceQuantity($row) {
+            if (!$row || !$row.length) return;
+            var qty = num($row.find('.qty').val());
+            if (qty <= 0) qty = 1;
+            var maxAttr = $row.find('.qty').attr('max');
+            var imeiVal = $.trim($row.find('.imei-number').val() || '');
+
+            /* IMEI rows: qty always equals the number of serials on the row */
+            if (imeiVal) {
+                $row.find('.qty').val(imeiVal.split(',').filter(Boolean).length);
                 return;
             }
 
-            $.get('{{ url('exchange/getcustomergroup') }}/' + id, function(data) {
-                customer_group_rate = (data / 100);
+            if (isReturnRow($row)) {
+                if (maxAttr !== undefined && maxAttr !== '' && qty > num(maxAttr)) {
+                    alert('Quantity exceeds the returnable quantity (' + maxAttr + ')!');
+                    qty = num(maxAttr) || 1;
+                }
+            } else if (without_stock === 'no') {
+                var ptype = $.trim($row.find('.product_type').val() || 'standard');
+                if (ptype === 'standard' || ptype === 'combo') {
+                    var unit = rowUnitData($row);
+                    var baseQty = unit.operator === '/' ? qty / unit.value : qty * unit.value;
+                    var available = num(maxAttr) + pendingReturnBaseQty($row);
+                    if (baseQty > available + 0.00001) {
+                        alert('Quantity exceeds stock quantity!');
+                        var maxUnitQty = unit.operator === '/' ? available * unit.value : available / unit.value;
+                        qty = Math.max(Math.floor(maxUnitQty * 10000) / 10000, 1);
+                    }
+                }
+            }
+            $row.find('.qty').val(qty);
+        }
+
+        /* kept for backward compatibility (e.g. other inline handlers) */
+        function checkQuantity(value, flag, tableSelector) {
+            var $row = currentEditRow && currentEditRow.length
+                ? currentEditRow
+                : $(tableSelector || 'table.order-list').find('tbody tr').first();
+            if ($row.length) {
+                $row.find('.qty').val(num(value));
+                enforceQuantity($row);
+                updateRowCalc($row);
+                recalculateAll();
+            }
+            return true;
+        }
+
+        /* Server-rendered rows (Order Product table) carry their data in hidden
+           inputs — mirror it into the row's jQuery data once so the edit modal
+           and recalculation work on them exactly like on search-added rows. */
+        function initRowData($row) {
+            if (!$row || !$row.length || $row.data('base-price') !== undefined) return;
+            var unit = rowUnitData($row);
+            var netUnit = parseFormattedNumber($row.find('.net_unit_price').val());
+            var qty = num($row.find('.qty').val()) || 1;
+            var lineDiscount = parseFormattedNumber($row.find('.discount-value').val());
+            $row.data('base-price', unitToBasePrice(netUnit, unit));
+            $row.data('wholesale-price', 0);
+            $row.data('discount-per-unit', lineDiscount / qty);
+        }
+
+        /* ---------------- exchange totals ---------------- */
+        var exchangeValue = 0, newProductsTotal = 0;
+
+        function recalculateAll() {
+            var returnedTotal = 0, newTotal = 0;
+
+            $('table.return-order-list tbody tr').each(function () {
+                var $row = $(this);
+                if ($row.find('.exchange-checkbox').is(':checked')) {
+                    returnedTotal += parseFormattedNumber($row.find('.sub-total').text());
+                }
             });
-        }
-        $('select[name="customer_id"]').val($('input[name="customer_id_hidden"]').val());
-        $('select[name="warehouse_id"]').val($('input[name="warehouse_id_hidden"]').val());
-        $('select[name="biller_id"]').val($('input[name="biller_id_hidden"]').val());
-        $('select[name="order_tax_rate"]').val($('input[name="order_tax_rate_hidden"]').val());
-        $('.selectpicker').selectpicker('refresh');
-
-        $(window).on('load', function() {
-            setCustomerGroupRate($('#customer_id').val());
-            recalculateAll();
-        });
-
-        var lims_product_array = [],
-            product_code = [],
-            product_name = [],
-            product_qty = [],
-            product_type = [],
-            product_id = [],
-            product_list = [],
-            variant_list = [],
-            qty_list = [];
-        var product_price = [],
-            wholesale_price = [],
-            cost = [],
-            product_discount = [],
-            tax_rate = [],
-            tax_name = [],
-            tax_method = [],
-            unit_name = [],
-            unit_operator = [],
-            unit_operation_value = [];
-        var is_imei = [],
-            is_variant = [],
-            gift_card_amount = [],
-            gift_card_expense = [],
-            temp_unit_name = [],
-            temp_unit_operator = [],
-            temp_unit_operation_value = [];
-        var exist_type = [],
-            exist_code = [],
-            exist_qty = [],
-            rowindex, customer_group_rate, row_product_price, pos, role_id = <?php echo json_encode($authUser); ?>;
-        var warehouse_id = $('#warehouse_id').val();
-        var rownumber = $('table.order-list tbody tr:last').index();
-
-        for (rowindex = 0; rowindex <= rownumber; rowindex++) {
-            product_price.push(parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                '.product-price').val()));
-            exist_code.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)')
-                .text());
-            exist_type.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-type').val());
-            var total_discount = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                '.discount').text());
-            var quantity = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val());
-            exist_qty.push(quantity);
-            product_discount.push((total_discount / quantity).toFixed({{ $general_setting->decimal }}));
-            tax_rate.push(parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-rate')
-                .val()));
-            tax_name.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-name').val());
-            tax_method.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-method').val());
-            temp_unit_name = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sale-unit').val()
-                .split(',');
-            unit_name.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sale-unit').val());
-            unit_operator.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sale-unit-operator')
-                .val());
-            unit_operation_value.push($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                '.sale-unit-operation-value').val());
-            if (!$('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val().includes(null))
-                is_imei.push(1);
-            else is_imei.push(0);
-            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sale-unit').val(temp_unit_name[0]);
-        }
-
-        $('.selectpicker').selectpicker({
-            style: 'btn-link'
-        });
-        $('[data-toggle="tooltip"]').tooltip();
-        $('select[name="customer_id"]').on('change', function() {
-            setCustomerGroupRate($(this).val());
-        });
-
-        // ===== CALCULATION FUNCTIONS (Pure - No Recursion) =====
-        function calculateExchangeValue() {
-            exchangeValue = 0;
-            $('table.return-order-list input.exchange-checkbox:checked').each(function() {
-                var subtotalText = $(this).closest('tr').find('.sub-total').text();
-                var subtotal = parseFloat(subtotalText.replace(/,/g, '')) || 0;
-                exchangeValue += subtotal;
+            $('table.order-list tbody tr').each(function () {
+                newTotal += parseFormattedNumber($(this).find('.sub-total').text());
             });
-            $('#exchange-value').text(exchangeValue.toFixed(decimal));
-        }
 
-        function calculateNewProductsTotal() {
-            newProductsTotal = 0;
-            $('table.order-list tbody tr').each(function() {
-                var subtotal = parseFormattedNumber($(this).find('.sub-total').text());
-                newProductsTotal += subtotal;
-            });
-            $('#new-products-total').text(newProductsTotal.toFixed(decimal));
-        }
-
-        function calculateExchangeBalance() {
             var shippingCost = parseFormattedNumber($('input[name="shipping_cost"]').val());
             var returnDiscount = parseFormattedNumber($('input[name="total_sale_discount"]').val());
 
-            var grandTotal = newProductsTotal + shippingCost;
-            var adjustedExchangeValue = exchangeValue - returnDiscount;
-            var balance = grandTotal - adjustedExchangeValue;
+            exchangeValue = returnedTotal;
+            newProductsTotal = newTotal;
 
-            $('#exchange-shipping').text(shippingCost.toFixed(decimal));
-            $('#new-grand-total').text(grandTotal.toFixed(decimal));
-            $('.exchage_grand_total').val(grandTotal.toFixed(decimal));
+            $('#exchange-value').text(fmt(returnedTotal));
+            $('#new-products-total').text(fmt(newTotal));
+            $('#exchange-shipping').text(fmt(shippingCost));
 
-            var balanceDisplay = $('#balance-display'),
-                balanceStatus = $('#balance-status'),
-                paymentType = $('#payment-type'),
-                balanceAmount = $('#amount');
+            var grandTotal = newTotal + shippingCost;
+            $('#new-grand-total').text(fmt(grandTotal));
+            $('.exchage_grand_total').val(fmt(grandTotal));
 
-            balanceDisplay.text(Math.abs(balance).toFixed(decimal));
-            balanceAmount.val(Math.abs(balance).toFixed(decimal));
+            var balance = grandTotal - (returnedTotal - returnDiscount);
+            var $balanceDisplay = $('#balance-display'),
+                $balanceStatus = $('#balance-status'),
+                $paymentType = $('#payment-type'),
+                $balanceAmount = $('#amount');
 
-            if (balance > 0) {
-                balanceDisplay.css('color', '#d32f2f');
-                balanceStatus.text('(Customer Pays)').css('color', '#d32f2f');
-                paymentType.val('receive');
-            } else if (balance < 0) {
-                balanceDisplay.css('color', '#388e3c');
-                balanceStatus.text('(Refund to Customer)').css('color', '#388e3c');
-                paymentType.val('pay');
+            $balanceDisplay.text(fmt(Math.abs(balance)));
+            $balanceAmount.val(fmt(Math.abs(balance)));
+
+            if (balance > 0.009) {
+                $balanceDisplay.css('color', '#d32f2f');
+                $balanceStatus.text('(Customer Pays)').css('color', '#d32f2f');
+                $paymentType.val('receive');
+            } else if (balance < -0.009) {
+                $balanceDisplay.css('color', '#388e3c');
+                $balanceStatus.text('(Refund to Customer)').css('color', '#388e3c');
+                $paymentType.val('pay');
             } else {
-                balanceDisplay.css('color', '#1565c0');
-                balanceStatus.text('(No Balance)').css('color', '#1565c0');
+                $balanceDisplay.css('color', '#1565c0');
+                $balanceStatus.text('(No Balance)').css('color', '#1565c0');
+                $paymentType.val('');
+                $balanceAmount.val('0');
             }
-        }
 
-        function calculateTotal() {
-            var total_qty = 0,
-                total_discount = 0,
-                total_tax = 0,
-                total = 0;
-
-            $("table.order-list tbody .qty, table.return-order-list tbody .qty").each(function() {
-                total_qty += parseFloat($(this).val() || 0);
+            /* hidden totals (single set of inputs) */
+            var totalQty = 0;
+            $("table.order-list tbody .qty, table.return-order-list tbody .qty").each(function () {
+                totalQty += num($(this).val());
             });
-            $(".discount-value").each(function() {
-                total_discount += parseFloat($(this).val() || 0);
-            });
-            $(".tax-value").each(function() {
-                total_tax += parseFloat($(this).val() || 0);
-            });
-            $(".sub-total").each(function() {
-                total += parseFormattedNumber($(this).text());
-            });
+            var totalDiscount = 0, totalTax = 0;
+            $(".discount-value").each(function () { totalDiscount += num($(this).val()); });
+            $(".tax-value").each(function () { totalTax += num($(this).val()); });
 
-            $("#total-qty").text(total_qty);
-            $('input[name="total_qty"]').val(total_qty);
-            $("#total-discount").text(total_discount.toFixed(decimal));
-            $('input[name="total_discount"]').val(total_discount.toFixed(decimal));
-            $("#total-tax").text(total_tax.toFixed(decimal));
-            $('input[name="total_tax"]').val(total_tax.toFixed(decimal));
-            $("#total").text(total.toFixed(decimal));
-            $('input[name="total_price"]').val(total.toFixed(decimal));
+            $('input[name="total_qty"]').val(totalQty);
+            $('input[name="total_discount"]').val(fmt(totalDiscount));
+            $('input[name="total_tax"]').val(fmt(totalTax));
+            $('input[name="total_price"]').val(fmt(returnedTotal + newTotal));
+            $('input[name="item"]').val($('table.order-list tbody tr').length + ' (' + totalQty + ')');
+
+            var orderTaxRate = num($('select[name="order_tax_rate"]').val());
+            $('input[name="order_tax"]').val(fmt(newTotal * (orderTaxRate / 100)));
         }
 
-        function parseFormattedNumber(str) {
-            if (!str) return 0;
-            return parseFloat(String(str).replace(/,/g, '').trim()) || 0;
+        /* ---------------- product search (autocomplete dropdowns) ---------------- */
+        function isStockManaged(p) {
+            return p && (p.type === 'standard' || p.type === 'combo') && !num(p.is_imei);
         }
 
-        function calculateGrandTotal() {
-            var item = $('table.order-list tbody tr:last').index();
-            if (item == -1) {
-                $('#order-discount-val').val(0);
-            }
-            var total_qty = parseFloat($('input[name="total_qty"]').val());
-            var subtotal = parseFloat($('input[name="total_price"]').val());
-            var order_tax = parseFloat($('select[name="order_tax_rate"]').val());
-            var order_discount_type = $('select[name="order_discount_type"]').val();
-            var order_discount_value = parseFloat($('input[name="order_discount_value"]').val());
-            if (!order_discount_value) order_discount_value = {{ number_format(0, $general_setting->decimal, '.', '') }};
-            var order_discount = (order_discount_type == 'Flat') ? (currencyChange ? parseFloat(order_discount_value *
-                currency['exchange_rate']) : parseFloat(order_discount_value)) : parseFloat(subtotal * (
-                order_discount_value / 100));
-            $("#discount").text(order_discount_value.toFixed(decimal));
-            $('input[name="order_discount"]').val(order_discount);
-            $('#order-discount-val').val(order_discount_value);
-            $('input[name="order_discount_type"]').val(order_discount_type);
-            var shipping_cost = currencyChange ? parseFloat($('input[name="shipping_cost"]').val() * currency[
-                'exchange_rate']) : parseFloat($('input[name="shipping_cost"]').val());
-            if (!shipping_cost) shipping_cost = {{ number_format(0, $general_setting->decimal, '.', '') }};
-            item = ++item + '(' + total_qty + ')';
-            order_tax = (subtotal - order_discount) * (order_tax / 100);
-            var grand_total = (subtotal + order_tax + shipping_cost) - order_discount;
-            var coupon_discount = currencyChange ? parseFloat($('input[name="coupon_discount"]').val() * currency[
-                'exchange_rate']) : parseFloat($('input[name="coupon_discount"]').val());
-            if (!coupon_discount) coupon_discount = {{ number_format(0, $general_setting->decimal, '.', '') }};
-            grand_total -= coupon_discount;
-            $('#item').text(item);
-            $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
-            $('#subtotal').text(subtotal.toFixed(decimal));
-            $('#order_tax').text(order_tax.toFixed(decimal));
-            $('#tax').text(order_tax.toFixed(decimal));
-            $('input[name="order_tax"]').val(order_tax.toFixed(decimal));
-            $('#order_discount').text(order_discount.toFixed(decimal));
-            $('#shipping_cost').text(shipping_cost.toFixed(decimal));
-            $('input[name="shipping_cost"]').val(shipping_cost);
-            $('#grand_total').text(grand_total.toFixed(decimal));
-            $('input[name="grand_total"]').val(grand_total.toFixed(decimal));
-            currencyChange = false;
+        /* dropdown row text: name (code) | price | stock | IMEI | batch */
+        function suggestionLabel(p) {
+            var label = p.name + ' (' + p.code + ')  |  ' + num(p.price);
+            if (authUser <= 2) label += '  |  ' + p.qty + ' ' + MSG_IN_STOCK;
+            if (p.imei_number) label += '  |  IMEI: ' + p.imei_number;
+            if (p.batch_no) label += '  |  Batch: ' + p.batch_no;
+            if (p.expired_date) label += '  |  ' + p.expired_date;
+            return label;
         }
 
-        function recalculateAll() {
-            calculateExchangeValue();
-            calculateNewProductsTotal();
-            calculateExchangeBalance();
-            calculateTotal();
-            calculateGrandTotal();
-        }
-
-        // ===== EVENT HANDLERS =====
-        $(document).on('change', 'input.exchange-checkbox', function() {
-            recalculateAll();
-        });
-        $('input[name="shipping_cost"]').on('blur change', function() {
-            recalculateAll();
-        });
-        $('select[name="order_tax_rate"]').on("change", function() {
-            recalculateAll();
-        });
-        $('select[name="order_discount_type"]').on("change", function() {
-            recalculateAll();
-        });
-        $('input[name="order_discount_value"]').on("blur", function() {
-            recalculateAll();
-        });
-        $('input[name="total_sale_discount"]').on('blur change keyup', function() {
-            var val = parseFloat($(this).val());
-            if (isNaN(val) || val < 0) {
-                $(this).val(0);
-            }
-            recalculateAll();
-        });
-
-        // Delete product
-        $(document).on("click", "table tbody .ibtnDel", function(event) {
-            rowindex = $(this).closest('tr').index();
-            product_price.splice(rowindex, 1);
-            wholesale_price.splice(rowindex, 1);
-            product_discount.splice(rowindex, 1);
-            tax_rate.splice(rowindex, 1);
-            tax_name.splice(rowindex, 1);
-            tax_method.splice(rowindex, 1);
-            unit_name.splice(rowindex, 1);
-            unit_operator.splice(rowindex, 1);
-            unit_operation_value.splice(rowindex, 1);
-            is_imei.splice(rowindex, 1);
-            is_variant.splice(rowindex, 1);
-            $(this).closest("tr").remove();
-            recalculateAll();
-        });
-
-        // Edit product
-        $("table.order-list, table.return-order-list").on("click", ".edit-product", function() {
-            rowindex = $(this).closest('tr').index();
-            edit();
-        });
-        $('button[name="update_btn"]').on("click", function() {
-            var $row = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-            var tableSelector = 'table.order-list';
-            if ($row.length === 0) {
-                $row = $('table.return-order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-                tableSelector = 'table.return-order-list';
-            }
-            if (is_imei[rowindex]) {
-                var imeiNumbers = '';
-                $("#editModal .imei-numbers").each(function(i) {
-                    if (i) imeiNumbers += ',' + $(this).val();
-                    else imeiNumbers = $(this).val();
+        /* resolve the warehouse (auto-select first if the operator hasn't) */
+        function resolveWarehouse() {
+            var $wh = $('#warehouse_id');
+            var warehouse = $wh.val();
+            if (!warehouse) {
+                $wh.find('option').each(function () {
+                    if (!warehouse && $(this).attr('value')) {
+                        warehouse = $(this).attr('value');
+                    }
                 });
-                $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(
-                    imeiNumbers);
+                if (warehouse) {
+                    $wh.val(warehouse);
+                    if ($.fn.selectpicker) { $wh.selectpicker('refresh'); }
+                }
             }
-            var edit_discount = $('input[name="edit_discount"]').val(),
-                edit_qty = $('input[name="edit_qty"]').val(),
-                edit_unit_price = $('input[name="edit_unit_price"]').val();
-            if (parseFloat(edit_discount) > parseFloat(edit_unit_price)) {
+            return warehouse;
+        }
+
+        /* Fetch suggestions. `response` is jQuery UI's callback; when
+           autoAddSingle is true (barcode) a single hit is added immediately. */
+        function fetchSuggestions(term, kind, autoAddSingle, response) {
+            term = String(term || '').trim();
+            if (!term) { if (response) response([]); return; }
+
+            var warehouse = resolveWarehouse();
+            if (!warehouse) {
+                alert('Please add a warehouse first — product search needs it.');
+                if (response) response([]);
+                return;
+            }
+
+            $.ajax({
+                url: '{{ url('exchange/product-search') }}',
+                type: 'GET',
+                data: { warehouse_id: warehouse, search: term }
+            }).done(function (list) {
+                var items = $.map(list || [], function (p) {
+                    return $.extend({}, p, {
+                        label: suggestionLabel(p),
+                        value: p.name + ' (' + p.code + ')'
+                    });
+                });
+                if (autoAddSingle && items.length === 1) {
+                    handleSuggestionSelect(items[0], kind);
+                    if (response) response([]);
+                } else if (response) {
+                    response(items);
+                }
+            }).fail(function () {
+                if (response) response([]);
+            });
+        }
+
+        /* picking an item from the dropdown */
+        function handleSuggestionSelect(item, kind) {
+            if (kind === 'new' && without_stock === 'no' && isStockManaged(item) && num(item.qty) <= 0) {
+                alert(MSG_OUT_OF_STOCK);
+                return;
+            }
+            addRowFromProduct(item, kind);
+        }
+
+        function wireAutocomplete($input, kind) {
+            $input.autocomplete({
+                minLength: 1,
+                delay: 200,
+                source: function (request, response) {
+                    fetchSuggestions(request.term, kind, false, response);
+                },
+                select: function (event, ui) {
+                    handleSuggestionSelect(ui.item, kind);
+                    $(this).val(''); /* ready for the next search */
+                    return false;
+                }
+            });
+            /* clicking back into a non-empty box re-opens the dropdown */
+            $input.on('focus', function () {
+                var value = $(this).val().trim();
+                if (value) $(this).autocomplete('search', value);
+            });
+        }
+
+        /* ---------------- add product rows ---------------- */
+        function addRowFromProduct(p, kind) {
+            if (!p) return;
+            if (num(p.is_embeded) === 1) {
+                alert(MSG_EMBEDDED);
+                return;
+            }
+
+            var code = String(p.code || '').trim();
+            var $table = kind === 'return' ? $('table.return-order-list') : $('table.order-list');
+            var isImeiRow = num(p.is_imei) === 1 && p.imei_number && String(p.imei_number) !== 'null' &&
+                String(p.imei_number).trim() !== '';
+
+            /* duplicate handling */
+            var $existing = null, duplicateImei = false;
+            $table.find('tbody tr').each(function () {
+                var $r = $(this);
+                if ($.trim($r.find('.product-code').val()) !== code) return;
+                var rowImei = $.trim($r.find('.imei-number').val() || '');
+                if (isImeiRow) {
+                    if (rowImei.split(',').indexOf(String(p.imei_number).trim()) >= 0) duplicateImei = true;
+                } else if (!rowImei && !$existing) {
+                    $existing = $r;
+                }
+            });
+            if (duplicateImei) {
+                alert('Same imei or serial number is not allowed!');
+                return;
+            }
+            if ($existing) {
+                if (kind === 'return') {
+                    alert('This product is already in the return list.');
+                    return;
+                }
+                $existing.find('.qty').val(num($existing.find('.qty').val()) + 1);
+                enforceQuantity($existing);
+                updateRowCalc($existing);
+                recalculateAll();
+                return;
+            }
+
+            var rate = num(currency.exchange_rate);
+            var groupFactor = 1 + num(customer_group_rate);
+            var basePrice = num(p.price) * rate * groupFactor;
+            var wholesale = num(p.wholesale_price) * rate * groupFactor;
+
+            var unitNames = parseCsv(p.unit_names);
+            var unitOperators = parseCsv(p.unit_operators);
+            var unitValues = parseCsv(p.unit_operation_values);
+            var unitName = unitNames[0] || 'n/a';
+            var stockQty = num(p.qty);
+
+            var $tr = $('<tr class="exchange-product-row">');
+            var cols = '<td class="product-title">';
+
+            if (authUser > 2) {
+                cols += '<strong>' + escapeHtml(p.name) + '</strong><br><span>' + escapeHtml(code) + '</span>';
+            } else {
+                cols += '<strong class="edit-product btn btn-link pl-0 pr-0" data-toggle="modal" data-target="#editModal">' +
+                    escapeHtml(p.name) + ' <i class="ti ti-edit"></i></strong><br><span>' + escapeHtml(code) + '</span>';
+            }
+            if (authUser <= 2 && (p.type === 'standard' || p.type === 'combo') && !isImeiRow) {
+                cols += ' <span class="text-muted">| ' + MSG_IN_STOCK + ': <span class="in-stock">' + stockQty + '</span></span>';
+            }
+            if (p.product_batch_id) {
+                cols += '<br><small class="text-muted">Batch: ' + escapeHtml(p.batch_no || 'N/A') + '</small>';
+            }
+
+            cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + escapeAttr(code) + '">';
+            cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + escapeAttr(p.id) + '">';
+            cols += '<input type="hidden" class="product_type" name="product_type[]" value="' + escapeAttr(p.type || 'standard') + '">';
+            cols += '<input type="hidden" class="product-batch-id" name="product_batch_id[]" value="' + escapeAttr(p.product_batch_id || '') + '">';
+            cols += '</td>';
+
+            /* qty cell */
+            cols += '<td><div class="input-group">';
+            if (!isImeiRow) {
+                cols += '<span class="input-group-btn"><button type="button" class="btn btn-default minus mr-1" style="padding:5px 8px"><i class="ti ti-minus"></i></button></span>';
+            }
+            cols += '<input type="number" name="qty[]" class="form-control qty numkey input-number" style="font-size:13px;max-width:50px;padding:0 0;text-align:center" step="any" value="1" max="' + stockQty + '" required>';
+            if (!isImeiRow) {
+                cols += '<span class="input-group-btn"><button type="button" class="btn btn-default plus ml-1" style="padding:5px 8px"><i class="ti ti-plus"></i></button></span>';
+            }
+            cols += '</div></td>';
+
+            cols += '<td class="product-price">' + fmt(basePrice) + '</td>';
+            cols += '<td class="discount">0.00</td>';
+            cols += '<td class="tax">0.00</td>';
+            cols += '<td class="sub-total">0.00</td>';
+
+            if (kind === 'return') {
+                cols += '<td class="is-exchange text-center"><input type="checkbox" name="is_exchange[]" class="exchange-checkbox" checked value="' + escapeAttr(code) + '" style="width:18px;height:18px;cursor:pointer" title="Check to include in exchange"></td>';
+            } else {
+                cols += '<td><button type="button" class="ibtnDel btn btn-danger btn-sm"><i class="ti ti-trash"></i></button></td>';
+            }
+
+            cols += '<input type="hidden" class="product_price" value="' + basePrice + '">';
+            cols += '<input type="hidden" class="sale-unit" name="sale_unit[]" value="' + escapeAttr(unitName) + '">';
+            cols += '<input type="hidden" class="sale-unit-names" value="' + escapeAttr(unitNames.join(',')) + '">';
+            cols += '<input type="hidden" class="sale-unit-operator" value="' + escapeAttr(unitOperators.join(',')) + '">';
+            cols += '<input type="hidden" class="sale-unit-operation-value" value="' + escapeAttr(unitValues.join(',')) + '">';
+            cols += '<input type="hidden" class="net_unit_price" name="net_unit_price[]" value="' + fmt(basePrice) + '">';
+            cols += '<input type="hidden" class="discount-value" name="discount[]" value="0.00">';
+            cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + num(p.tax_rate) + '">';
+            cols += '<input type="hidden" class="tax-name" value="' + escapeAttr(p.tax_name || 'No Tax') + '">';
+            cols += '<input type="hidden" class="tax-method" value="' + escapeAttr(p.tax_method || 1) + '">';
+            cols += '<input type="hidden" class="tax-value" name="tax[]" value="0.00">';
+            cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" value="0.00">';
+            cols += '<input type="hidden" name="type[]" value="' + kind + '">';
+            cols += '<input type="hidden" class="imei-number" name="imei_number[]" value="' + escapeAttr(isImeiRow ? p.imei_number : '') + '">';
+
+            $tr.html(cols);
+            $tr.data('base-price', basePrice)
+                .data('wholesale-price', wholesale)
+                .data('discount-per-unit', 0);
+
+            $table.find('tbody').append($tr);
+
+            if (isImeiRow) {
+                $tr.find('.qty').val(1).prop('readonly', true);
+            }
+            updateRowCalc($tr);
+            if (kind === 'new') enforceQuantity($tr);
+            recalculateAll();
+        }
+
+        /* ---------------- edit modal (Order Product click) ---------------- */
+        function modalUnit() {
+            var $sel = $('select[name="edit_unit"]');
+            if (!$sel.prop('disabled') && $sel.find(':selected').length) {
+                var $opt = $sel.find(':selected');
+                return { operator: $opt.data('operator') || '*', value: num($opt.data('operation-value')) || 1 };
+            }
+            return rowUnitData(currentEditRow);
+        }
+
+        function applyPriceOption() {
+            if (!currentEditRow || !currentEditRow.length) return;
+            var opt = $('#price_option').val();
+            var $price = $('input[name="edit_unit_price"]');
+            if (opt === 'custom') {
+                $price.prop('readonly', false);
+                return;
+            }
+            var baseVal = opt === 'wholesale'
+                ? num(currentEditRow.data('wholesale-price'))
+                : num(currentEditRow.data('base-price'));
+            $price.val(fmt(unitDisplayPrice(baseVal, modalUnit()))).prop('readonly', true);
+        }
+
+        function renderImeiSection($row) {
+            $(".imei-section").remove();
+            var imeiVal = $.trim($row.find('.imei-number').val() || '');
+            if (!imeiVal) return;
+            var imeis = imeiVal.split(',').filter(Boolean);
+            var html = '<div class="col-md-8 form-group imei-section"><label>IMEI or Serial Numbers</label><div class="table-responsive"><table id="imei-table" class="table table-hover"><tbody>';
+            $.each(imeis, function (i, imei) {
+                html += '<tr><td><input type="text" class="form-control imei-numbers" name="imei_numbers[]" value="' + escapeAttr(imei) + '" /></td>' +
+                    '<td><button type="button" class="imei-del btn btn-sm btn-danger">X</button></td></tr>';
+            });
+            html += '</tbody></table></div></div>';
+            $("#editModal .modal-element").append(html);
+        }
+
+        function openEditModal() {
+            var $row = currentEditRow;
+            if (!$row || !$row.length) return;
+            var isReturn = isReturnRow($row);
+
+            var productName = $.trim($row.find('.product-title strong').first().clone().children().remove().end().text());
+            var productCode = $.trim($row.find('.product-code').val() || '');
+            $('#modal_header').text(productName + ' [' + productCode + ']');
+
+            $('input[name="edit_qty"]').val($row.find('.qty').val());
+            $('input[name="edit_discount"]').val(fmt($row.data('discount-per-unit')));
+
+            /* Price Option — rebuilt for every row, always selectable */
+            var unit = rowUnitData($row);
+            var base = num($row.data('base-price'));
+            var $po = $('#price_option').empty();
+            $po.append($('<option/>', { value: 'default', text: 'Default Price (' + fmt(unitDisplayPrice(base, unit)) + ')' }));
+            var wholesale = num($row.data('wholesale-price'));
+            if (wholesale > 0) {
+                $po.append($('<option/>', { value: 'wholesale', text: 'Wholesale Price (' + fmt(unitDisplayPrice(wholesale, unit)) + ')' }));
+            }
+            $po.append($('<option/>', { value: 'custom', text: 'Custom Price' }));
+            $po.val('default');
+
+            $('input[name="edit_unit_price"]').val(fmt(unitDisplayPrice(base, unit))).prop('readonly', true);
+
+            /* tax rate */
+            var taxName = $.trim($row.find('.tax-name').val() || 'No Tax');
+            var tIdx = tax_name_all.indexOf(taxName);
+            $('select[name="edit_tax_rate"]').val(tIdx >= 0 ? tIdx : 0);
+
+            /* unit selector — locked for return rows (qty max is in the sale unit) */
+            var $unitSel = $('select[name="edit_unit"]').empty();
+            if (unit.names.length > 1 && !isReturn) {
+                $.each(unit.names, function (i, n) {
+                    $unitSel.append('<option data-operator="' + escapeAttr(unit.operators[i] || '*') +
+                        '" data-operation-value="' + escapeAttr(unit.values[i] || 1) + '" value="' + i + '">' +
+                        escapeHtml(n) + '</option>');
+                });
+                $unitSel.val(String(unit.index)).prop('disabled', false);
+            } else {
+                $unitSel.append('<option value="0">' +
+                    escapeHtml(unit.names[unit.index] || $.trim($row.find('.sale-unit').val()) || 'n/a') +
+                    '</option>');
+                $unitSel.prop('disabled', true);
+            }
+            $("#edit_unit").show();
+
+            renderImeiSection($row);
+            $('#editModal').modal('show');
+        }
+
+        $(document).on('click', '.edit-product', function (e) {
+            e.preventDefault();
+            currentEditRow = $(this).closest('tr');
+            rowindex = currentEditRow.index();
+            openEditModal();
+        });
+
+        $(document).on('change', '#price_option', applyPriceOption);
+        $(document).on('change', 'select[name="edit_unit"]', function () {
+            if (currentEditRow && $('#price_option').val() !== 'custom') applyPriceOption();
+        });
+
+        $(document).on('click', '#imei-table .imei-del', function () {
+            if (!currentEditRow || !currentEditRow.length) return;
+            var target = $(this).closest('tr').find('.imei-numbers').val();
+            $(this).closest('tr').remove();
+            var imeis = $.trim(currentEditRow.find('.imei-number').val() || '')
+                .split(',').filter(function (s) { return s && s !== target; });
+            currentEditRow.find('.imei-number').val(imeis.join(','));
+            $('input[name="edit_qty"]').val(imeis.length);
+            currentEditRow.find('.qty').val(imeis.length);
+            if (!imeis.length) {
+                $('#editModal').modal('hide');
+                currentEditRow.remove();
+                currentEditRow = null;
+                recalculateAll();
+                return;
+            }
+            updateRowCalc(currentEditRow);
+            recalculateAll();
+        });
+
+        $(document).on('click', 'button[name="update_btn"]', function () {
+            var $row = currentEditRow;
+            if (!$row || !$row.length) { $('#editModal').modal('hide'); return; }
+
+            var qty = num($('input[name="edit_qty"]').val());
+            var discount = num($('input[name="edit_discount"]').val());
+            var unitPrice = num($('input[name="edit_unit_price"]').val());
+
+            if (discount < 0 || discount > unitPrice) {
                 alert('Invalid Discount Input!');
                 return;
             }
-            if (edit_qty < 0) {
-                $('input[name="edit_qty"]').val(1);
-                edit_qty = 1;
-                alert("Quantity can't be less than 0");
+            if (qty < 1) {
+                alert("Quantity can't be less than 1");
+                return;
             }
-            var tax_rate_all = <?php echo json_encode($tax_rate_all); ?>;
-            tax_rate[rowindex] = parseFloat(tax_rate_all[$('select[name="edit_tax_rate"]').val()]);
-            tax_name[rowindex] = $('select[name="edit_tax_rate"] option:selected').text();
-            var product_type = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .product_type').val();
-            product_discount[rowindex] = $('input[name="edit_discount"]').val();
-            if (product_type == 'standard') {
-                row_unit_operator = $('#edit_unit select').find(':selected').data('operator');
-                row_unit_operation_value = $('#edit_unit select').find(':selected').data('operation-value');
-                if (row_unit_operator == '*') {
-                    product_price[rowindex] = $('input[name="edit_unit_price"]').val() * row_unit_operation_value;
-                } else {
-                    product_price[rowindex] = $('input[name="edit_unit_price"]').val() / row_unit_operation_value;
+
+            var imeiVal = $.trim($row.find('.imei-number').val() || '');
+            if (imeiVal) {
+                qty = imeiVal.split(',').filter(Boolean).length;
+                $('input[name="edit_qty"]').val(qty);
+            }
+
+            /* apply unit change (new rows only) */
+            var $unitSel = $('select[name="edit_unit"]');
+            if (!$unitSel.prop('disabled')) {
+                var $opt = $unitSel.find(':selected');
+                var newName = $.trim($opt.text());
+                if (newName) {
+                    var newOp = $opt.data('operator') || '*';
+                    var newV = num($opt.data('operation-value')) || 1;
+                    $row.data('base-price', unitToBasePrice(unitPrice, { operator: newOp, value: newV }));
+                    $row.find('.sale-unit').val(newName);
                 }
-                var position = $('select[name="edit_unit"]').val();
-                var temp_operator = temp_unit_operator[position],
-                    temp_operation_value = temp_unit_operation_value[position];
-                $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sale-unit').val(
-                    temp_unit_name[position]);
-                temp_unit_name.splice(position, 1);
-                temp_unit_operator.splice(position, 1);
-                temp_unit_operation_value.splice(position, 1);
-                temp_unit_name.unshift($('select[name="edit_unit"] option:selected').text());
-                temp_unit_operator.unshift(temp_operator);
-                temp_unit_operation_value.unshift(temp_operation_value);
-                unit_name[rowindex] = temp_unit_name.toString() + ',';
-                unit_operator[rowindex] = temp_unit_operator.toString() + ',';
-                unit_operation_value[rowindex] = temp_unit_operation_value.toString() + ',';
-            } else {
-                product_price[rowindex] = $('input[name="edit_unit_price"]').val();
+            } else if ($('#price_option').val() === 'custom') {
+                /* custom price on a locked unit: convert back to base */
+                $row.data('base-price', unitToBasePrice(unitPrice, rowUnitData($row)));
             }
-            checkDiscount(edit_qty, false, tableSelector);
+
+            /* tax */
+            var tIdx = parseInt($('select[name="edit_tax_rate"]').val(), 10) || 0;
+            $row.find('.tax-rate').val(num(tax_rate_all[tIdx]));
+            $row.find('.tax-name').val(tax_name_all[tIdx] || 'No Tax');
+
+            $row.data('discount-per-unit', discount);
+            $row.find('.qty').val(qty);
+
+            enforceQuantity($row);
+            updateRowCalc($row);
             $('#editModal').modal('hide');
+            currentEditRow = null;
             recalculateAll();
         });
 
-        // Plus/Minus buttons
-        $(document).on('click', 'table .plus', function() {
-            rowindex = $(this).closest('tr').index();
-            var $row = $(this).closest('tr'),
-                tableSelector = 'table.order-list';
-            if ($row.closest('table').hasClass('return-order-list')) {
-                tableSelector = 'table.return-order-list';
-            }
-            var qty = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
-            var max_qty = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').attr('max');
-            if (!qty) qty = 1;
-            else if (max_qty && qty >= max_qty) {
-                alert("Quantity cannot exceed available stock (" + max_qty + ").");
+        /* ---------------- table row events ---------------- */
+        $(document).on('click', '.ibtnDel', function () {
+            $(this).closest('tr').remove();
+            recalculateAll();
+        });
+
+        $(document).on('click', 'table .plus, table .minus', function () {
+            var $row = $(this).closest('tr');
+            var delta = $(this).hasClass('plus') ? 1 : -1;
+            var qty = num($row.find('.qty').val()) + delta;
+            if (qty < 1) qty = 1;
+            $row.find('.qty').val(qty);
+            enforceQuantity($row);
+            updateRowCalc($row);
+            recalculateAll();
+        });
+
+        $(document).on('change', 'table.order-list .qty, table.return-order-list .qty', function () {
+            var $row = $(this).closest('tr');
+            enforceQuantity($row);
+            updateRowCalc($row);
+            recalculateAll();
+        });
+
+        $(document).on('change', 'input.exchange-checkbox', recalculateAll);
+        $(document).on('blur change keyup', 'input[name="total_sale_discount"]', function () {
+            if (num($(this).val()) < 0) { $(this).val(0); }
+            recalculateAll();
+        });
+        $(document).on('change', 'select[name="order_tax_rate"]', recalculateAll);
+
+        /* ---------------- barcode scanner ---------------- */
+        var scannerObj = null, scannerActive = false, currentScannerType = 'new';
+
+        function startScanner() {
+            if (typeof Html5Qrcode === 'undefined') {
+                alert('Barcode scanner library could not be loaded. Please check your internet connection.');
                 return;
-            } else qty = parseFloat(qty) + 1;
-            if (is_variant[rowindex]) {
-                checkQuantity(String(qty), true, tableSelector);
-            } else {
-                checkDiscount(qty, true, tableSelector);
             }
-        });
-        $(document).on('click', 'table .minus', function() {
-            rowindex = $(this).closest('tr').index();
-            var $row = $(this).closest('tr'),
-                tableSelector = 'table.order-list';
-            if ($row.closest('table').hasClass('return-order-list')) {
-                tableSelector = 'table.return-order-list';
-            }
-            var qty = parseFloat($(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) - 1;
-            if (qty > 0) {
-                $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                if (is_variant[rowindex]) checkQuantity(String(qty), true, tableSelector);
-                else checkDiscount(qty, '3', tableSelector);
-            } else {
-                qty = 1;
-            }
-        });
-
-        // Batch change
-        $("#myTable").on("change", ".batch-no", function() {
-            rowindex = $(this).closest('tr').index();
-            var $row = $(this).closest('tr'),
-                tableSelector = 'table.order-list';
-            if ($row.closest('table').hasClass('return-order-list')) {
-                tableSelector = 'table.return-order-list';
-            }
-            var product_id = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-id')
-                .val();
-            var warehouse_id = $('#warehouse_id').val();
-            $.get('{{ url('/check-batch-availability') }}/' + product_id + '/' + $(this).val() + '/' +
-                warehouse_id,
-                function(data) {
-                    if (data['message'] != 'ok') {
-                        alert(data['message']);
-                        $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.batch-no').val(
-                            '');
-                        $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                            '.product-batch-id').val('');
-                        $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.expired-date')
-                            .text('');
-                    } else {
-                        $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                            '.product-batch-id').val(data['product_batch_id']);
-                        $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.expired-date')
-                            .text(data['expired_date']);
-                        code = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                            '.product-code').val();
-                        pos = product_code.indexOf(code);
-                        product_qty[pos] = data['qty'];
-                    }
-                });
-        });
-
-        // Product click - STOCK CHECK ONLY FOR NEW PRODUCT
-        $(document).on('click', '.product-img', function() {
-            var data = $(this).data();
-            if (data.type === 'new' && without_stock == 'no') {
-                var stock_qty = parseFloat(data.qty);
-                if (stock_qty <= 0) {
-                    alert('{{ __('file.Out of Stock!') }}');
-                    clearResults('new');
+            if (scannerActive) return;
+            if (!scannerObj) {
+                try {
+                    scannerObj = new Html5Qrcode('reader');
+                } catch (err) {
+                    alert('Scanner is not available on this device.');
                     return;
                 }
             }
-            productSearch(data);
+            scannerActive = true;
+            $('#closeScannerBtn').show();
+            scannerObj.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 300, height: 100 } },
+                function (decodedText) {
+                    stopScanner();
+                    if (!decodedText) return;
+                    var kind = currentScannerType;
+                    $(kind === 'return' ? '#sale-product-search-input' : '#product-search-input').val(decodedText);
+                    fetchSuggestions(String(decodedText).trim(), kind, true);
+                },
+                function () { /* per-frame decode errors — ignore */ }
+            ).catch(function () {
+                scannerActive = false;
+                $('#closeScannerBtn').hide();
+                alert('Unable to access the camera.');
+            });
+        }
+
+        function stopScanner() {
+            if (scannerObj && scannerActive) {
+                scannerActive = false;
+                scannerObj.stop().then(function () { $('#closeScannerBtn').hide(); })
+                    .catch(function () { $('#closeScannerBtn').hide(); });
+            } else {
+                $('#closeScannerBtn').hide();
+            }
+        }
+
+        function barcodeNew() { currentScannerType = 'new'; startScanner(); }
+        function barcodeSale() { currentScannerType = 'return'; startScanner(); }
+
+        $(document).on('click', '#closeScannerBtn', stopScanner);
+
+        /* ---------------- misc ---------------- */
+        function setCustomerGroupRate(id) {
+            if (!id) { customer_group_rate = 0; return; }
+            $.get('{{ url('exchange/getcustomergroup') }}/' + id, function (data) {
+                customer_group_rate = num(data) / 100;
+            }).fail(function () { customer_group_rate = 0; });
+        }
+
+        $(document).on('change', 'select[name="customer_id"]', function () {
+            setCustomerGroupRate($(this).val());
         });
 
-        function productSearch(data) {
-            var product_type = data.type;
-            if (data.embedded == 1) {
-                alert('{{ __('file.This product has been added using the weight scale machine.') }}');
+        /* reference number lookup — reload the page so the server renders the sale products */
+        $('#saleSearchBtn').on('click', function (e) {
+            e.preventDefault();
+            var ref = $('#sale_product_search').val().trim();
+            if (!ref) {
+                alert('Please enter a reference number');
                 return;
             }
-            if (data.type === 'new' && without_stock == 'no' && parseFloat(data[19]) <= 0) {
-                alert('Out of Stock!');
-                $('#product-search-input').val('');
-                clearResults('new');
-                return;
-            }
-            var item_code = data.code,
-                pre_qty = 0,
-                flag = true;
-            var tableSelector = 'table.order-list';
-            if (product_type === 'return') {
-                tableSelector = 'table.return-order-list';
-            }
-            $(".product-code").each(function(i) {
-                if ($(this).val().trim() == item_code) {
-                    rowindex = i;
-                    if (data.imei != 'null' && data.imei != '') {
-                        imeiNumbers = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .imei-number')
-                            .val();
-                        if (imeiNumbers && imeiNumbers.trim() !== '') {
-                            imeiNumbersArray = imeiNumbers.split(",");
-                            if (imeiNumbersArray.includes(data.imei)) {
-                                alert('Same imei or serial number is not allowed!');
-                                flag = false;
-                                $('#product-search-input').val('');
-                                $('#sale-product-search-input').val('');
-                                return;
-                            }
-                        }
-                    }
-                    pre_qty = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val();
-                }
-            });
-            if (flag) {
-                let product = {
-                    code: data.code,
-                    qty: data.qty,
-                    pre_qty: (parseFloat(pre_qty) + 1),
-                    imei: data.imei,
-                    embedded: data.embedded,
-                    batch: data.batch,
-                    price: data.price,
-                    customer_id: $('#customer_id').val()
-                };
-                $.ajax({
-                    type: 'GET',
-                    async: false,
-                    url: '{{ url('sales/lims_product_search') }}',
-                    data: {
-                        data: product
-                    },
-                    success: function(data) {
-                        if (data[23]) {
-                            data[15] = 1;
-                            pre_qty = 0;
-                        }
-                        if (pre_qty > 0 && data[21]) {
-                            var old_batch = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')')
-                                .find('.batch-no').val();
-                            if (old_batch && old_batch != data[22]) {
-                                pre_qty = 0;
-                                data[15] = 1;
-                            }
-                        }
-                        var flag = 1;
-                        if (pre_qty > 0) {
-                            var qty = data[15];
-                            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-                            product_price[rowindex] = parseFloat(data[2] * currency['exchange_rate']) +
-                                parseFloat(data[2] * currency['exchange_rate'] * customer_group_rate);
-                            checkDiscount(String(qty), true, tableSelector);
-                            flag = 0;
-                        }
-                        $("input[name='product_code_name']").val('');
-                        $("input[name='sale_product_code_name']").val('');
-                        if (flag) {
-                            addNewProduct(data, tableSelector);
-                        } else if (data[18] != 'null' && data[18] != '') {
-                            var imeiNumbers = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')')
-                                .find('.imei-number').val();
-                            if (imeiNumbers) imeiNumbers += ',' + data[18];
-                            else imeiNumbers = data[18];
-                            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                                '.imei-number').val(imeiNumbers);
-                        }
-                    }
-                });
-            }
-        }
-
-        function addNewProduct(data, tableSelector) {
-            var productName = (data[0] && data[0] != 'null') ? data[0] : 'Unknown Product';
-            var productCode = (data[1] && data[1] != 'null') ? data[1] : '';
-            var productPrice = parseFormattedNumber(data[2]) || 0;
-            var productQty = parseFormattedNumber(data[15]) || 1;
-            var maxStock = parseFormattedNumber(data[19]) || 99999;
-            var productType = data[20] || 'standard';
-            var isImei = data[13] || 0;
-            var isVariant = data[14] || 0;
-            var imeiNumber = (data[18] && data[18] != 'null') ? data[18] : '';
-
-            var sale_type = (tableSelector === 'table.return-order-list') ? 'return' : 'new';
-            $('.payment-btn').removeAttr('disabled');
-
-            var newRow = $('<tr id=' + productCode + '>');
-            var cols = '';
-            var temp_unit_name = (data[6] || '').split(',');
-            pos = product_code.indexOf(productCode);
-
-            let stockDisplay = '';
-            if (authUser <= 2 && (productType == 'standard' || productType == 'combo')) {
-                if (!imeiNumber || imeiNumber == 'null') {
-                    stockDisplay = ' | {{ __('file.In Stock') }} : <span class="in-stock">' + maxStock + '</span>';
-                }
-            }
-
-            if (authUser > 2) {
-                cols += '<td class="product-title"><strong>' + productName + '<br><span>' + productCode + '</span>' +
-                    stockDisplay + ' <strong class="product-price d-md-none"></strong>';
-            } else {
-                cols +=
-                    '<td class="product-title"><strong class="edit-product btn btn-link pl-0 pr-0" data-toggle="modal" data-target="#editModal">' +
-                    productName + ' <i class="ti ti-edit"></i></strong><br><span>' + productCode + '</span>' +
-                    stockDisplay + ' <strong class="product-price d-md-none"></strong>';
-            }
-
-            if (data[12]) {
-                cols +=
-                    '<br><input style="font-size:13px;padding:3px 25px 3px 10px;height:30px !important" type="text" class="form-control batch-no" value="' +
-                    (data[22] || '') +
-                    '" required/> <input type="hidden" class="product-batch-id" name="product_batch_id[]" value="' + (data[
-                        21] || '') + '"/>';
-            } else {
-                cols +=
-                    '<input type="text" class="form-control batch-no d-none" disabled/> <input type="hidden" class="product-batch-id" name="product_batch_id[]"/>';
-            }
-            cols += '</td>';
-
-            cols += '<td><div class="input-group"><span class="input-group-btn">';
-            if (!imeiNumber || imeiNumber == 'null') {
-                cols +=
-                    '<button type="button" class="btn btn-default minus mr-1" style="padding:5px 8px"><i class="ti ti-minus"></i></button></span>';
-            }
-            cols +=
-                '<input type="number" name="qty[]" class="form-control qty numkey input-number" style="font-size:13px;max-width:50px;padding:0 0;text-align:center" step="any" value="' +
-                productQty + '" max="' + maxStock + '" required><span class="input-group-btn">';
-            if (!imeiNumber || imeiNumber == 'null') {
-                cols +=
-                    '<button type="button" class="btn btn-default plus ml-1" style="padding:5px 8px"><i class="ti ti-plus"></i></button>';
-            }
-            cols += '</span></div></td>';
-
-            cols += '<td class="product-price">' + productPrice.toFixed(decimal) + '</td>';
-            cols += '<td class="discount">0.00</td>';
-            cols += '<td class="tax">0.00</td>';
-            cols += '<td class="sub-total">' + productPrice.toFixed(decimal) + '</td>';
-
-            if (tableSelector === 'table.return-order-list') {
-                cols += '<td class="is-exchange"><input type="checkbox" id="exchange_' + productCode +
-                    '" name="is_exchange[]" class="exchange-checkbox" checked value="' + productCode +
-                    '" onchange="calculateExchangeValue()" style="width: 18px; height: 18px; cursor: pointer;"></td>';
-            } else {
-                cols +=
-                    '<td><button type="button" class="ibtnDel btn btn-danger btn-sm mr-2"><i class="ti ti-trash"></i></button></td>';
-            }
-
-            cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + productCode + '"/>';
-            cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + (data[9] || '') + '"/>';
-            cols += '<input type="hidden" class="product_type" name="product_type[]" value="' + productType + '"/>';
-            cols += '<input type="hidden" class="product_price" value="' + productPrice + '"/>';
-            cols += '<input type="hidden" class="sale-unit" name="sale_unit[]" value="' + (temp_unit_name[0] || 'n/a') +
-                '"/>';
-            cols += '<input type="hidden" class="net_unit_price" name="net_unit_price[]" value="' + productPrice.toFixed(
-                decimal) + '"/>';
-            cols += '<input type="hidden" class="discount-value" name="discount[]" value="0.00"/>';
-            cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + parseFormattedNumber(data[3]) +
-                '"/>';
-            cols += '<input type="hidden" class="tax-value" name="tax[]" value="0.00"/>';
-            cols += '<input type="hidden" class="tax-name" value="' + (data[4] || 'No Tax') + '" />';
-            cols += '<input type="hidden" class="tax-method" value="' + (data[5] || '1') + '" />';
-            cols += '<input type="hidden" class="sale-unit-operator" value="' + (data[7] || ',') + '"/>';
-            cols += '<input type="hidden" class="sale-unit-operation-value" value="' + (data[8] || ',') + '"/>';
-            cols += '<input type="hidden" class="subtotal-value" name="subtotal[]" value="' + productPrice.toFixed(
-                decimal) + '"/>';
-            cols += '<input type="hidden" name="type[]" value="' + sale_type + '">';
-
-            if (imeiNumber && imeiNumber != 'null') {
-                cols += '<input type="hidden" class="imei-number" name="imei_number[]" value="' + imeiNumber + '" />';
-            } else {
-                cols += '<input type="hidden" class="imei-number" name="imei_number[]" value="" />';
-            }
-
-            if (data[23]) {
-                cols += '<input type="hidden" class="topping_product" name="topping_product[]" value="" />';
-                cols += '<input type="hidden" class="topping-price" name="topping-price" value="" />';
-            }
-
-            newRow.append(cols);
-            $(tableSelector + ' tbody').prepend(newRow);
-            rowindex = 0;
-
-            var calculatedPrice = productPrice + (productPrice * (customer_group_rate || 0));
-            product_price.unshift(calculatedPrice);
-
-            if (data[16]) {
-                var wholesalePrice = parseFormattedNumber(data[16]) || 0;
-                wholesale_price.unshift(wholesalePrice + (wholesalePrice * (customer_group_rate || 0)));
-            } else {
-                wholesale_price.unshift(0);
-            }
-
-            cost.unshift(parseFormattedNumber(data[17]) || 0);
-            product_discount.unshift(0);
-            tax_rate.unshift(parseFormattedNumber(data[3]) || 0);
-            tax_name.unshift(data[4] || 'No Tax');
-            tax_method.unshift(data[5] || '1');
-            unit_name.unshift(data[6] || '');
-            unit_operator.unshift(data[7] || '');
-            unit_operation_value.unshift(data[8] || '');
-            is_imei.unshift(isImei);
-            is_variant.unshift(isVariant);
-
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product_price').val(calculatedPrice);
-
-            checkQuantity(String(productQty), true, tableSelector);
-            checkDiscount(String(productQty), true, tableSelector);
-
-            if (data[16]) {
-                populatePriceOption();
-                $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.edit-product').click();
-            }
-
-            setTimeout(function() {
-                recalculateAll();
-            }, 100);
-        }
-
-        function populatePriceOption() {
-            $('#editModal select[name=price_option]').empty();
-            $('#editModal select[name=price_option]').append('<option value="' + product_price[rowindex] + '">' +
-                product_price[rowindex] + '</option>');
-            if (wholesale_price[rowindex] > 0) $('#editModal select[name=price_option]').append('<option value="' +
-                wholesale_price[rowindex] + '">' + wholesale_price[rowindex] + '</option>');
-            $('.selectpicker').selectpicker('refresh');
-        }
-
-        function getRowUnitData(tableSelector) {
-            var $row = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')');
-            var operator = ($row.find('.sale-unit-operator').val() || '').split(',');
-            var operationValue = ($row.find('.sale-unit-operation-value').val() || '').split(',');
-
-            return {
-                operator: operator[0] || '*',
-                operationValue: parseFloat(operationValue[0]) || 1
-            };
-        }
-
-        function getPendingReturnQtyForProduct(productId, productCode) {
-            var pendingReturnQty = 0;
-
-            $('table.return-order-list tbody tr').each(function() {
-                var $row = $(this);
-                var rowProductId = String($row.find('.product-id').val() || '');
-                var rowProductCode = String($row.find('.product-code').val() || '');
-
-                if (!$row.find('.exchange-checkbox').is(':checked')) {
-                    return;
-                }
-
-                if (rowProductId === String(productId || '') || rowProductCode === String(productCode || '')) {
-                    var qty = parseFloat($row.find('.qty').val()) || 0;
-                    var operator = ($row.find('.sale-unit-operator').val() || '').split(',');
-                    var operationValue = ($row.find('.sale-unit-operation-value').val() || '').split(',');
-                    var unitOperator = operator[0] || '*';
-                    var unitOperationValue = parseFloat(operationValue[0]) || 1;
-
-                    pendingReturnQty += unitOperator === '*' ? qty * unitOperationValue : qty / unitOperationValue;
-                }
-            });
-
-            return pendingReturnQty;
-        }
-
-        function edit() {
-            $(".imei-section").remove();
-            var tableSelector = 'table.order-list',
-                $row = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-            if ($row.length === 0) {
-                $row = $('table.return-order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-                tableSelector = 'table.return-order-list';
-            }
-            if (is_imei[rowindex]) {
-                var imeiNumbers = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number')
-                    .val();
-                if (imeiNumbers && imeiNumbers.length) {
-                    imeiArrays = [...new Set(imeiNumbers.split(","))];
-                    htmlText =
-                        `<div class="col-md-8 form-group imei-section"><label>IMEI or Serial Numbers</label><div class="table-responsive"><table id="imei-table" class="table table-hover"><tbody>`;
-                    for (var i = 0; i < imeiArrays.length; i++) {
-                        htmlText +=
-                            `<tr><td><input type="text" class="form-control imei-numbers" name="imei_numbers[]" value="` +
-                            imeiArrays[i] +
-                            `" /></td><td><button type="button" class="imei-del btn btn-sm btn-danger">X</button></td></tr>`;
-                    }
-                    htmlText += `</tbody></table></div></div>`;
-                    $("#editModal .modal-element").append(htmlText);
-                }
-            }
-            populatePriceOption();
-            $("#product-cost").text(cost[rowindex]);
-            var row_product_name_code = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                'td:nth-child(1)').text().trim();
-            if (!row_product_name_code) {
-                row_product_name_code = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find(
-                    'td:nth-child(1) strong').text().trim();
-            }
-            $('#modal_header').text(row_product_name_code);
-            var qty = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val();
-            $('input[name="edit_qty"]').val(qty);
-            cur_product_id = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
-            @if (isset($draft_product_discount))
-                if (product_discount[rowindex] < 1) {
-                    draft_discounts = @json($draft_product_discount['discount']);
-                    product_discount[rowindex] = draft_discounts[cur_product_id];
-                }
-            @endif
-            $('input[name="edit_discount"]').val(parseFloat(product_discount[rowindex]).toFixed(
-                {{ $general_setting->decimal }}));
-            var tax_name_all = <?php echo json_encode($tax_name_all); ?>;
-            pos = tax_name_all.indexOf(tax_name[rowindex]);
-            $('select[name="edit_tax_rate"]').val(pos);
-            var row_product_code = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code')
-                .val();
-            var product_type = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product_type').val();
-            if (product_type == 'standard') {
-                unitConversion();
-                temp_unit_name = (unit_name[rowindex]).split(',');
-                temp_unit_name.pop();
-                temp_unit_operator = (unit_operator[rowindex]).split(',');
-                temp_unit_operator.pop();
-                temp_unit_operation_value = (unit_operation_value[rowindex]).split(',');
-                temp_unit_operation_value.pop();
-                $('select[name="edit_unit"]').empty();
-                $.each(temp_unit_name, function(key, value) {
-                    $('select[name="edit_unit"]').append('<option data-operator="' + temp_unit_operator[key] +
-                        '" data-operation-value="' + temp_unit_operation_value[key] + '" value="' + key + '">' +
-                        value + '</option>');
-                });
-                $("#edit_unit").show();
-            } else {
-                row_product_price = product_price[rowindex];
-                $("#edit_unit").hide();
-            }
-            $('input[name="edit_unit_price"]').val(row_product_price.toFixed({{ $general_setting->decimal }}));
-            $('.selectpicker').selectpicker('refresh');
-        }
-
-        $(document).on("click", "table#imei-table tbody .imei-del", function() {
-            var edit_qty = parseFloat($('input[name="edit_qty"]').val());
-            edit_qty = (edit_qty - 1);
-            $('input[name="edit_qty"]').val(edit_qty);
-            var tableSelector = 'table.order-list',
-                $row = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-            if ($row.length === 0) {
-                $row = $('table.return-order-list tbody tr:nth-child(' + (rowindex + 1) + ')');
-                tableSelector = 'table.return-order-list';
-            }
-            let imeis = $(tableSelector + ' tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(),
-                target = $(this).closest("tr").find('.imei-numbers').val();
-            $(this).closest("tr").remove();
-            let arr = imeis.split(',').map(s => s.trim());
-            arr = arr.filter(i => i !== target);
-            let updated = arr.join(',');
-            $(tableSelector + ' tr:nth-child(' + (rowindex + 1) + ')').find('.imei-number').val(updated);
-            if (edit_qty == 0) {
-                $('#editModal').modal('hide');
-                $(tableSelector + ' tr:eq(' + rowindex + ')').remove();
-            }
-            $(tableSelector + ' tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(edit_qty);
-            checkDiscount(edit_qty, false, tableSelector);
-            recalculateAll();
+            window.location.href = '{{ route('exchange.create') }}?reference_no=' + encodeURIComponent(ref);
         });
 
-        function checkDiscount(qty, flag, tableSelector = 'table.order-list', price = 0) {
-            var customer_id = $('#customer_id').val(),
-                warehouse_id = $('#warehouse_id').val(),
-                product_id = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
-            $.ajax({
-                type: 'GET',
-                async: false,
-                url: '{{ url('/') }}/sales/check-discount?qty=' + qty + '&customer_id=' + customer_id +
-                    '&product_id=' + product_id + '&warehouse_id=' + warehouse_id,
-                success: function(data) {
-                    if (product_price[rowindex].length == 0) {
-                        product_price[rowindex] = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) +
-                            ') .product_price').val();
-                    }
-                    product_price[rowindex] = parseFloat(product_price[rowindex] * currency['exchange_rate']) +
-                        parseFloat(product_price[rowindex] * currency['exchange_rate'] * customer_group_rate);
-                    var productDiscount = parseFloat($('#discount').text());
-                    if (flag == true) $('#discount').text(productDiscount + data[2]);
-                    else if (flag == false) $('#discount').text(productDiscount - data[2] * qty);
-                    else if (flag == 'input') $('#discount').text(productDiscount - data[2] * previousqty +
-                        data[2] * qty);
-                    else $('#discount').text(productDiscount - data[2]);
-                }
-            });
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-            flag = true;
-            checkQuantity(String(qty), flag, tableSelector);
-        }
-
-        function checkQuantity(sale_qty, flag, tableSelector = 'table.order-list') {
-            var $row = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')');
-            var row_product_code = $row.find('.product-code').val();
-            var row_product_id = $row.find('.product-id').val();
-            var qty = parseFloat($row.find('.qty').attr('max'));
-            var product_type = $row.find('.product_type').val();
-            var isReturnTable = tableSelector.includes('return-order-list');
-            if (without_stock == 'no' && !isReturnTable) {
-                if (product_type && (product_type.trim() == 'standard' || product_type.trim() == 'combo')) {
-                    var unitData = getRowUnitData(tableSelector);
-                    var parsedSaleQty = parseFloat(sale_qty) || 0;
-                    var total_qty = (unitData.operator == '*') ?
-                        parsedSaleQty * unitData.operationValue :
-                        parsedSaleQty / unitData.operationValue;
-                    var availableQty = (isNaN(qty) ? 0 : qty) + getPendingReturnQtyForProduct(row_product_id, row_product_code);
-
-                    if (total_qty > availableQty) {
-                        alert('Quantity exceeds stock quantity!');
-                        if (flag) {
-                            sale_qty = Math.max(1, parsedSaleQty - 1);
-                            checkQuantity(sale_qty, true, tableSelector);
-                        } else {
-                            edit();
-                            return;
-                        }
-                    }
-                }
-            }
-            $row.find('.qty').val(sale_qty);
-            if (!flag) {
-                $('#editModal').modal('hide');
-            }
-            calculateRowProductData(sale_qty, tableSelector);
-            recalculateAll();
-        }
-
-        function unitConversion() {
-            var row_unit_operator = unit_operator[rowindex].slice(0, unit_operator[rowindex].indexOf(",")),
-                row_unit_operation_value = unit_operation_value[rowindex].slice(0, unit_operation_value[rowindex].indexOf(
-                    ","));
-            if (row_unit_operator == '*') {
-                row_product_price = product_price[rowindex] * row_unit_operation_value;
-            } else {
-                row_product_price = product_price[rowindex] / row_unit_operation_value;
-            }
-        }
-
-        function calculateRowProductData(quantity, tableSelector = 'table.order-list') {
-            if (product_discount[rowindex] < 1) {
-                cur_product_id = $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ') .product-id').val();
-                @if (isset($draft_product_discount))
-                    if (product_discount[rowindex] < 1) {
-                        draft_discounts = @json($draft_product_discount['discount']);
-                        product_discount[rowindex] = draft_discounts[cur_product_id];
-                    }
-                @endif
-            }
-            if (product_type[pos] == 'standard') unitConversion();
-            else row_product_price = product_price[rowindex];
-            var net_unit_price, tax, sub_total, sub_total_unit;
-            if (tax_method[rowindex] == 1) {
-                net_unit_price = row_product_price - product_discount[rowindex];
-                tax = net_unit_price * quantity * (tax_rate[rowindex] / 100);
-                sub_total = (net_unit_price * quantity) + tax;
-                sub_total_unit = parseFloat(quantity) ? sub_total / quantity : sub_total;
-            } else {
-                sub_total_unit = row_product_price - product_discount[rowindex];
-                net_unit_price = (100 / (100 + tax_rate[rowindex])) * sub_total_unit;
-                tax = (sub_total_unit - net_unit_price) * quantity;
-                sub_total = sub_total_unit * quantity;
-            }
-            var topping_price = ($(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.topping-price')
-                .val() * quantity) || 0;
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.discount-value').val((product_discount[
-                rowindex] * quantity).toFixed({{ $general_setting->decimal }}));
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-rate').val(tax_rate[rowindex]
-                .toFixed({{ $general_setting->decimal }}));
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.net_unit_price').val(net_unit_price
-                .toFixed({{ $general_setting->decimal }}));
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.tax-value').val(tax.toFixed(
-                {{ $general_setting->decimal }}));
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-price').text(sub_total_unit
-                .toFixed({{ $general_setting->decimal }}));
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.sub-total').text((sub_total +
-                topping_price).toFixed({{ $general_setting->decimal }}));
-            $(tableSelector + ' tbody tr:nth-child(' + (rowindex + 1) + ')').find('.subtotal-value').val((sub_total +
-                topping_price).toFixed({{ $general_setting->decimal }}));
-        }
-
-        function cancel(rownumber) {
-            while (rownumber >= 0) {
-                product_price.pop();
-                wholesale_price.pop();
-                product_discount.pop();
-                tax_rate.pop();
-                tax_name.pop();
-                tax_method.pop();
-                unit_name.pop();
-                unit_operator.pop();
-                unit_operation_value.pop();
-                $('table.order-list tbody tr:last').remove();
-                rownumber--;
-            }
-            $('input[name="shipping_cost"]').val('');
-            $('input[name="order_discount_value"]').val('');
-            $('select[name="order_tax_rate"]').val(0);
-            recalculateAll();
-        }
-
-        $(window).keydown(function(e) {
+        /* prevent Enter from submitting the main form (search boxes handle Enter themselves) */
+        $(window).keydown(function (e) {
             if (e.which == 13) {
                 var $targ = $(e.target);
-                if (!$targ.is("textarea") && !$targ.is(":button,:submit")) {
-                    var focusNext = false;
-                    $(this).find(":input:visible:not([disabled],[readonly]), a").each(function() {
-                        if (this === e.target) {
-                            focusNext = true;
-                        } else if (focusNext) {
-                            $(this).focus();
-                            return false;
-                        }
-                    });
+                if (!$targ.is("textarea") && !$targ.is(":button,:submit") &&
+                    !$targ.is('#product-search-input') && !$targ.is('#sale-product-search-input')) {
                     return false;
                 }
             }
         });
 
-        $('#payment-form').on('submit', function(e) {
-            var rownumber = $('table.order-list tbody tr:last').index();
-            $("table.order-list tbody .qty, table.return-order-list tbody .qty").each(function() {
-                if ($(this).val() == '') {
-                    alert('One of products has no quantity!');
-                    e.preventDefault();
-                }
-            });
-            if (rownumber < 0) {
-                alert("Please insert product to order table!");
-                e.preventDefault();
-            } else if (parseFloat($('input[name="total_qty"]').val()) <= 0) {
-                alert('Product quantity is 0');
-                e.preventDefault();
-            } else {
-                $("#submit-button").prop('disabled', true);
-                $(".batch-no").prop('disabled', false);
-            }
-        });
+        /* submit guard */
+        $('#payment-form').on('submit', function (e) {
+            var hasReturn = $('table.return-order-list tbody .exchange-checkbox:checked').length > 0;
+            var hasNew = $('table.order-list tbody tr').length > 0;
 
-        function toggleExchange(el) {
-            const row = el.closest('tr');
-            const exchangeInputs = row.querySelectorAll('input[name^="exchange["]');
-            exchangeInputs.forEach(input => {
-                input.disabled = !el.checked;
-            });
-        }
-
-        $('#saleSearchBtn').on('click', function() {
-            let reference = $('#sale_product_search').val().trim();
-            if (reference === '') {
-                alert('Please enter a reference number');
+            if (!hasReturn && !hasNew) {
+                alert('Please select product(s) to return or add new product(s)!');
+                e.preventDefault();
                 return;
             }
 
-            $.ajax({
-                url: "{{ route('sale.exchange.search') }}",
-                type: "GET",
-                data: {
-                    reference: reference
-                },
-                success: function(res) {
-                    if (res.status) {
-                        $('#sale-product-table tbody').html(res.html);
-
-                        setTimeout(function() {
-                            recalculateAll();
-                            $('table.return-order-list .exchange-checkbox').first().prop(
-                                'checked', true).trigger('change');
-                        }, 100);
-                    } else {
-                        alert(res.message || 'Sale not found');
-                    }
-                },
-                error: function() {
-                    alert('Error searching reference number');
-                }
+            var badQty = false;
+            $("table.order-list tbody .qty, table.return-order-list tbody .qty").each(function () {
+                if ($(this).val() === '') badQty = true;
             });
-        });
-
-        document.getElementById('saleSearchBtn').addEventListener('click', function(e) {
-            e.preventDefault();
-
-            let ref = document.getElementById('sale_product_search').value;
-
-            if (!ref) {
-                alert('Please enter reference number');
+            if (badQty) {
+                alert('One of products has no quantity!');
+                e.preventDefault();
                 return;
             }
 
-            window.location.href = "{{ route('exchange.create') }}?reference_no=" + encodeURIComponent(ref);
+            $("#submit-button").prop('disabled', true);
+        });
+
+        /* ---------------- init ---------------- */
+        $(document).ready(function () {
+            /* mirror server-rendered row data into jQuery data before anything else */
+            $('table.return-order-list tbody tr').each(function () { initRowData($(this)); });
+
+            $('select[name="customer_id"]').val($('input[name="customer_id_hidden"]').val());
+            $('select[name="warehouse_id"]').val($('input[name="warehouse_id_hidden"]').val());
+            $('select[name="biller_id"]').val($('input[name="biller_id_hidden"]').val());
+            if ($.fn.selectpicker) { $('.selectpicker').selectpicker('refresh'); }
+
+            wireAutocomplete($('#product-search-input'), 'new');
+            wireAutocomplete($('#sale-product-search-input'), 'return');
+            $('#product-search-input').focus();
+
+            setCustomerGroupRate($('select[name="customer_id"]').val());
+            recalculateAll();
         });
     </script>
-    <script type="text/javascript" src="https://js.stripe.com/v3/"></script>
 @endpush

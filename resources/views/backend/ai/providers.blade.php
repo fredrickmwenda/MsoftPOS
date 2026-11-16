@@ -79,14 +79,14 @@ textarea.aip-form-control { min-height: 80px; resize: vertical; font-family: mon
         <div class="aip-card">
             <div class="aip-card-header">
                 <h3 class="aip-card-title">AI Provider Settings</h3>
-                
-                
+
+
                 <button type="button" class="aip-btn aip-btn-primary" id="aipAddBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     Add Provider
                 </button>
-               
-                
+
+
             </div>
             <div class="aip-card-body">
 
@@ -98,8 +98,8 @@ textarea.aip-form-control { min-height: 80px; resize: vertical; font-family: mon
                 </div>
 
                 {{-- Inline Add/Edit form (toggled via JS) --}}
-                
-                
+
+
                 <div class="aip-card" id="aipFormCard" style="display: none; margin-bottom: 20px;">
                     <div class="aip-card-header" style="background: #f8f6fd;">
                         <h4 class="aip-card-title" id="aipFormTitle" style="font-size: 1rem;">New Provider</h4>
@@ -165,8 +165,8 @@ textarea.aip-form-control { min-height: 80px; resize: vertical; font-family: mon
                         </form>
                     </div>
                 </div>
-               
-                
+
+
 
                 {{-- Providers table --}}
                 <div class="aip-table-wrap">
@@ -252,6 +252,9 @@ textarea.aip-form-control { min-height: 80px; resize: vertical; font-family: mon
 
 @push('scripts')
 <script type="text/javascript">
+$("ul#ai-assistant").siblings('a').attr('aria-expanded','true');
+$("ul#ai-assistant").addClass("show");
+$("ul#ai-assistant #ai-provider-settings-menu").addClass("active");
 document.addEventListener('DOMContentLoaded', function() {
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const apiBase    = "{{ route('ai-assistant.providers.index') }}";
