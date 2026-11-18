@@ -93,6 +93,7 @@ use App\Http\Controllers\PolicyController;
 use App\Http\Controllers\SalaryTemplateController;
 use App\Http\Controllers\PayrollPaymentController;
 use App\Http\Controllers\SocialMediaController;
+use App\Http\Controllers\VariantTypeController;
 
 
 // ---------------------------------------
@@ -126,6 +127,10 @@ Route::get('/customer-display', function() {
 
 Route::get('stock-count/products',[StockCountController::class, 'getProducts'])->name('stock-count.products');
 Route::get('stock-count/batches',[StockCountController::class, 'getBatches'])->name('stock-count.batches');
+
+
+//set them as Resource
+Route::resource('variant-types', VariantTypeController::class);
 
 
 
