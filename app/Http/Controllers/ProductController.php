@@ -420,65 +420,98 @@ class ProductController extends Controller
     }
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | VARIANT-AWARE store() + updateProduct() for ProductController
-    |--------------------------------------------------------------------------
-    | HOW TO INSTALL
-    | 1) In create() add this line and pass it to the view:
-    |
-    |       $variant_type_values = DB::table('variant_types')->orderBy('id')->get()->map(function($type) {
-    |           $type->values = DB::table('variants')->where('variant_type_id', $type->id)
-    |                       ->orderBy('id')->pluck('name')->values();
-    |           return $type;
-    |       });
-    |       return view('backend.product.create', compact(..., 'variant_type_values'));
-    |
-    | 2) Replace your store() and updateProduct() with the two methods below.
-    | 3) Add the two private helpers at the bottom of the class.
-    |
-    | WHAT IT MATCHES (per your SQL dumps):
-    |  - variants table      -> only typed VALUES (White..4xl), never combinations
-    |  - product_variants    -> one row per combination, name = "White/S",
-    |                           item_code = "White/S-10001", variant_id = the COLOR id,
-    |                           position = running 1..N, qty = per-combo qty
-    |  - product_warehouse  -> one row per combination per warehouse,
-    |                           variant_id = product_variants.id (NOT variants.id)
-    |--------------------------------------------------------------------------
-    */
+    /**
+     * ============================================================================
+     * ProductController — UPDATED store() and updateProduct() methods
+     * ============================================================================
+     *
+     * WHAT CHANGED IN THIS VERSION:
+     *
+     *   For products WITH variants (is_variant = 1):
+     *
+     *   1. Each variant combination's qty is AUTOMATICALLY stored in
+     *      product_warehouse for every active warehouse — you no longer
+     *      need to check the "Initial Stock" checkbox.
+     *
+     *   2. The product's qty field is AUTOMATICALLY set to the SUM of all
+     *      variant combination qtys.
+     *
+     *      Example: if you create Polo with variants:
+     *        White/S  qty=5
+     *        White/M  qty=10
+     *        Black/S  qty=3
+     *      Then:
+     *        - product_warehouse gets 3 rows (one per combo) with qty 5, 10, 3
+     *        - products.qty = 5 + 10 + 3 = 18
+     *
+     *   For products WITHOUT variants:
+     *      The original behavior is preserved (Initial Stock checkbox works
+     *      as before via autoPurchase).
+     *
+     *   The old validation that required "warehouse stock == variant total"
+     *   when both is_initial_stock and is_variant were checked is REMOVED —
+     *   variant qtys ARE the stock, so there's nothing to validate against.
+     *
+     * INSTALL: Replace your store() and updateProduct() methods in
+     *          app/Http/Controllers/ProductController.php with these two.
+     * ============================================================================
+     */
 
+
+    /**
+     * ============================================================================
+     * ProductController — CORRECTED store() and updateProduct() methods
+     * ============================================================================
+     *
+     * WHAT WAS WRONG:
+     *   - For variant products, stock was being auto-written to EVERY active
+     *     warehouse, ignoring the "variant_warehouse_id" dropdown on the form.
+     *   - Result: variant qtys were duplicated across all warehouses and the
+     *     user could not pick which warehouse should hold the variant stock.
+     *
+     * WHAT IS FIXED:
+     *   - Variant stock is now written ONLY to the warehouse chosen in the
+     *     "variant_warehouse_id" <select> on the form.
+     *   - If the dropdown is missing or empty (e.g. only one warehouse exists),
+     *     the controller auto-falls back to the first / only active warehouse.
+     *   - On update, if the chosen warehouse changes, the old warehouse rows
+     *     for the variants are removed so the stock physically "moves" to the
+     *     new warehouse instead of being duplicated.
+     *   - Non-variant "Initial Stock" logic is completely untouched and works
+     *     exactly as before.
+     *
+     * INSTALL:
+     *   Replace your existing store() and updateProduct() methods inside
+     *   app/Http/Controllers/ProductController.php with the two methods below.
+     * ============================================================================
+     */
+
+
+    /**
+     * ============================================================================
+     * store()
+     * ============================================================================
+     */
     public function store(Request $request)
     {
         $this->validate($request, [
             'code' => [
                 'max:255',
-                    Rule::unique('products')->where(function ($query) {
+                Rule::unique('products')->where(function ($query) {
                     return $query->where('is_active', 1);
                 }),
             ],
             'name' => [
                 'max:255',
-                    Rule::unique('products')->where(function ($query) {
+                Rule::unique('products')->where(function ($query) {
                     return $query->where('is_active', 1);
                 }),
             ]
         ]);
 
-        // 🟩 variant initial stock must match warehouse stock before anything is written
-        if($request->boolean('is_initial_stock') && $request->boolean('is_variant') && !$request->boolean('is_batch')) {
-            $variantTotal = array_sum(array_map('floatval', $request->variant_qty ?? []));
-            foreach($request->stock ?? [] as $warehouseQty) {
-                $warehouseQty = (float)$warehouseQty;
-                if($warehouseQty > 0 && $warehouseQty != $variantTotal) {
-                    return redirect()->back()->withInput()->with('not_permitted',
-                        "Initial stock per warehouse ($warehouseQty) must equal the total variant quantity ($variantTotal)");
-                }
-            }
-        }
-
-        // 🟩 build the combination matrix BEFORE json_encode() overwrites the raw arrays
+        // Build the combination matrix BEFORE json_encode() overwrites raw arrays
         $variant_combinations = [];
-        if($request->boolean('is_variant')) {
+        if ($request->boolean('is_variant')) {
             $variant_combinations = $this->buildVariantCombinations($request->input('variant_value', []));
         }
 
@@ -491,40 +524,42 @@ class ProductController extends Controller
             $data['wholesale_price'] = $request->wholesale_price;
         }
 
-        if(isset($data['is_variant'])) {
+        if (isset($data['is_variant'])) {
             $data['variant_option'] = json_encode($data['variant_option']);
-            $data['variant_value'] = json_encode($data['variant_value']);
-        }
-        else {
+            $data['variant_value']  = json_encode($data['variant_value']);
+        } else {
             $data['variant_option'] = $data['variant_value'] = null;
         }
         $data['name'] = preg_replace('/[\n\r]/', "<br>", htmlspecialchars(trim($data['name'])));
         $data['slug'] = Str::slug($data['name'], '-');
         $data['slug'] = preg_replace('/[^A-Za-z0-9\-]/', '', $data['slug']);
-        $data['slug'] = str_replace( '\/', '/', $data['slug'] );
-        if($data['type'] == 'combo') {
+        $data['slug'] = str_replace('\/', '/', $data['slug']);
+        if ($data['type'] == 'combo') {
             $data['product_list'] = implode(",", $data['product_id']);
             $data['variant_list'] = implode(",", $data['variant_id']);
-            $data['qty_list'] = implode(",", $data['product_qty']);
-            $data['price_list'] = implode(",", $data['unit_price']);
+            $data['qty_list']     = implode(",", $data['product_qty']);
+            $data['price_list']   = implode(",", $data['unit_price']);
+            $data['cost'] = $data['unit_id'] = $data['purchase_unit_id'] = $data['sale_unit_id'] = 0;
+        } elseif ($data['type'] == 'digital' || $data['type'] == 'service') {
             $data['cost'] = $data['unit_id'] = $data['purchase_unit_id'] = $data['sale_unit_id'] = 0;
         }
-        elseif($data['type'] == 'digital' || $data['type'] == 'service')
-            $data['cost'] = $data['unit_id'] = $data['purchase_unit_id'] = $data['sale_unit_id'] = 0;
 
         $data['product_details'] = str_replace('"', '@', $data['product_details']);
 
-        if($data['starting_date'])
+        if ($data['starting_date']) {
             $data['starting_date'] = date('Y-m-d', strtotime($data['starting_date']));
-        if($data['last_date'])
+        }
+        if ($data['last_date']) {
             $data['last_date'] = date('Y-m-d', strtotime($data['last_date']));
-        $data['is_active'] = true;
-        $data['is_ecommerce'] = $request->boolean('is_ecommerce');
-        $data['is_featured'] = $request->boolean('is_ecommerce');
+        }
+        $data['is_active']     = true;
+        $data['is_ecommerce']  = $request->boolean('is_ecommerce');
+        $data['is_featured']   = $request->boolean('is_ecommerce');
 
+        // Images
         $images = $request->image;
         $image_names = [];
-        if($images) {
+        if ($images) {
             if (!File::exists(public_path('images/product/large'))) {
                 File::makeDirectory(public_path('images/product/large'), 0777, true);
             }
@@ -536,8 +571,7 @@ class ProductController extends Controller
             }
             foreach ($images as $key => $image) {
                 $ext = pathinfo($image->getClientOriginalName(), PATHINFO_EXTENSION);
-                $imageName = date("Ymdhis") . ($key+1) . '.' . $ext;
-
+                $imageName = date("Ymdhis") . ($key + 1) . '.' . $ext;
                 if (!config('database.connections.saleprosaas_landlord')) {
                     $image->move(public_path('images/brand'), $imageName);
                 } else {
@@ -553,14 +587,13 @@ class ProductController extends Controller
                 $img_lg = Image::make($sourcePath)->fit(500, 500)->save(public_path('images/product/large/' . $imageName), 90);
                 $img_md = Image::make($sourcePath)->fit(250, 250)->save(public_path('images/product/medium/' . $imageName), 100);
                 $img_sm = Image::make($sourcePath)->fit(100, 100)->save(public_path('images/product/small/' . $imageName), 100);
-
                 $image_names[] = $imageName;
             }
             $data['image'] = implode(",", $image_names);
-        }
-        else {
+        } else {
             $data['image'] = 'zummXD2dvAtI.png';
         }
+
         $file = $request->file;
         if ($file) {
             $ext = pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION);
@@ -569,72 +602,80 @@ class ProductController extends Controller
             $file->move('public/product/files', $fileName);
             $data['file'] = $fileName;
         }
-        if(!isset($data['is_sync_disable']) && \Schema::hasColumn('products', 'is_sync_disable'))
-                $data['is_sync_disable'] = null;
+        if (!isset($data['is_sync_disable']) && \Schema::hasColumn('products', 'is_sync_disable')) {
+            $data['is_sync_disable'] = null;
+        }
         $data['expiry_date'] = $request->expiry_date ? date('Y-m-d', strtotime($request->expiry_date)) : null;
+
+        // For variant products, set qty to 0 initially — it will be updated to
+        // the sum of variant qtys after the combinations are created.
+        if (isset($data['is_variant'])) {
+            $data['qty'] = 0;
+        }
+
         $lims_product_data = Product::create($data);
 
         if ($request->has('tax_id') && is_array($request->tax_id)) {
             $lims_product_data->product_taxes()->sync($request->tax_id);
         }
 
-        //inserting custom field data
+        // Custom fields
         $custom_field_data = [];
         $custom_fields = CustomField::where('belongs_to', 'product')->select('name', 'type')->get();
         foreach ($custom_fields as $type => $custom_field) {
             $field_name = str_replace(' ', '_', strtolower($custom_field->name));
-            if(isset($data[$field_name])) {
-                if($custom_field->type == 'checkbox' || $custom_field->type == 'multi_select')
+            if (isset($data[$field_name])) {
+                if ($custom_field->type == 'checkbox' || $custom_field->type == 'multi_select') {
                     $custom_field_data[$field_name] = implode(",", $data[$field_name]);
-                else
+                } else {
                     $custom_field_data[$field_name] = $data[$field_name];
+                }
             }
         }
-        if(count($custom_field_data))
+        if (count($custom_field_data)) {
             DB::table('products')->where('id', $lims_product_data->id)->update($custom_field_data);
+        }
 
-        if(!isset($data['is_batch'])){
+        if (!isset($data['is_batch'])) {
             $data['is_batch'] = null;
         } else {
             $data['is_batch'] = 1;
             $lims_product_batch_data = new ProductBatch();
-            $lims_product_batch_data->product_id = $lims_product_data->id;
-            $lims_product_batch_data->batch_no = $request->batch_no;
-            $lims_product_batch_data->expired_date =  $request->expired_date ? date('Y-m-d', strtotime($request->expired_date)) : null;
-            $lims_product_batch_data->qty = $lims_product_data->qty;
+            $lims_product_batch_data->product_id   = $lims_product_data->id;
+            $lims_product_batch_data->batch_no     = $request->batch_no;
+            $lims_product_batch_data->expired_date = $request->expired_date ? date('Y-m-d', strtotime($request->expired_date)) : null;
+            $lims_product_batch_data->qty          = $lims_product_data->qty;
         }
 
         // =====================================================================
-        // 🟩 VARIANT CREATION — one product_variants row per COMBINATION
-        //    "White" + "S"  ->  name "White/S", item_code "White/S-10001",
-        //    variant_id = variants.id of the COLOR (first option value),
-        //    position running 1..N, qty from the form's qty column
+        // VARIANT CREATION — one product_variants row per COMBINATION
         // =====================================================================
-        $variant_ids   = [];   // 🟩 these are product_variants.id (used by product_warehouse)
-        $variant_qties = [];
-        if(isset($data['is_variant'])) {
+        $variant_ids   = [];   // product_variants.id values
+        $variant_qties = [];   // per-combo qty values
+        $variant_total_qty = 0;
 
-            // map each variant option (type NAME, e.g. "Color") to variant_types.id
-            // so brand-new values are stored in `variants` with the correct variant_type_id
+        if (isset($data['is_variant'])) {
+
+            // Map each variant option (type NAME, e.g. "Color") to variant_types.id
             $variant_type_ids = [];
-            if(!empty($request->input('variant_option'))) {
+            if (!empty($request->input('variant_option'))) {
                 $typeRows = DB::table('variant_types')
-                                ->whereIn('name', (array)$request->input('variant_option'))
-                                ->pluck('id', 'name');
-                foreach((array)$request->input('variant_option') as $i => $optName) {
+                    ->whereIn('name', (array)$request->input('variant_option'))
+                    ->pluck('id', 'name');
+                foreach ((array)$request->input('variant_option') as $i => $optName) {
                     $variant_type_ids[$i] = $typeRows[$optName] ?? null;
                 }
             }
 
             foreach ($variant_combinations as $key => $combo) {
-                $variant_name = implode('/', $combo);            // e.g. "White/S"
+                $variant_name = implode('/', $combo);
 
-                // variants table stores VALUES only -> firstOrCreate the COLOR value
+                // variants table stores VALUES only -> firstOrCreate the value
                 $lims_variant_data = Variant::where('name', $combo[0])->first();
-                if(!$lims_variant_data) {
+                if (!$lims_variant_data) {
                     $lims_variant_data = new Variant;
                     $lims_variant_data->name = $combo[0];
-                    if(!empty($variant_type_ids[0])) {
+                    if (!empty($variant_type_ids[0])) {
                         $lims_variant_data->variant_type_id = $variant_type_ids[0];
                     }
                     $lims_variant_data->save();
@@ -643,97 +684,92 @@ class ProductController extends Controller
                 $variant_qty = isset($data['variant_qty'][$key]) ? (float)$data['variant_qty'][$key] : 0;
 
                 $lims_product_variant_data = new ProductVariant;
-                $lims_product_variant_data->product_id = $lims_product_data->id;
-                $lims_product_variant_data->variant_id = $lims_variant_data->id;   // color id, like your dump (1..11)
-                $lims_product_variant_data->position = $key + 1;
-                $lims_product_variant_data->name = $variant_name;
-                $lims_product_variant_data->item_code = $data['item_code'][$key] ?? ($variant_name.'-'.$data['code']);
-                $lims_product_variant_data->additional_cost = $data['additional_cost'][$key] ?? 0;
-                $lims_product_variant_data->additional_price = $data['additional_price'][$key] ?? 0;
-                $lims_product_variant_data->qty = $variant_qty;
+                $lims_product_variant_data->product_id        = $lims_product_data->id;
+                $lims_product_variant_data->variant_id         = $lims_variant_data->id;
+                $lims_product_variant_data->position           = $key + 1;
+                $lims_product_variant_data->name               = $variant_name;
+                $lims_product_variant_data->item_code          = $data['item_code'][$key] ?? ($variant_name . '-' . $data['code']);
+                $lims_product_variant_data->additional_cost    = $data['additional_cost'][$key] ?? 0;
+                $lims_product_variant_data->additional_price   = $data['additional_price'][$key] ?? 0;
+                $lims_product_variant_data->qty                = $variant_qty;
                 $lims_product_variant_data->save();
 
-                $variant_ids[]   = $lims_product_variant_data->id;   // 🟩 product_variants.id
-                $variant_qties[] = $variant_qty;
+                $variant_ids[]      = $lims_product_variant_data->id;
+                $variant_qties[]    = $variant_qty;
+                $variant_total_qty += $variant_qty;
             }
+
+            // =================================================================
+            // ✅ VARIANT STOCK — store ONLY in the selected warehouse
+            //
+            // The form sends "variant_warehouse_id" (the dropdown shown when
+            // is_variant is checked).  If it is missing or empty (e.g. only
+            // one warehouse exists), fall back to the first / only active one.
+            // =================================================================
+            $variant_warehouse_id = $request->input('variant_warehouse_id');
+
+            if (!$variant_warehouse_id) {
+                $warehouse_ids = Warehouse::where('is_active', true)->pluck('id');
+                $variant_warehouse_id = $warehouse_ids->first();
+            }
+
+            foreach ($variant_ids as $i => $product_variant_id) {
+                Product_Warehouse::create([
+                    "product_id"   => $lims_product_data->id,
+                    "variant_id"   => $product_variant_id,
+                    "warehouse_id" => $variant_warehouse_id,
+                    "qty"          => $variant_qties[$i] ?? 0,
+                    "price"        => $lims_product_data->price,
+                ]);
+            }
+
+            // =================================================================
+            // Set the product's qty to the SUM of all variant qtys
+            // =================================================================
+            $lims_product_data->qty = $variant_total_qty;
+            $lims_product_data->save();
         }
         // =====================================================================
 
-        // 🟩 INITIAL STOCK (variant products get one product_warehouse row per combo)
+        // INITIAL STOCK for non-variant products (unchanged from original)
         $initial_stock = 0;
-        if(isset($data['is_initial_stock']) && !isset($data['is_batch'])) {
-
-            if(isset($data['is_variant'])) {
-                foreach ($data['stock_warehouse_id'] as $key => $warehouse_id) {
-                    $stock = (float)($data['stock'][$key] ?? 0);
-                    if($stock <= 0) continue;
-
-                    // Safety net — JS already validated this, but never trust the client
-                    if($stock != array_sum($variant_qties)) {
-                        $lims_product_data->delete();
-                        return redirect()->back()->withInput()->with('not_permitted',
-                            "Initial stock per warehouse ($stock) must equal the total variant quantity (".array_sum($variant_qties).")");
-                    }
-
-                    foreach ($variant_ids as $i => $product_variant_id) {
-                        Product_Warehouse::create([
-                            "product_id"   => $lims_product_data->id,
-                            "variant_id"   => $product_variant_id,   // 🟩 product_variants.id
-                            "warehouse_id" => $warehouse_id,
-                            "qty"          => $variant_qties[$i] ?? 0,
-                        ]);
-                    }
+        if (!isset($data['is_variant']) && isset($data['is_initial_stock']) && !isset($data['is_batch'])) {
+            foreach ($data['stock_warehouse_id'] as $key => $warehouse_id) {
+                $stock = $data['stock'][$key];
+                if ($stock > 0) {
+                    $this->autoPurchase($lims_product_data, $warehouse_id, $stock);
                     $initial_stock += $stock;
                 }
             }
-            else {
-                foreach ($data['stock_warehouse_id'] as $key => $warehouse_id) {
-                    $stock = $data['stock'][$key];
-                    if($stock > 0) {
-                        $this->autoPurchase($lims_product_data, $warehouse_id, $stock);
-                        $initial_stock += $stock;
-                    }
-                }
-            }
 
-            if($initial_stock > 0) {
+            if ($initial_stock > 0) {
                 $lims_product_data->qty += $initial_stock;
                 $lims_product_data->save();
             }
         }
 
-        if(isset($data['is_diffPrice'])) {
+        if (isset($data['is_diffPrice'])) {
             foreach ($data['diff_price'] as $key => $diff_price) {
-                if($diff_price) {
+                if ($diff_price) {
                     Product_Warehouse::create([
-                        "product_id" => $lims_product_data->id,
+                        "product_id"   => $lims_product_data->id,
                         "warehouse_id" => $data["warehouse_id"][$key],
-                        "qty" => 0,
-                        "price" => $diff_price
+                        "qty"          => 0,
+                        "price"        => $diff_price
                     ]);
                 }
             }
-        }
-        elseif(!isset($data['is_initial_stock']) && !isset($data['is_batch']) && config('without_stock') == 'yes') {
+        } elseif (!isset($data['is_initial_stock']) && !isset($data['is_batch']) && config('without_stock') == 'yes') {
             $warehouse_ids = Warehouse::where('is_active', true)->pluck('id');
             foreach ($warehouse_ids as $warehouse_id) {
-                if(count($variant_ids)) {
-                    foreach ($variant_ids as $product_variant_id) {
-                        Product_Warehouse::create([
-                            "product_id" => $lims_product_data->id,
-                            "variant_id" => $product_variant_id,   // 🟩 product_variants.id
-                            "warehouse_id" => $warehouse_id,
-                            "qty" => 0,
-                        ]);
-                    }
-                }
-                else {
+                if (!count($variant_ids)) {
                     Product_Warehouse::create([
-                        "product_id" => $lims_product_data->id,
+                        "product_id"   => $lims_product_data->id,
                         "warehouse_id" => $warehouse_id,
-                        "qty" => 0,
+                        "qty"          => 0,
                     ]);
                 }
+                // Variant products already have warehouse rows from the block above
             }
         }
         $this->cacheForget('product_list');
@@ -741,13 +777,18 @@ class ProductController extends Controller
         \Session::flash('create_message', 'Product created successfully');
     }
 
+
+    /**
+     * ============================================================================
+     * updateProduct()
+     * ============================================================================
+     */
     public function updateProduct(Request $request)
     {
         info($request->all());
-        if(!env('USER_VERIFIED')) {
+        if (!env('USER_VERIFIED')) {
             return redirect()->back()->with('not_permitted', 'This feature is disable for demo!');
-        }
-        else {
+        } else {
             $this->validate($request, [
                 'name' => [
                     'max:255',
@@ -755,7 +796,6 @@ class ProductController extends Controller
                         return $query->where('is_active', 1);
                     }),
                 ],
-
                 'code' => [
                     'max:255',
                     Rule::unique('products')->ignore($request->input('id'))->where(function ($query) {
@@ -766,83 +806,71 @@ class ProductController extends Controller
 
             $lims_product_data = Product::findOrFail($request->input('id'));
 
-            // 🟩 compute combinations BEFORE json_encode overwrites the raw arrays
+            // Build combinations BEFORE json_encode overwrites the raw arrays
             $variant_combinations = [];
-            if($request->boolean('is_variant')) {
+            if ($request->boolean('is_variant')) {
                 $variant_combinations = $this->buildVariantCombinations($request->input('variant_value', []));
             }
 
             $data = $request->except('image', 'file', 'prev_img');
             $data['product_barcode'] = $request->product_barcode;
-            $data['box_barcode'] = $request->box_barcode;
+            $data['box_barcode']     = $request->box_barcode;
             $data['name'] = htmlspecialchars(trim($data['name']));
             $data['slug'] = Str::slug($data['name'], '-');
             $data['slug'] = preg_replace('/[^A-Za-z0-9\-]/', '', $data['slug']);
-            $data['slug'] = str_replace( '\/', '/', $data['slug'] );
-            if($data['type'] == 'combo') {
+            $data['slug'] = str_replace('\/', '/', $data['slug']);
+            if ($data['type'] == 'combo') {
                 $data['product_list'] = implode(",", $data['product_id']);
                 $data['variant_list'] = implode(",", $data['variant_id']);
-                $data['qty_list'] = implode(",", $data['product_qty']);
-                $data['price_list'] = implode(",", $data['unit_price']);
+                $data['qty_list']     = implode(",", $data['product_qty']);
+                $data['price_list']   = implode(",", $data['unit_price']);
+                $data['cost'] = $data['unit_id'] = $data['purchase_unit_id'] = $data['sale_unit_id'] = 0;
+            } elseif ($data['type'] == 'digital' || $data['type'] == 'service') {
                 $data['cost'] = $data['unit_id'] = $data['purchase_unit_id'] = $data['sale_unit_id'] = 0;
             }
-            elseif($data['type'] == 'digital' || $data['type'] == 'service')
-                $data['cost'] = $data['unit_id'] = $data['purchase_unit_id'] = $data['sale_unit_id'] = 0;
 
-            if(!isset($data['featured']))
-                $data['featured'] = 0;
-
-            if(!isset($data['is_embeded']))
-                $data['is_embeded'] = 0;
-
-            if(!isset($data['promotion']))
-                $data['promotion'] = null;
-
-            if(!isset($data['is_batch']))
-                $data['is_batch'] = null;
-
-            if(!isset($data['is_imei']))
-                $data['is_imei'] = null;
-
-            if(!isset($data['is_ecommerce']))
-                $data['is_ecommerce'] = false;
-
-            if(!isset($data['is_featured']))
-                $data['is_featured'] = false;
-
-            if(!isset($data['is_sync_disable']) && \Schema::hasColumn('products', 'is_sync_disable'))
+            if (!isset($data['featured']))         $data['featured']         = 0;
+            if (!isset($data['is_embeded']))       $data['is_embeded']       = 0;
+            if (!isset($data['promotion']))        $data['promotion']        = null;
+            if (!isset($data['is_batch']))         $data['is_batch']         = null;
+            if (!isset($data['is_imei']))          $data['is_imei']          = null;
+            if (!isset($data['is_ecommerce']))     $data['is_ecommerce']     = false;
+            if (!isset($data['is_featured']))      $data['is_featured']      = false;
+            if (!isset($data['is_sync_disable']) && \Schema::hasColumn('products', 'is_sync_disable')) {
                 $data['is_sync_disable'] = null;
+            }
 
             $data['product_details'] = str_replace('"', '@', $data['product_details']);
-            if($data['starting_date'])
+            if ($data['starting_date']) {
                 $data['starting_date'] = date('Y-m-d', strtotime($data['starting_date']));
-            if($data['last_date'])
+            }
+            if ($data['last_date']) {
                 $data['last_date'] = date('Y-m-d', strtotime($data['last_date']));
+            }
 
+            // Images
             $previous_images = [];
-            //dealing with previous images
-            if($request->prev_img) {
+            if ($request->prev_img) {
                 foreach ($request->prev_img as $key => $prev_img) {
-                    if(!in_array($prev_img, $previous_images))
+                    if (!in_array($prev_img, $previous_images)) {
                         $previous_images[] = $prev_img;
+                    }
                 }
                 $lims_product_data->image = implode(",", $previous_images);
                 $lims_product_data->save();
-            }
-            else {
+            } else {
                 $lims_product_data->image = null;
                 $lims_product_data->save();
             }
 
-            //dealing with new images
-            if($request->image) {
-                if ( !file_exists("public/images/product/large") && !is_dir("public/images/product/large") ) {
+            if ($request->image) {
+                if (!file_exists("public/images/product/large") && !is_dir("public/images/product/large")) {
                     mkdir("public/images/product/large");
                 }
-                if ( !file_exists("public/images/product/medium") && !is_dir("public/images/product/medium") ) {
+                if (!file_exists("public/images/product/medium") && !is_dir("public/images/product/medium")) {
                     mkdir("public/images/product/medium");
                 }
-                if ( !file_exists("public/images/product/small") && !is_dir("public/images/product/small") ) {
+                if (!file_exists("public/images/product/small") && !is_dir("public/images/product/small")) {
                     mkdir("public/images/product/small");
                 }
                 $images = $request->image;
@@ -850,28 +878,29 @@ class ProductController extends Controller
                 $length = count(explode(",", $lims_product_data->image));
                 foreach ($images as $key => $image) {
                     $ext = pathinfo($image->getClientOriginalName(), PATHINFO_EXTENSION);
-                    if(!config('database.connections.saleprosaas_landlord')) {
-                        $imageName = date("Ymdhis") . ($length + $key+1) . '.' . $ext;
+                    if (!config('database.connections.saleprosaas_landlord')) {
+                        $imageName = date("Ymdhis") . ($length + $key + 1) . '.' . $ext;
                         $image->move('public/images/product', $imageName);
-                        $img_lg = Image::make('public/images/product/'. $imageName)->fit(500, 500)->save('public/images/product/large/'. $imageName, 90);
-                        $img_md = Image::make('public/images/product/'. $imageName)->fit(250, 250)->save('public/images/product/medium/'. $imageName, 100);
-                        $img_sm = Image::make('public/images/product/'. $imageName)->fit(100, 100)->save('public/images/product/small/'. $imageName, 100);
-                    }else{
-                        $imageName = $this->getTenantId() . '_' . date("Ymdhis") . ($length + $key+1) . '.' . $ext;
+                        $img_lg = Image::make('public/images/product/' . $imageName)->fit(500, 500)->save('public/images/product/large/' . $imageName, 90);
+                        $img_md = Image::make('public/images/product/' . $imageName)->fit(250, 250)->save('public/images/product/medium/' . $imageName, 100);
+                        $img_sm = Image::make('public/images/product/' . $imageName)->fit(100, 100)->save('public/images/product/small/' . $imageName, 100);
+                    } else {
+                        $imageName = $this->getTenantId() . '_' . date("Ymdhis") . ($length + $key + 1) . '.' . $ext;
                         $image->move('public/images/product', $imageName);
-                        $img_lg = Image::make('public/images/product/'. $imageName)->fit(500, 500)->save('public/images/product/large/'. $imageName, 90);
-                        $img_md = Image::make('public/images/product/'. $imageName)->fit(250, 250)->save('public/images/product/medium/'. $imageName, 100);
-                        $img_sm = Image::make('public/images/product/'. $imageName)->fit(100, 100)->save('public/images/product/small/'. $imageName, 100);
+                        $img_lg = Image::make('public/images/product/' . $imageName)->fit(500, 500)->save('public/images/product/large/' . $imageName, 90);
+                        $img_md = Image::make('public/images/product/' . $imageName)->fit(250, 250)->save('public/images/product/medium/' . $imageName, 100);
+                        $img_sm = Image::make('public/images/product/' . $imageName)->fit(100, 100)->save('public/images/product/small/' . $imageName, 100);
                     }
                     $image_names[] = $imageName;
                 }
-                if($lims_product_data->image)
-                    $data['image'] = $lims_product_data->image. ',' . implode(",", $image_names);
-                else
+                if ($lims_product_data->image) {
+                    $data['image'] = $lims_product_data->image . ',' . implode(",", $image_names);
+                } else {
                     $data['image'] = implode(",", $image_names);
-            }
-            else
+                }
+            } else {
                 $data['image'] = $lims_product_data->image;
+            }
 
             $file = $request->file;
             if ($file) {
@@ -886,24 +915,32 @@ class ProductController extends Controller
             $new_product_variant_ids = [];
 
             // =====================================================================
-            // 🟩 VARIANT SYNC — match combinations by their `name` ("White/S").
-            //    Existing rows keep their qty (warehouse stock is the truth),
-            //    brand-new combinations take the qty typed in the form and get
-            //    product_warehouse rows created for every active warehouse.
+            // ✅ Resolve the chosen warehouse for variant stock.
+            //    Form sends variant_warehouse_id; fallback to the first / only
+            //    active warehouse if missing.
             // =====================================================================
-            if(isset($data['is_variant'])) {
-                if(isset($data['variant_option']) && isset($data['variant_value'])) {
+            $variant_warehouse_id = $request->input('variant_warehouse_id');
+            if (!$variant_warehouse_id) {
+                $warehouse_ids = Warehouse::where('is_active', true)->pluck('id');
+                $variant_warehouse_id = $warehouse_ids->first();
+            }
+
+            // =====================================================================
+            // VARIANT SYNC — match combinations by their name ("White/S")
+            // =====================================================================
+            if (isset($data['is_variant'])) {
+                if (isset($data['variant_option']) && isset($data['variant_value'])) {
                     $data['variant_option'] = json_encode($data['variant_option']);
-                    $data['variant_value'] = json_encode($data['variant_value']);
+                    $data['variant_value']  = json_encode($data['variant_value']);
                 }
 
                 // variant_type ids so new values get the right variant_type_id
                 $variant_type_ids = [];
-                if(!empty($request->input('variant_option'))) {
+                if (!empty($request->input('variant_option'))) {
                     $typeRows = DB::table('variant_types')
-                                    ->whereIn('name', (array)$request->input('variant_option'))
-                                    ->pluck('id', 'name');
-                    foreach((array)$request->input('variant_option') as $i => $optName) {
+                        ->whereIn('name', (array)$request->input('variant_option'))
+                        ->pluck('id', 'name');
+                    foreach ((array)$request->input('variant_option') as $i => $optName) {
                         $variant_type_ids[$i] = $typeRows[$optName] ?? null;
                     }
                 }
@@ -911,12 +948,12 @@ class ProductController extends Controller
                 foreach ($variant_combinations as $key => $combo) {
                     $variant_name = implode('/', $combo);
 
-                    // variants table holds VALUES only -> ensure the COLOR value exists
+                    // variants table holds VALUES only -> ensure the value exists
                     $lims_variant_data = Variant::where('name', $combo[0])->first();
-                    if(!$lims_variant_data) {
+                    if (!$lims_variant_data) {
                         $lims_variant_data = new Variant;
                         $lims_variant_data->name = $combo[0];
-                        if(!empty($variant_type_ids[0])) {
+                        if (!empty($variant_type_ids[0])) {
                             $lims_variant_data->variant_type_id = $variant_type_ids[0];
                         }
                         $lims_variant_data->save();
@@ -927,56 +964,85 @@ class ProductController extends Controller
                         ['name', $variant_name]
                     ])->first();
 
-                    if($lims_product_variant_data) {
-                        // existing combination — keep its qty (stock source of truth)
+                    if ($lims_product_variant_data) {
+                        // Existing combination — update its qty from the form
+                        $new_qty = isset($data['variant_qty'][$key]) ? (float)$data['variant_qty'][$key] : $lims_product_variant_data->qty;
                         $lims_product_variant_data->update([
-                            'variant_id' => $lims_variant_data->id,
-                            'position' => $key + 1,
-                            'item_code' => $data['item_code'][$key] ?? ($variant_name.'-'.$data['code']),
-                            'additional_cost' => $data['additional_cost'][$key] ?? 0,
-                            'additional_price' => $data['additional_price'][$key] ?? 0
+                            'variant_id'       => $lims_variant_data->id,
+                            'position'         => $key + 1,
+                            'item_code'        => $data['item_code'][$key] ?? ($variant_name . '-' . $data['code']),
+                            'additional_cost'  => $data['additional_cost'][$key] ?? 0,
+                            'additional_price' => $data['additional_price'][$key] ?? 0,
+                            'qty'              => $new_qty,
                         ]);
-                    }
-                    else {
+
+                        // ✅ Update warehouse stock ONLY for the selected warehouse
+                        $pw = Product_Warehouse::where([
+                            ['product_id',   $lims_product_data->id],
+                            ['variant_id',   $lims_product_variant_data->id],
+                            ['warehouse_id', $variant_warehouse_id],
+                        ])->first();
+
+                        if ($pw) {
+                            $pw->qty = $new_qty;
+                            $pw->save();
+                        } else {
+                            Product_Warehouse::create([
+                                'product_id'   => $lims_product_data->id,
+                                'variant_id'   => $lims_product_variant_data->id,
+                                'warehouse_id' => $variant_warehouse_id,
+                                'qty'          => $new_qty,
+                                'price'        => null
+                            ]);
+                        }
+                    } else {
+                        // New combination
                         $lims_product_variant_data = new ProductVariant();
-                        $lims_product_variant_data->product_id = $lims_product_data->id;
-                        $lims_product_variant_data->variant_id = $lims_variant_data->id;
-                        $lims_product_variant_data->position = $key + 1;
-                        $lims_product_variant_data->name = $variant_name;
-                        $lims_product_variant_data->item_code = $data['item_code'][$key] ?? ($variant_name.'-'.$data['code']);
-                        $lims_product_variant_data->additional_cost = $data['additional_cost'][$key] ?? 0;
-                        $lims_product_variant_data->additional_price = $data['additional_price'][$key] ?? 0;
-                        $lims_product_variant_data->qty = isset($data['variant_qty'][$key]) ? (float)$data['variant_qty'][$key] : 0;
+                        $lims_product_variant_data->product_id        = $lims_product_data->id;
+                        $lims_product_variant_data->variant_id         = $lims_variant_data->id;
+                        $lims_product_variant_data->position           = $key + 1;
+                        $lims_product_variant_data->name               = $variant_name;
+                        $form_item_code = $data['item_code'][$key] ?? '';
+                       if (!$form_item_code || substr($form_item_code, -1) === '-') {
+                           // JS sent an empty or broken suffix → rebuild from variant_name + product code
+                           $lims_product_variant_data->item_code = $variant_name . '-' . $data['code'];
+                       } else {
+                           $lims_product_variant_data->item_code = $form_item_code;
+                       }
+                        //$lims_product_variant_data->item_code          = $data['item_code'][$key] ?? ($variant_name . '-' . $data['code']);
+                        $lims_product_variant_data->additional_cost    = $data['additional_cost'][$key] ?? 0;
+                        $lims_product_variant_data->additional_price   = $data['additional_price'][$key] ?? 0;
+                        $lims_product_variant_data->qty                = isset($data['variant_qty'][$key]) ? (float)$data['variant_qty'][$key] : 0;
                         $lims_product_variant_data->save();
 
-                        // make sure every active warehouse has a row for the new combination
-                        $warehouse_ids = Warehouse::where('is_active', true)->pluck('id');
-                        foreach ($warehouse_ids as $warehouse_id) {
-                            $exists = Product_Warehouse::where([
-                                ['product_id', $lims_product_data->id],
-                                ['variant_id', $lims_product_variant_data->id],
-                                ['warehouse_id', $warehouse_id]
-                            ])->first();
-                            if(!$exists) {
-                                Product_Warehouse::create([
-                                    'product_id' => $lims_product_data->id,
-                                    'variant_id' => $lims_product_variant_data->id,
-                                    'warehouse_id' => $warehouse_id,
-                                    'qty' => 0,
-                                    'price' => null
-                                ]);
-                            }
-                        }
+                        // ✅ Create warehouse row ONLY for the selected warehouse
+                        Product_Warehouse::create([
+                            'product_id'   => $lims_product_data->id,
+                            'variant_id'   => $lims_product_variant_data->id,
+                            'warehouse_id' => $variant_warehouse_id,
+                            'qty'          => $lims_product_variant_data->qty,
+                            'price'        => null
+                        ]);
                     }
                     $new_product_variant_ids[] = $lims_product_variant_data->id;
                 }
+
+                // =================================================================
+                // ✅ CLEANUP: Delete warehouse rows for variants in OTHER warehouses.
+                //    Stock physically "moves" to the selected warehouse instead of
+                //    being duplicated across every warehouse.
+                // =================================================================
+                Product_Warehouse::where('product_id', $lims_product_data->id)
+                    ->whereNotNull('variant_id')
+                    ->where('warehouse_id', '!=', $variant_warehouse_id)
+                    ->delete();
+            } else {
+                $data['is_variant']      = null;
+                $data['variant_option']  = null;
+                $data['variant_value']   = null;
             }
-            else {
-                $data['is_variant'] = null;
-                $data['variant_option'] = null;
-                $data['variant_value'] = null;
-            }
-            // deleting old product variants (and their warehouse rows) if not exist anymore
+
+            // Delete old product variants (and their warehouse rows) that no longer exist
             foreach ($old_product_variant_ids as $key => $product_variant_id) {
                 if (!in_array($product_variant_id, $new_product_variant_ids)) {
                     Product_Warehouse::where('product_id', $lims_product_data->id)
@@ -987,30 +1053,28 @@ class ProductController extends Controller
             }
             // =====================================================================
 
-            if(isset($data['is_diffPrice'])) {
+            if (isset($data['is_diffPrice'])) {
                 foreach ($data['diff_price'] as $key => $diff_price) {
-                    if($diff_price) {
+                    if ($diff_price) {
                         $lims_product_warehouse_data = Product_Warehouse::FindProductWithoutVariant($lims_product_data->id, $data['warehouse_id'][$key])->first();
-                        if($lims_product_warehouse_data) {
+                        if ($lims_product_warehouse_data) {
                             $lims_product_warehouse_data->price = $diff_price;
                             $lims_product_warehouse_data->save();
-                        }
-                        else {
+                        } else {
                             Product_Warehouse::create([
-                                "product_id" => $lims_product_data->id,
+                                "product_id"   => $lims_product_data->id,
                                 "warehouse_id" => $data["warehouse_id"][$key],
-                                "qty" => 0,
-                                "price" => $diff_price
+                                "qty"          => 0,
+                                "price"        => $diff_price
                             ]);
                         }
                     }
                 }
-            }
-            else {
+            } else {
                 $data['is_diffPrice'] = false;
                 foreach ($data['warehouse_id'] as $key => $warehouse_id) {
                     $lims_product_warehouse_data = Product_Warehouse::FindProductWithoutVariant($lims_product_data->id, $warehouse_id)->first();
-                    if($lims_product_warehouse_data) {
+                    if ($lims_product_warehouse_data) {
                         $lims_product_warehouse_data->price = null;
                         $lims_product_warehouse_data->save();
                     }
@@ -1018,78 +1082,47 @@ class ProductController extends Controller
             }
             $lims_product_data->update($data);
 
-            // 🟩 for variant products the master qty is always the sum of the combinations
-            if(isset($data['is_variant'])) {
+            // =====================================================================
+            // For variant products, set the product's qty to the SUM of all
+            // variant combination qtys.
+            // =====================================================================
+            if (isset($data['is_variant'])) {
                 $lims_product_data->qty = ProductVariant::where('product_id', $lims_product_data->id)->sum('qty');
                 $lims_product_data->save();
             }
 
-            // ----------------------
-            // UPDATE INITIAL STOCK
-            // ----------------------
-            if (isset($data['is_initial_stock']) && $data['is_initial_stock'] == 1) {
+            // UPDATE INITIAL STOCK (non-variant products only)
+            if (isset($data['is_initial_stock']) && $data['is_initial_stock'] == 1 && !isset($data['is_variant'])) {
                 $initial_stock_total = 0;
 
                 $warehouse_ids = $request->stock_warehouse_id ?? [];
                 $stock_values   = $request->stock ?? [];
 
-                if(isset($data['is_variant'])) {
-                    // 🟩 variant product: stock entered per warehouse must equal the
-                    // total of all combinations; rows are created per combination and
-                    // existing warehouse rows are never overwritten.
-                    $variantTotal = ProductVariant::where('product_id', $lims_product_data->id)->sum('qty');
-                    foreach ($warehouse_ids as $key => $warehouse_id) {
-                        $stock_qty = (float)($stock_values[$key] ?? 0);
-                        if($stock_qty <= 0) continue;
-                        if($stock_qty != $variantTotal) {
-                            return redirect()->back()->withInput()->with('not_permitted',
-                                "Initial stock per warehouse ($stock_qty) must equal the total variant quantity ($variantTotal)");
-                        }
-                        $variants = ProductVariant::where('product_id', $lims_product_data->id)->get();
-                        foreach ($variants as $pv) {
-                            $pw = Product_Warehouse::where([
-                                ['product_id', $lims_product_data->id],
-                                ['variant_id', $pv->id],
-                                ['warehouse_id', $warehouse_id]
-                            ])->first();
-                            if(!$pw) {
-                                Product_Warehouse::create([
-                                    'product_id' => $lims_product_data->id,
-                                    'variant_id' => $pv->id,
-                                    'warehouse_id' => $warehouse_id,
-                                    'qty' => $pv->qty,
-                                    'price' => null
-                                ]);
-                            }
-                        }
+                foreach ($warehouse_ids as $key => $warehouse_id) {
+                    $stock_qty = (float)($stock_values[$key] ?? 0);
+                    if ($stock_qty > 0) {
+                        $pw = Product_Warehouse::firstOrCreate(
+                            [
+                                'product_id'   => $lims_product_data->id,
+                                'warehouse_id' => $warehouse_id
+                            ],
+                            [
+                                'qty' => 0,
+                                'price' => null
+                            ]
+                        );
+                        $pw->qty += $stock_qty;
+                        $pw->save();
+                        $initial_stock_total += $stock_qty;
                     }
                 }
-                else {
-                    foreach ($warehouse_ids as $key => $warehouse_id) {
-                        $stock_qty = (float)($stock_values[$key] ?? 0);
-                        if ($stock_qty > 0) {
-                            $pw = Product_Warehouse::firstOrCreate(
-                                [
-                                    'product_id'   => $lims_product_data->id,
-                                    'warehouse_id' => $warehouse_id
-                                ],
-                                [
-                                    'qty' => 0,
-                                    'price' => null
-                                ]
-                            );
-                            $pw->qty += $stock_qty;
-                            $pw->save();
-                            $initial_stock_total += $stock_qty;
-                        }
-                    }
-                    info($initial_stock_total);
-                    if ($initial_stock_total > 0) {
-                        $lims_product_data->qty += $initial_stock_total;
-                        $lims_product_data->save();
-                    }
+                info($initial_stock_total);
+                if ($initial_stock_total > 0) {
+                    $lims_product_data->qty += $initial_stock_total;
+                    $lims_product_data->save();
                 }
             }
+
             if ($request->has('tax_id')) {
                 if (is_array($request->tax_id)) {
                     $lims_product_data->product_taxes()->sync($request->tax_id);
@@ -1099,54 +1132,58 @@ class ProductController extends Controller
             } else {
                 $lims_product_data->product_taxes()->detach();
             }
-            //inserting data for custom field
+
+            // Custom fields
             $custom_field_data = [];
             $custom_fields = CustomField::where('belongs_to', 'product')->select('name', 'type')->get();
             foreach ($custom_fields as $type => $custom_field) {
                 $field_name = str_replace(' ', '_', strtolower($custom_field->name));
-                if(isset($data[$field_name])) {
-                    if($custom_field->type == 'checkbox' || $custom_field->type == 'multi_select')
+                if (isset($data[$field_name])) {
+                    if ($custom_field->type == 'checkbox' || $custom_field->type == 'multi_select') {
                         $custom_field_data[$field_name] = implode(",", $data[$field_name]);
-                    else
+                    } else {
                         $custom_field_data[$field_name] = $data[$field_name];
+                    }
                 }
             }
-            if(count($custom_field_data))
+            if (count($custom_field_data)) {
                 DB::table('products')->where('id', $lims_product_data->id)->update($custom_field_data);
+            }
             $this->cacheForget('product_list');
             $this->cacheForget('product_list_with_variant');
             \Session::flash('edit_message', 'Product updated successfully');
         }
     }
 
-        // =====================================================================
-        // 🟩 HELPERS
-        // =====================================================================
 
-        /**
-         * Turn the submitted variant_value[] strings ("White,Black", "S,M,L")
-         * into the cartesian combination matrix:
-         * [["White","S"],["White","M"],...]  — same order the JS table builds.
-         */
-        private function buildVariantCombinations($variant_values)
-        {
-            $combinations = [[]];
-            foreach ((array)$variant_values as $values_string) {
-                $values = array_values(array_filter(array_map('trim', explode(',', (string)$values_string)), function($v) {
-                    return $v !== '';
-                }));
-                if (empty($values)) continue;
 
-                $next = [];
-                foreach ($combinations as $combo) {
-                    foreach ($values as $value) {
-                        $next[] = array_merge($combo, [$value]);
-                    }
+    /**
+     * Turn the submitted variant_value[] strings ("White,Black", "S,M,L")
+     * into the cartesian combination matrix:
+     * [["White","S"],["White","M"],...] — same order the JS table builds.
+     */
+    private function buildVariantCombinations($variant_values)
+    {
+        $combinations = [[]];
+        foreach ((array)$variant_values as $values_string) {
+            $values = array_values(array_filter(array_map('trim', explode(',', (string)$values_string)), function($v) {
+                return $v !== '';
+            }));
+            if (empty($values)) continue;
+
+            $next = [];
+            foreach ($combinations as $combo) {
+                foreach ($values as $value) {
+                    $next[] = array_merge($combo, [$value]);
                 }
-                $combinations = $next;
             }
-            return count($combinations[0]) ? $combinations : [];
+            $combinations = $next;
         }
+        return count($combinations[0]) ? $combinations : [];
+    }
+
+
+
 
     public function autoPurchase($product_data, $warehouse_id, $stock)
     {

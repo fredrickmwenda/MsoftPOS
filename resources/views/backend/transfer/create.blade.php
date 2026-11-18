@@ -1,4 +1,4 @@
-@extends('backend.layout.main') 
+@extends('backend.layout.main')
 @section('content')
 @if(session()->has('not_permitted'))
   <div class="alert alert-danger alert-dismissible text-center">
@@ -21,9 +21,9 @@
                     </div>
                     <div class="card-body">
                         <p class="italic"><small>{{trans('file.The field labels marked with * are required input fields')}}.</small></p>
-                        
+
                         {!! Form::open(['route' => 'transfers.store', 'method' => 'post', 'files' => true, 'id' => 'transfer-form']) !!}
-                        
+
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="row">
@@ -64,7 +64,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row mt-3">
                                     <div class="col-md-12">
                                         <label>{{trans('file.Select Product')}}</label>
@@ -75,7 +75,7 @@
                                         <small class="text-muted" id="search-status"></small>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row mt-5">
                                     <div class="col-md-12">
                                         <h5>{{trans('file.Order Table')}} *</h5>
@@ -107,7 +107,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row">
                                     <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_qty" /></div></div>
                                     <div class="col-md-2"><div class="form-group"><input type="hidden" name="total_discount" /></div></div>
@@ -127,7 +127,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row mt-3">
                                     <div class="col-md-4">
                                         <div class="form-group">
@@ -146,7 +146,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="row">
                                     <div class="col-md-12">
                                         <div class="form-group">
@@ -155,7 +155,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div class="form-group">
                                     <input type="submit" value="{{trans('file.submit')}}" class="btn btn-primary" id="submit-button">
                                 </div>
@@ -167,7 +167,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="container-fluid">
         <table class="table table-bordered table-condensed totals">
             <td><strong>{{trans('file.Items')}}</strong>
@@ -184,7 +184,7 @@
             </td>
         </table>
     </div>
-    
+
     <!-- Edit Modal -->
     <div id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" class="modal fade text-left">
         <div role="document" class="modal-dialog">
@@ -253,8 +253,8 @@
 <script src="https://cdn.jsdelivr.net/npm/barcode-detector@2.2.2/dist/barcode-detector.min.js"></script>
 
 <script type="text/javascript">
-  
-    
+
+
 
 
     // =============================
@@ -303,10 +303,10 @@
     // =============================
     $('select[name="from_warehouse_id"]').on('change', function() {
         var id = $(this).val();
-        if (!id) { 
-            lims_product_array = []; 
-  
-            return; 
+        if (!id) {
+            lims_product_array = [];
+
+            return;
         }
 
         $('#search-status').text('Loading products...');
@@ -335,8 +335,8 @@
                 $('#search-status').text(product_code.length + ' products loaded');
             },
             error: function(xhr, status, error) {
-                showError('Failed to load warehouse products', 
-                    'Status: ' + status + '\nError: ' + error + '\nURL: ' + GET_PRODUCT_URL + '/' + id + 
+                showError('Failed to load warehouse products',
+                    'Status: ' + status + '\nError: ' + error + '\nURL: ' + GET_PRODUCT_URL + '/' + id +
                     '\nResponse: ' + xhr.responseText.substring(0, 500));
                 lims_product_array = [];
                 $('#search-status').text('Failed to load products');
@@ -353,7 +353,7 @@
             var v = $(this).val();
             $(this).val(v.substring(0, v.length - 1));
             alert('Please select Warehouse!');
-            return false; 
+            return false;
         }
     });
 
@@ -374,8 +374,8 @@
         },
         select: function(event, ui) {
             productSearch(ui.item.value);
-            $(this).val(''); 
-            return false; 
+            $(this).val('');
+            return false;
         }
     });
 
@@ -417,7 +417,7 @@
             } catch (e) {
                 barcodeDetector = new BarcodeDetector();
             }
-            
+
             videoStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
             video.srcObject = videoStream;
             await video.play();
@@ -443,18 +443,18 @@
 
     async function detectBarcodes() {
         if (!isScanning) return;
-        
+
         const video = document.getElementById('barcodeVideo');
         try {
             const barcodes = await barcodeDetector.detect(video);
             if (barcodes.length > 0) {
                 const code = barcodes[0].rawValue;
                 const now = Date.now();
-                
+
                 if (code !== lastScannedCode || (now - lastScannedTime > 2500)) {
                     lastScannedCode = code;
                     lastScannedTime = now;
-                    
+
                     playBeep();
                     if (navigator.vibrate) navigator.vibrate(200);
                     productSearch(code);
@@ -463,7 +463,7 @@
         } catch (e) {
             // Silent catch
         }
-        
+
         if (isScanning) {
             requestAnimationFrame(detectBarcodes);
         }
@@ -508,7 +508,7 @@
     // PRODUCT SEARCH (WITH FULL ERROR IDENTIFICATION)
     // =============================
     function productSearch(data){
-        
+
         var searched_code = '';
 
         if (typeof data === 'string' && data.indexOf('Code:') !== -1) {
@@ -538,7 +538,7 @@
 
         $.ajax({
             type: 'GET',
-            url: PRODUCT_SEARCH_URL, 
+            url: PRODUCT_SEARCH_URL,
             data: { data: ajaxData },
             dataType: 'json',  // Forces JSON parsing; triggers error if HTML returned
             beforeSend: function(xhr) {
@@ -591,7 +591,7 @@
                 });
                 $("input[name='product_code_name']").val('');
                 $('#search-status').text('');
-                
+
                 if(flag){
                     var newRow = $("<tr>");
                     var cols = '';
@@ -609,6 +609,7 @@
                     cols += '<td><button type="button" class="ibtnDel btn btn-md btn-danger">{{trans("file.delete")}}</button></td>';
                     cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
                     cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[9] + '"/>';
+                    cols += '<input type="hidden" name="product_variant_id[]" value="' + (data[10] || '') + '"/>';
                     cols += '<input type="hidden" class="purchase-unit" name="purchase_unit[]" value="' + temp_unit_name[0] + '"/>';
                     cols += '<input type="hidden" class="net_unit_cost" name="net_unit_cost[]" />';
                     cols += '<input type="hidden" class="tax-rate" name="tax_rate[]" value="' + data[3] + '"/>';
@@ -635,7 +636,7 @@
             },
             error: function(xhr, textStatus, errorThrown) {
                 var detail = '';
-                
+
                 // === ERROR IDENTIFICATION #4: HTTP Status Codes ===
                 if (xhr.status === 0) {
                     detail = 'Request failed. Possible causes:\n' +
@@ -686,7 +687,7 @@
         rowindex = $(this).closest('tr').index();
         var product_id = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-id').val();
         var warehouse_id = $('#from-warehouse-id').val();
-        
+
         $.get(BATCH_CHECK_URL + '/' + product_id + '/' + $(this).val() + '/' + warehouse_id, function(data) {
             if(data['message'] != 'ok') {
                 alert(data['message']);
@@ -799,7 +800,7 @@
         var pos = product_code.indexOf(row_product_code);
         var operator = unit_operator[rowindex].split(',');
         var operation_value = unit_operation_value[rowindex].split(',');
-        
+
         var total_qty = 0; // FIX: Declare the variable to prevent ReferenceError
         if(operator[0] == '*') {
             total_qty = purchase_qty * (operation_value[0] || 1);

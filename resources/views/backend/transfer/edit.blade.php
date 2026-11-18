@@ -103,9 +103,23 @@
                                                         $product_data = DB::table('products')->find($product_transfer->product_id);
 
                                                         if($product_transfer->variant_id) {
-                                                            $product_variant_data = \App\Models\ProductVariant::select('id', 'item_code')->FindExactProduct($product_data->id, $product_transfer->variant_id)->first();
-                                                            $product_variant_id = $product_variant_data->id;
-                                                            $product_data->code = $product_variant_data->item_code;
+                                                            // ✅ Primary key lookup (product_transfers.variant_id stores product_variants.id)
+                                                            $product_variant_data = \App\Models\ProductVariant::select('id', 'item_code', 'name')
+                                                                ->where('id', $product_transfer->variant_id)
+                                                                ->where('product_id', $product_data->id)
+                                                                ->first();
+                                                            // 🪵 Fallback for legacy rows
+                                                            if(!$product_variant_data) {
+                                                                $product_variant_data = \App\Models\ProductVariant::select('id', 'item_code', 'name')
+                                                                    ->FindExactProduct($product_data->id, $product_transfer->variant_id)->first();
+                                                            }
+                                                            if($product_variant_data) {
+                                                                $product_variant_id = $product_variant_data->id;
+                                                                $product_data->code = $product_variant_data->item_code;
+                                                            } else {
+                                                                $product_variant_id = null;
+                                                                $product_data->code = '(variant not found)';
+                                                            }
                                                         }
                                                         else
                                                             $product_variant_id = null;

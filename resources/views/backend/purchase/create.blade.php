@@ -945,7 +945,7 @@
                 '<tr>' +
                     '<td>' +
                         '<input type="hidden" name="product_id[]" class="product-id" value="' + d[9] + '">' +
-                        '<input type="hidden" class="product-variant-id" value="' + (d[10] == null ? '' : d[10]) + '">' +
+                        '<input type="hidden" name="product_variant_id[]" class="product-variant-id" value="' + (d[10] == null ? '' : d[10]) + '">' +
                         '<input type="hidden" name="tax_rate[]" class="tax-rate-input" value="' + taxIds.join(',') + '">' +
                         '<input type="hidden" name="tax_names[]" class="tax-names-input" value="' + taxNames.join(',') + '">' +
                         '<select name="purchase_unit[]" class="purchase-unit d-none">' + unitOptions + '</select>' +

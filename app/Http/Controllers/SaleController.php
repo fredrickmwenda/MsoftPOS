@@ -1480,6 +1480,217 @@ public function saleData(Request $request)
     }
 
 
+    // public function getProduct($id)
+    // {
+    //     $product_code = [];
+    //     $product_name = [];
+    //     $product_qty = [];
+    //     $product_type = [];
+    //     $product_id = [];
+    //     $product_list = [];
+    //     $qty_list = [];
+    //     $product_price = [];
+    //     $batch_no = [];
+    //     $product_batch_id = [];
+    //     $expired_date = [];
+    //     $is_embeded = [];
+    //     $product_shelf = [];
+
+    //     // 🔹 1. Get ALL product IDs assigned to this specific warehouse
+    //     $warehouse_product_ids = \DB::table('product_warehouse')
+    //         ->where('warehouse_id', $id)
+    //         ->pluck('product_id')
+    //         ->unique()
+    //         ->toArray();
+
+    //     // If warehouse has no products, return empty array immediately
+    //     if (empty($warehouse_product_ids)) {
+    //         return [
+    //             $product_code, $product_name, $product_qty, $product_type, $product_id,
+    //             $product_list, $qty_list, $product_price, $batch_no, $product_batch_id,
+    //             $expired_date, $is_embeded, $product_shelf
+    //         ];
+    //     }
+
+    //     // 🔹 2. Fetch standard products without variant assigned to this warehouse
+    //     $lims_product_warehouse_data = Product_Warehouse::where('warehouse_id', $id)
+    //         ->whereNull('variant_id')
+    //         ->whereNull('product_batch_id')
+    //         ->get();
+
+    //     foreach ($lims_product_warehouse_data as $product_warehouse) {
+    //         $lims_product_data = Product::find($product_warehouse->product_id);
+    //         if(!$lims_product_data || !$lims_product_data->is_active) continue;
+
+    //         $product_qty[] = $product_warehouse->qty;
+    //         $product_code[] =  $lims_product_data->code;
+    //         $product_name[] = $lims_product_data->name;
+    //         $product_type[] = $lims_product_data->type;
+    //         $product_id[] = $lims_product_data->id;
+    //         $product_list[] = $lims_product_data->product_list;
+    //         $product_shelf[] = $lims_product_data->shelf ?? 'NA';
+    //         $product_price[] = $lims_product_data->price;
+    //         $qty_list[] = $lims_product_data->qty_list;
+    //         $batch_no[] = null;
+    //         $product_batch_id[] = null;
+    //         $expired_date[] = null;
+    //         $is_embeded[] = $product_warehouse->is_embeded ? $product_warehouse->is_embeded : 0;
+    //     }
+
+    //     // 🔹 3. Fetch products with batches assigned to this warehouse
+    //     config()->set('database.connections.mysql.strict', false);
+    //     \DB::reconnect();
+
+    //     $lims_product_with_batch_warehouse_data = Product_Warehouse::where('warehouse_id', $id)
+    //         ->whereNull('variant_id')
+    //         ->whereNotNull('product_batch_id')
+    //         ->select('product_warehouse.*')
+    //         ->groupBy('product_warehouse.product_id')
+    //         ->get();
+
+    //     config()->set('database.connections.mysql.strict', true);
+    //     \DB::reconnect();
+
+    //     foreach ($lims_product_with_batch_warehouse_data as $product_warehouse) {
+    //         $lims_product_data = Product::find($product_warehouse->product_id);
+    //         if(!$lims_product_data || !$lims_product_data->is_active) continue;
+
+    //         $product_qty[] = $product_warehouse->qty;
+    //         $product_code[] =  $lims_product_data->code;
+    //         $product_name[] = $lims_product_data->name;
+    //         $product_type[] = $lims_product_data->type;
+    //         $product_id[] = $lims_product_data->id;
+    //         $product_list[] = $lims_product_data->product_list;
+    //         $product_shelf[] = $lims_product_data->shelf ?? 'NA';
+    //         $product_price[] = $lims_product_data->price;
+    //         $qty_list[] = $lims_product_data->qty_list;
+    //         $product_batch_data = ProductBatch::find($product_warehouse->product_batch_id);
+    //         $batch_no[] = $product_batch_data->batch_no;
+    //         $product_batch_id[] = $product_batch_data->id;
+    //         $expired_date[] = date(config('date_format'), strtotime($product_batch_data->expired_date));
+    //         $is_embeded[] = $product_warehouse->is_embeded ? $product_warehouse->is_embeded : 0;
+    //     }
+
+    //     // 🔹 4. Fetch products with variants assigned to this warehouse
+    //     $lims_product_with_variant_warehouse_data = Product_Warehouse::where('warehouse_id', $id)
+    //         ->whereNotNull('variant_id')
+    //         ->get();
+
+    //     foreach ($lims_product_with_variant_warehouse_data as $product_warehouse) {
+    //         $lims_product_data = Product::find($product_warehouse->product_id);
+    //         if(!$lims_product_data || !$lims_product_data->is_active) continue;
+
+    //         $lims_product_variant_data = ProductVariant::select('item_code')->FindExactProduct($product_warehouse->product_id, $product_warehouse->variant_id)->first();
+    //         if($lims_product_variant_data) {
+    //             $product_qty[] = $product_warehouse->qty;
+    //             $product_code[] =  $lims_product_variant_data->item_code;
+    //             $product_name[] = $lims_product_data->name;
+    //             $product_type[] = $lims_product_data->type;
+    //             $product_id[] = $lims_product_data->id;
+    //             $product_list[] = $lims_product_data->product_list;
+    //             $product_shelf[] = $lims_product_data->shelf ?? 'NA';
+    //             $product_price[] = $lims_product_data->price;
+    //             $qty_list[] = $lims_product_data->qty_list;
+    //             $batch_no[] = null;
+    //             $product_batch_id[] = null;
+    //             $expired_date[] = null;
+    //             $is_embeded[] = $product_warehouse->is_embeded ? $product_warehouse->is_embeded : 0;
+    //         }
+    //     }
+
+    //     // 🔹 5. Retrieve digital, combo and service products (No warehouse restriction)
+    //     $lims_product_data = Product::whereNotIn('type', ['standard'])
+    //         ->where('is_active', true)
+    //         ->whereNotIn('id', $product_id)
+    //         ->get();
+
+    //     foreach ($lims_product_data as $product) {
+    //         $product_qty[] = $product->qty;
+    //         $product_price[] = $product->price ?? 'NA';
+    //         $product_code[] =  $product->code;
+    //         $product_name[] = $product->name;
+    //         $product_type[] = $product->type;
+    //         $product_id[] = $product->id;
+    //         $product_list[] = $product->product_list;
+    //         $product_shelf[] = $product->shelf ?? 'NA';
+    //         $qty_list[] = $product->qty_list;
+    //         $batch_no[] = null;
+    //         $product_batch_id[] = null;
+    //         $expired_date[] = null;
+    //         $is_embeded[] = 0;
+    //     }
+
+    //     $product_data = [
+    //         $product_code,
+    //         $product_name,
+    //         $product_qty,
+    //         $product_type,
+    //         $product_id,
+    //         $product_list,
+    //         $qty_list,
+    //         $product_price,
+    //         $batch_no,
+    //         $product_batch_id,
+    //         $expired_date,
+    //         $is_embeded,
+    //         $product_shelf,
+    //     ];
+    //     return $product_data;
+    // }
+
+
+    /**
+     * ============================================================================
+     * SaleController::getProduct($id) — FIXED VERSION
+     * ============================================================================
+     *
+     * WHAT WAS WRONG
+     * --------------
+     * The variant lookup was using:
+     *
+     *   ProductVariant::select('item_code')
+     *       ->FindExactProduct($product_warehouse->product_id, $product_warehouse->variant_id)
+     *       ->first();
+     *
+     * `FindExactProduct($product_id, $variant_id)` is a scope that filters
+     * `product_variants` by `WHERE product_id = ? AND variant_id = ?`.
+     *
+     * BUT — `product_warehouse.variant_id` stores the PIVOT ROW id
+     * (i.e. `product_variants.id`, e.g. 162, 163, 164, 165),
+     * while `product_variants.variant_id` stores the VALUE TYPE id
+     * (i.e. `variants.id`, e.g. 1 for "Color", 2 for "Size").
+     *
+     * So the query was effectively:
+     *
+     *   SELECT item_code FROM product_variants
+     *   WHERE product_id = 921 AND variant_id = 162;
+     *
+     * …which returns NULL, because no `product_variants` row has `variant_id = 162`
+     * (they have `variant_id` = 1 or 2, etc.). The `if($lims_product_variant_data)`
+     * check then silently skipped the variant, so variant products never made it
+     * into the array that the POS autocomplete filters client-side.
+     *
+     * Result: typing "mana" on the POS returned nothing even though the database
+     * had perfectly valid `product_warehouse` rows for product 921.
+     *
+     * WHAT THIS VERSION DOES
+     * ----------------------
+     * 1. Looks up the ProductVariant by its PRIMARY KEY (`product_variants.id`),
+     *    which is what `product_warehouse.variant_id` actually stores.
+     * 2. Falls back to the OLD `FindExactProduct()` lookup, in case any legacy
+     *    data in your DB was written with the other convention. This makes the
+     *    fix safe to apply regardless of which controller version created the
+     *    rows.
+     * 3. Adds \Log::info() diagnostics at every step so you can verify in
+     *    storage/logs/laravel.log exactly what's happening on each POS load.
+     *
+     * INSTALL
+     * -------
+     * Replace the entire `getProduct($id)` method inside
+     * app/Http/Controllers/SaleController.php with the method below.
+     * ============================================================================
+     */
+
     public function getProduct($id)
     {
         $product_code = [];
@@ -1496,6 +1707,14 @@ public function saleData(Request $request)
         $is_embeded = [];
         $product_shelf = [];
 
+        // Track counters for the summary log
+        $log_standard_count   = 0;
+        $log_batch_count      = 0;
+        $log_variant_total    = 0;
+        $log_variant_loaded   = 0;
+        $log_variant_skipped  = 0;
+        $log_variant_fallback = 0;
+
         // 🔹 1. Get ALL product IDs assigned to this specific warehouse
         $warehouse_product_ids = \DB::table('product_warehouse')
             ->where('warehouse_id', $id)
@@ -1503,8 +1722,16 @@ public function saleData(Request $request)
             ->unique()
             ->toArray();
 
+        \Log::info('POS getProduct — start', [
+            'warehouse_id'           => $id,
+            'distinct_product_count' => count($warehouse_product_ids),
+        ]);
+
         // If warehouse has no products, return empty array immediately
         if (empty($warehouse_product_ids)) {
+            \Log::info('POS getProduct — empty warehouse, returning early', [
+                'warehouse_id' => $id,
+            ]);
             return [
                 $product_code, $product_name, $product_qty, $product_type, $product_id,
                 $product_list, $qty_list, $product_price, $batch_no, $product_batch_id,
@@ -1535,6 +1762,7 @@ public function saleData(Request $request)
             $product_batch_id[] = null;
             $expired_date[] = null;
             $is_embeded[] = $product_warehouse->is_embeded ? $product_warehouse->is_embeded : 0;
+            $log_standard_count++;
         }
 
         // 🔹 3. Fetch products with batches assigned to this warehouse
@@ -1569,18 +1797,68 @@ public function saleData(Request $request)
             $product_batch_id[] = $product_batch_data->id;
             $expired_date[] = date(config('date_format'), strtotime($product_batch_data->expired_date));
             $is_embeded[] = $product_warehouse->is_embeded ? $product_warehouse->is_embeded : 0;
+            $log_batch_count++;
         }
 
         // 🔹 4. Fetch products with variants assigned to this warehouse
+        //
+        //    ✅ FIX: product_warehouse.variant_id stores product_variants.id (the
+        //    pivot row's primary key), NOT variants.id. The old code used
+        //    FindExactProduct(product_id, variant_id) which filters
+        //    product_variants.variant_id = ?  → always returned NULL → variant
+        //    was silently skipped → POS search had nothing to match.
+        //
+        //    New approach: look up by primary key first. If that returns null
+        //    (legacy data using the old convention), fall back to FindExactProduct
+        //    so we don't break any rows that were created with an older controller.
         $lims_product_with_variant_warehouse_data = Product_Warehouse::where('warehouse_id', $id)
             ->whereNotNull('variant_id')
             ->get();
 
+        $log_variant_total = $lims_product_with_variant_warehouse_data->count();
+
         foreach ($lims_product_with_variant_warehouse_data as $product_warehouse) {
             $lims_product_data = Product::find($product_warehouse->product_id);
-            if(!$lims_product_data || !$lims_product_data->is_active) continue;
+            if(!$lims_product_data || !$lims_product_data->is_active) {
+                $log_variant_skipped++;
+                continue;
+            }
 
-            $lims_product_variant_data = ProductVariant::select('item_code')->FindExactProduct($product_warehouse->product_id, $product_warehouse->variant_id)->first();
+            // ✅ Primary lookup: by product_variants.id (= product_warehouse.variant_id)
+            $lims_product_variant_data = ProductVariant::select('id', 'product_id', 'variant_id', 'item_code', 'name')
+                ->where('id', $product_warehouse->variant_id)
+                ->where('product_id', $product_warehouse->product_id)
+                ->first();
+
+            $lookup_method = 'primary_key';
+
+            // 🪵 Fallback: if the primary-key lookup missed, try the OLD
+            //    FindExactProduct scope. This handles any legacy rows where
+            //    product_warehouse.variant_id was storing variants.id instead.
+            if (!$lims_product_variant_data) {
+                $lims_product_variant_data = ProductVariant::select('id', 'product_id', 'variant_id', 'item_code', 'name')
+                    ->FindExactProduct($product_warehouse->product_id, $product_warehouse->variant_id)
+                    ->first();
+                $lookup_method = $lims_product_variant_data ? 'findexact_fallback' : 'not_found';
+                if ($lims_product_variant_data) {
+                    $log_variant_fallback++;
+                }
+            }
+
+            // 🪵 Per-row diagnostic log — see storage/logs/laravel.log
+            \Log::info('POS getProduct variant lookup', [
+                'warehouse_id'    => $id,
+                'product_id'      => $product_warehouse->product_id,
+                'product_name'    => $lims_product_data->name,
+                'pw_variant_id'   => $product_warehouse->variant_id,             // e.g. 162
+                'lookup_method'   => $lookup_method,                              // primary_key | findexact_fallback | not_found
+                'pv_found'        => $lims_product_variant_data ? 'YES' : 'NO',
+                'pv_id'           => $lims_product_variant_data->id ?? null,
+                'pv_variant_id'   => $lims_product_variant_data->variant_id ?? null,
+                'pv_item_code'    => $lims_product_variant_data->item_code ?? null,
+                'qty_in_warehouse'=> $product_warehouse->qty,
+            ]);
+
             if($lims_product_variant_data) {
                 $product_qty[] = $product_warehouse->qty;
                 $product_code[] =  $lims_product_variant_data->item_code;
@@ -1595,6 +1873,9 @@ public function saleData(Request $request)
                 $product_batch_id[] = null;
                 $expired_date[] = null;
                 $is_embeded[] = $product_warehouse->is_embeded ? $product_warehouse->is_embeded : 0;
+                $log_variant_loaded++;
+            } else {
+                $log_variant_skipped++;
             }
         }
 
@@ -1604,6 +1885,7 @@ public function saleData(Request $request)
             ->whereNotIn('id', $product_id)
             ->get();
 
+        $log_digital_count = 0;
         foreach ($lims_product_data as $product) {
             $product_qty[] = $product->qty;
             $product_price[] = $product->price ?? 'NA';
@@ -1618,7 +1900,21 @@ public function saleData(Request $request)
             $product_batch_id[] = null;
             $expired_date[] = null;
             $is_embeded[] = 0;
+            $log_digital_count++;
         }
+
+        // 🪵 Summary log — one line per POS load, super useful for debugging
+        \Log::info('POS getProduct — summary', [
+            'warehouse_id'        => $id,
+            'standard_rows'       => $log_standard_count,
+            'batch_rows'          => $log_batch_count,
+            'variant_rows_total'  => $log_variant_total,
+            'variant_rows_loaded' => $log_variant_loaded,
+            'variant_rows_skip'   => $log_variant_skipped,
+            'variant_fallbacks'   => $log_variant_fallback,
+            'digital_rows'        => $log_digital_count,
+            'total_in_array'      => count($product_code),
+        ]);
 
         $product_data = [
             $product_code,
@@ -1637,7 +1933,6 @@ public function saleData(Request $request)
         ];
         return $product_data;
     }
-
 
 
     public function getWarehouseProductsForSale(Request $request)
@@ -1827,9 +2122,10 @@ public function saleData(Request $request)
         });
 
         // Get featured products (standard)
-        $lims_product_list = Cache::remember('product_list', 60*60*24, function () {
-            return Product::ActiveFeatured()->whereNull('is_variant')->get();
-        });
+        // $lims_product_list = Cache::remember('product_list', 60*60*24, function () {
+        //     return Product::ActiveFeatured()->whereNull('is_variant')->get();
+        // });
+        $lims_product_list = Product::ActiveFeatured()->whereNull('is_variant')->get();
 
         // Process product images
         foreach ($lims_product_list as $key => $product) {
@@ -1838,9 +2134,12 @@ public function saleData(Request $request)
         }
 
         // Get featured products with variants
-        $lims_product_list_with_variant = Cache::remember('product_list_with_variant', 60*60*24, function () {
-            return Product::ActiveFeatured()->whereNotNull('is_variant')->get();
-        });
+        // $lims_product_list_with_variant = Cache::remember('product_list_with_variant', 60*60*24, function () {
+        //     return Product::ActiveFeatured()->whereNotNull('is_variant')->get();
+        // });
+        //
+        $lims_product_list_with_variant = Product::ActiveFeatured()->whereNotNull('is_variant')->get();
+        //dd($lims_product_list_with_variant);
 
         // Process variant products
         foreach ($lims_product_list_with_variant as $product) {

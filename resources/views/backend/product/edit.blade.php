@@ -229,7 +229,7 @@
                                     </div>
                                     <div class="form-group">
                                         <input type="hidden" name="qty" value="{{ $lims_product_data->qty }}" class="form-control">
-                                    </div> 
+                                    </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
@@ -252,10 +252,10 @@
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label><strong>{{ trans('file.Product') }} {{ trans('file.Tax') }}</strong></label>
-                                        <select name="tax_id[]" 
-                                                class="form-control selectpicker" 
-                                                multiple 
-                                                data-live-search="true" 
+                                        <select name="tax_id[]"
+                                                class="form-control selectpicker"
+                                                multiple
+                                                data-live-search="true"
                                                 title="Select Tax">
 
                                             <option value="">No Tax</option>
@@ -266,7 +266,7 @@
                                             @endphp
 
                                             @foreach($lims_tax_list as $tax)
-                                                <option value="{{ $tax->id }}" 
+                                                <option value="{{ $tax->id }}"
                                                     {{ in_array($tax->id, old('tax_id', $selected_taxes)) ? 'selected' : '' }}>
                                                     {{ $tax->name }} ({{ $tax->rate }}%)
                                                 </option>
@@ -311,7 +311,7 @@
                                                     @endforeach
                                                 @elseif($field->type == 'radio_button')
                                                     <br>
-                                                    <?php 
+                                                    <?php
                                                     $option_values = explode(",", $field->option_value);
                                                     ?>
                                                     @foreach($option_values as $value)
@@ -342,7 +342,7 @@
                                                 @endif
                                             </div>
                                         </div>
-                                    @endif 
+                                    @endif
                                 @endforeach
                                 <div class="col-md-3">
                                     <div class="form-group">
@@ -390,7 +390,7 @@
                                             When checked, this product appears in the customer-facing storefront.
                                             Uncheck to hide it from online sales.
                                         </small>
-                                    </div> 
+                                    </div>
                                 </div>
 @php
     use App\Models\Product_Warehouse;
@@ -449,7 +449,7 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                </div> 
+                                </div>
 
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -548,11 +548,11 @@
                                     <div id="ExpiryInput" class="mt-3" style="display: none;">
                                         <div class="form-group">
                                             <label for="batch_no">Batch No</label>
-                                            <input 
-                                                type="text" 
-                                                name="batch_no" 
-                                                id="batch_no" 
-                                                class="form-control" 
+                                            <input
+                                                type="text"
+                                                name="batch_no"
+                                                id="batch_no"
+                                                class="form-control"
                                                 placeholder="Enter Batch No"
                                                 value="{{ old('batch_no', $lims_product_data->batch_no ?? '') }}"
                                             >
@@ -560,10 +560,10 @@
 
                                         <div class="form-group">
                                             <label for="expired_date">Expiry</label>
-                                            <input 
-                                                type="date" 
-                                                name="expired_date" 
-                                                id="expired_date" 
+                                            <input
+                                                type="date"
+                                                name="expired_date"
+                                                id="expired_date"
                                                 class="form-control"
                                                 value="{{ old('expired_date', $lims_product_data->expired_date ?? '') }}"
                                             >
@@ -585,6 +585,21 @@
                                     @endif
                                 </div>
                                 <div class="col-md-12" id="variant-section">
+                                    @php
+                                        $editVariantWarehouseId = count($lims_warehouse_list) === 1 ? $lims_warehouse_list->first()->id : null;
+                                    @endphp
+                                    <div class="col-md-4 form-group mt-2" id="variant-warehouse-wrapper">
+                                        <label>Warehouse for Variant Stock *</label>
+                                        <select name="variant_warehouse_id" class="form-control" {{ count($lims_warehouse_list) > 1 ? 'required' : '' }}>
+                                            @if(count($lims_warehouse_list) > 1)
+                                                <option value="">-- Select warehouse --</option>
+                                            @endif
+                                            @foreach($lims_warehouse_list as $warehouse)
+                                                <option value="{{ $warehouse->id }}" {{ $editVariantWarehouseId == $warehouse->id ? 'selected' : '' }}>{{ $warehouse->name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">Only the selected warehouse quantity will be changed.</small>
+                                    </div>
                                     @if($lims_product_data->variant_option)
                                     <div class="row" id="variant-input-section">
                                         @foreach($lims_product_data->variant_option as $key => $variant_option)
@@ -624,6 +639,7 @@
                                                     <th>{{trans('file.Item Code')}}</th>
                                                     <th>{{trans('file.Additional Cost')}}</th>
                                                     <th>{{trans('file.Additional Price')}}</th>
+                                                    <th>Selected Warehouse Qty</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -635,6 +651,12 @@
                                                     <td><input type="text" class="form-control" name="item_code[]" value="{{$variant->pivot['item_code']}}" /></td>
                                                     <td><input type="number" class="form-control additional-cost" name="additional_cost[]" value="{{$variant->pivot['additional_cost']}}" step="any" /></td>
                                                     <td><input type="number" class="form-control additional-price" name="additional_price[]" value="{{$variant->pivot['additional_price']}}" step="any" /></td>
+                                                    @php
+                                                        $variantWarehouseQtyMap = \App\Models\Product_Warehouse::where('product_id', $lims_product_data->id)
+                                                            ->where('variant_id', $variant->pivot['id'])
+                                                            ->pluck('qty', 'warehouse_id')->toArray();
+                                                    @endphp
+                                                    <td><input type="number" min="0" step="any" class="form-control variant-warehouse-qty" name="variant_qty[]" value="{{ $editVariantWarehouseId ? ($variantWarehouseQtyMap[$editVariantWarehouseId] ?? 0) : '' }}" data-warehouse-qty='@json($variantWarehouseQtyMap)' /></td>
                                                 </tr>
                                                 @endforeach
                                             </tbody>
@@ -709,7 +731,7 @@
 @endsection
 
 @push('scripts')
-<script> 
+<script>
     $(document).ready(function () {
         $('#input_shelf_option').on('change', function () {
             if ($(this).is(':checked')) {
@@ -1819,5 +1841,14 @@ if ($("input[name='is_initial_stock']").is(':checked')) {
     $("#initial-stock-section").show();
 }
 
-    </script>
+
+    // Load each variant's existing quantity for the chosen warehouse.
+    $(document).on('change', 'select[name="variant_warehouse_id"]', function () {
+        var warehouseId = $(this).val();
+        $('.variant-warehouse-qty').each(function () {
+            var quantities = $(this).data('warehouse-qty') || {};
+            $(this).val(warehouseId && quantities[warehouseId] !== undefined ? quantities[warehouseId] : 0);
+        });
+    });
+</script>
 @endpush

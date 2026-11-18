@@ -430,6 +430,29 @@
                                     @endphp
                                     <script type="application/json" id="variant-types-data">{!! $variant_types_json->toJson() !!}</script>
 
+                                    {{-- ============================================================ --}}
+                                    {{-- ✅ Warehouse selector for variant stock                     --}}
+                                    {{--    Pre-selects the first warehouse; auto-locks when only    --}}
+                                    {{--    one warehouse exists. Controller reads variant_warehouse --}}
+                                    {{--    _id to decide where to write the variant qtys.          --}}
+                                    {{-- ============================================================ --}}
+                                    <div class="col-md-4 form-group mt-2" id="variant-warehouse-wrapper">
+                                        <label>Warehouse for Variant Stock *</label>
+                                        <select name="variant_warehouse_id" id="variant_warehouse_id" class="form-control" required>
+                                            @foreach($lims_warehouse_list as $warehouse)
+                                                <option value="{{ $warehouse->id }}" {{ $loop->first ? 'selected' : '' }}>
+                                                    {{ $warehouse->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">
+                                            All variant quantities below will be stored in this warehouse.
+                                            @if(count($lims_warehouse_list) == 1)
+                                                <strong>(Only one warehouse exists — auto-selected.)</strong>
+                                            @endif
+                                        </small>
+                                    </div>
+
                                     <div id="variant-input-section">
                                         {{-- First row — defaults to the first variant_type (Color) --}}
                                         <div class="row variant-input-row">
@@ -1597,8 +1620,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     $("input[name='is_initial_stock']").on("change", function () {
         if ($(this).is(':checked')) {
-            if(numberOfWarehouse > 0)
+            if(numberOfWarehouse > 0) {
                 $("#initial-stock-section").show(300);
+                // ✅ Grey-out the Variant checkbox while Initial Stock is on
+                $("#is-variant").prop("checked", false).prop("disabled", true);
+                $("#variant-section").hide(300);
+                $("#variant-warehouse-wrapper").hide(300);
+            }
             else {
                 alert('Please create warehouse first before adding stock!');
                 $(this).prop("checked", false);
@@ -1606,6 +1634,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         else {
             $("#initial-stock-section").hide(300);
+            // ✅ Re-enable the Variant checkbox
+            $("#is-variant").prop("disabled", false);
         }
     });
 
@@ -1623,13 +1653,20 @@ document.addEventListener('DOMContentLoaded', function() {
     $("input[name='is_variant']").on("change", function () {
         if ($(this).is(':checked')) {
             $("#variant-section").show(300);
+            $("#variant-warehouse-wrapper").show(300);
             $("#batch-option").hide(300);
             $(".variant-field").prop("required", true);
+            // ✅ Grey-out the Initial Stock checkbox while Variant is on
+            $("input[name='is_initial_stock']").prop("checked", false).prop("disabled", true);
+            $("#initial-stock-section").hide(300);
         }
         else {
             $("#variant-section").hide(300);
+            $("#variant-warehouse-wrapper").hide(300);
             $("#batch-option").show(300);
             $(".variant-field").prop("required", false);
+            // ✅ Re-enable the Initial Stock checkbox
+            $("input[name='is_initial_stock']").prop("disabled", false);
         }
     });
 

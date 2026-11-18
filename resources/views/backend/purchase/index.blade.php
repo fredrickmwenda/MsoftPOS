@@ -1,4 +1,4 @@
-@extends('backend.layout.main') 
+@extends('backend.layout.main')
 
 @section('content')
 <style>
@@ -76,7 +76,7 @@
                 </div>
                 <div class="col-md-3">
                     <div class="form-group">
-                        <label><strong>{{trans('file.Date')}}</strong></label>                  
+                        <label><strong>{{trans('file.Date')}}</strong></label>
                         <input type="date" name="ending_date" id="ending_date" class="form-control" value="{{$ending_date}}" />
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                             <option value="1">{{trans('file.Recieved')}}</option>
                             <option value="2">{{trans('file.Partial')}}</option>
                             <option value="3">{{trans('file.Pending')}}</option>
-                            <option value="4">{{trans('file.Ordered')}}</option>                                                      
+                            <option value="4">{{trans('file.Ordered')}}</option>
 
                         </select>
                     </div>
@@ -117,14 +117,14 @@
                     </div>
                 </div>
 
-               
+
 
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button class="btn btn-primary" id="filter-btn" type="submit">{{trans('file.submit')}}</button>
                     </div>
                 </div>
-                
+
                 <div class="col-md-2 mt-3">
                     <div class="form-group">
                         <button type="button" class="btn btn-secondary" id="reset-filters">Reset</button>
@@ -295,12 +295,12 @@
     // Handle Save as Default button for admin percentage filter
     $('#save-admin-filter').on('click', function() {
         var pct = $('#percentage_filter_value').val() || $('#percentage_filter_select').val();
-        
+
         if(!pct || pct === '') {
             alert('Please select a percentage filter first');
             return;
         }
-        
+
         $.ajax({
             url: '{{ route("sales.save-default-filter") }}',
             method: 'POST',
@@ -757,7 +757,7 @@
         if(purchase[25])
             htmltext += '<strong>{{trans("file.Attach Document")}}: </strong><a href="documents/purchase/'+purchase[25]+'">Download</a><br>';
         htmltext += '<br><div class="row"><div class="col-md-6"><strong>{{trans("file.From")}}:</strong><br>'+purchase[4]+'<br>'+purchase[5]+'<br>'+purchase[6]+'</div><div class="col-md-6"><div class="float-right"><strong>{{trans("file.To")}}:</strong><br>'+purchase[7]+'<br>'+purchase[8]+'<br>'+purchase[9]+'<br>'+purchase[10]+'<br>'+purchase[11]+'<br>'+purchase[12]+'</div></div></div>';
-        
+
         $("#purchase-details table.product-purchase-list tbody").remove();
         $.get('purchases/product_purchase/' + purchase[3], function(data) {
             if(data == 'Something is wrong!') {
@@ -931,7 +931,7 @@ document.addEventListener("DOMContentLoaded", function () {
         $('#payment-approval-modal').modal('show');
     });
 
-   
+
     $('#approve-payment').click(function() {
         var paymentId = $('#approval-payment-id').val();
         var note = $('textarea[name="approval_note"]').val();

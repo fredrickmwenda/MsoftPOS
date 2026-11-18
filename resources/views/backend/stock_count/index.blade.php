@@ -50,8 +50,7 @@
     margin: 0;
 }
 
-.stock-header-actions
- {
+.stock-header-actions {
     display: flex;
     gap: 12px;
     flex-wrap: wrap;
@@ -74,8 +73,7 @@
     backdrop-filter: blur(10px);
 }
 
-.stock-header-left
- {
+.stock-header-left {
     flex: 1;
 }
 
@@ -126,21 +124,25 @@
     font-weight:600;
 }
 
-/* =========================================
-   PRINT STYLES
-   ========================================= */
+/* Variant badge in the product name cell */
+.variant-badge {
+    display: inline-block;
+    background: #e8f4fb;
+    color: #2d7cb7;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
 @media print {
-    /* Hide everything on the page */
     body * {
         visibility: hidden;
     }
-
-    /* Make ONLY the print area and its contents visible */
     #print-area, #print-area * {
         visibility: visible;
     }
-
-    /* Position the print area at the top left of the paper */
     #print-area {
         position: absolute;
         left: 0;
@@ -149,20 +151,19 @@
         margin: 0;
         padding: 0;
     }
-
-    /* Hide elements explicitly marked to be excluded from print */
     .no-print {
         display: none !important;
     }
-
-    /* Force table borders to be visible on paper */
     .table-bordered th, .table-bordered td {
         border: 1px solid #000 !important;
     }
-
-    /* Remove badge background colors for clean printing */
     .badge {
         background-color: transparent !important;
+        color: #000 !important;
+        border: 1px solid #000;
+    }
+    .variant-badge {
+        background: transparent !important;
         color: #000 !important;
         border: 1px solid #000;
     }
@@ -173,7 +174,6 @@
 <section>
 <div class="stock-count-wrapper">
 
-    {{-- Header (Hidden on Print) --}}
     <div class="page-header-modern no-print">
         <div class="stock-header-content">
             <div class="stock-header-left">
@@ -194,7 +194,6 @@
         </div>
     </div>
 
-    {{-- Warehouse Selection (Hidden on Print) --}}
     <div class="card shadow-sm mt-4 no-print">
         <div class="card-body">
             <h5 class="mb-4">SELECT WAREHOUSE</h5>
@@ -216,7 +215,6 @@
         </div>
     </div>
 
-    {{-- Information Bar (Hidden on Print) --}}
     <div class="row mt-4 no-print">
         <input type="hidden" id="warehouse_id">
 
@@ -242,17 +240,14 @@
         </div>
     </div>
 
-    {{-- Count Section --}}
     <div class="card mt-4">
 
-        {{-- Card Header (Hidden on Print) --}}
         <div class="card-header no-print">
             <h4>Physical Inventory Count</h4>
         </div>
 
         <div class="card-body">
 
-            {{-- Filters (Hidden on Print) --}}
             <div class="row mb-4 no-print">
                 <div class="col-md-3">
                     <label>Product Category</label>
@@ -283,7 +278,6 @@
                 </div>
             </div>
 
-            {{-- PRINT AREA START --}}
             <div id="print-area">
                 <h4 class="text-center mb-4" style="display: none;" id="print-title">
                     Physical Inventory Count - <span id="print-warehouse-name"></span>
@@ -305,11 +299,9 @@
                         </tr>
                     </thead>
                     <tbody id="productTable">
-                        <!-- Data renders here -->
                     </tbody>
                 </table>
             </div>
-            {{-- PRINT AREA END --}}
 
         </div>
     </div>
@@ -320,7 +312,6 @@
 
 @push('scripts')
 <script>
-    // Sidebar Active Menu
     $("ul#product").siblings('a').attr('aria-expanded', 'true');
     $("ul#product").addClass("show");
     $("ul#product #stock-count-menu").addClass("active");
@@ -334,7 +325,6 @@
         }
     });
 
-    // Warehouse Selection
     $(document).on('click', '.warehouse-card', function () {
         $('.warehouse-card').removeClass('active');
         $(this).addClass('active');
@@ -396,7 +386,6 @@
         loadProducts(selectedWarehouse, categoryId, batchId);
     });
 
-    // Manual Load Button
     $('#loadProducts').on('click', function () {
         let categoryId = $('#category').val();
         let batchId = $('#batch_no').val();
@@ -412,7 +401,6 @@
         loadProducts(selectedWarehouse, categoryId, batchId);
     });
 
-    // Load Products Function
     function loadProducts(warehouseId, categoryId, batchId = '') {
         $('#productTable').html(`<tr><td colspan="8" class="text-center">Loading products...</td></tr>`);
 
@@ -436,6 +424,15 @@
                     let expiry = product.expiry_date ? product.expiry_date : 'N/A';
                     let systemQty = parseFloat(product.system_qty).toFixed(2);
 
+                    // ✅ The controller now returns name as
+                    //    "Product Name [Variant Name]" for variant products,
+                    //    and code as the variant item_code. We also have
+                    //    variant_name as a separate field for a badge.
+                    let variantBadge = '';
+                    if (product.variant_name && product.variant_name !== '') {
+                        variantBadge = `<span class="variant-badge">${product.variant_name}</span>`;
+                    }
+
                     html += `
                     <tr>
                         <td class="no-print">
@@ -444,6 +441,7 @@
                         <td>${product.id}</td>
                         <td>
                             <strong>${product.name}</strong>
+                            ${variantBadge}
                             <br>
                             <small>${product.code}</small>
                             ${product.batch_no ? `<br><span class="badge badge-info">${product.batch_no}</span>` : ''}
@@ -454,12 +452,16 @@
                             <input type="number" step="1" min="0" class="form-control physical-count"
                                 data-system="${systemQty}"
                                 data-product="${product.id}"
+                                data-variant="${product.variant_id ?? ''}"
                                 data-batch="${product.batch_id ?? ''}"
                                 value="0">
                         </td>
                         <td class="variance"></td>
                         <td class="no-print">
-                            <button class="btn btn-success save-row" data-product="${product.id}" data-batch="${product.batch_id ?? ''}">
+                            <button class="btn btn-success save-row"
+                                data-product="${product.id}"
+                                data-variant="${product.variant_id ?? ''}"
+                                data-batch="${product.batch_id ?? ''}">
                                 <i class="fa fa-save"></i>
                             </button>
                         </td>
@@ -474,7 +476,6 @@
         });
     }
 
-    // Live Variance Calculation
     $(document).on('keyup change', '.physical-count', function () {
         let row = $(this).closest('tr');
         let systemQty = parseFloat($(this).data('system')) || 0;
@@ -493,7 +494,6 @@
         }
     });
 
-    // Product Search
     $('#searchProduct').on('keyup', function () {
         let value = $(this).val().toLowerCase();
         $('#productTable tr').filter(function () {
@@ -501,11 +501,13 @@
         });
     });
 
-    // Save Single Row
+    // ✅ Save — now sends variant_id so the controller can look up the
+    //    correct product_warehouse row for variant products.
     $(document).on('click', '.save-row', function () {
         let button = $(this);
         let row = button.closest('tr');
         let productId = button.data('product');
+        let variantId = button.data('variant') || '';
         let physicalQty = row.find('.physical-count').val();
         let variance = row.find('.variance').text().trim();
 
@@ -516,6 +518,7 @@
                 _token: "{{ csrf_token() }}",
                 warehouse_id: selectedWarehouse,
                 product_id: productId,
+                variant_id: variantId,
                 physical_qty: physicalQty,
                 variance: variance
             },
@@ -549,23 +552,17 @@
         $('.product-check').prop('checked', $(this).prop('checked'));
     });
 
-    // =========================================
-    // PRINT FUNCTIONALITY
-    // =========================================
     function printReport() {
         let warehouseName = $('#selectedWarehouse').text().trim();
         if (warehouseName === 'Select Warehouse' || warehouseName === '') {
             warehouseName = 'All Warehouses';
         }
 
-        // Set the title and show it just before printing
         $('#print-warehouse-name').text(warehouseName);
         $('#print-title').show();
 
-        // Trigger the print dialog
         window.print();
 
-        // Hide the title again after the dialog closes so it doesn't mess up your UI
         setTimeout(function() {
             $('#print-title').hide();
         }, 500);

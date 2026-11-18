@@ -659,10 +659,18 @@ class PurchaseController extends Controller
 
                     $lims_product_warehouse_data = Product_Warehouse::where([
                         ['product_id', $id],
-                        ['variant_id', $lims_product_variant_data->variant_id],
+                        ['variant_id', $lims_product_variant_data->id],
                         ['warehouse_id', $data['warehouse_id']]
                     ])->first();
-                    $product_purchase['variant_id'] = $lims_product_variant_data->variant_id;
+                    // 🪵 Fallback for legacy rows
+                    if(!$lims_product_warehouse_data) {
+                        $lims_product_warehouse_data = Product_Warehouse::where([
+                            ['product_id', $id],
+                            ['variant_id', $lims_product_variant_data->variant_id],
+                            ['warehouse_id', $data['warehouse_id']]
+                        ])->first();
+                    }
+                    $product_purchase['variant_id'] = $lims_product_variant_data->id;
 
                     $lims_product_variant_data->qty += $quantity;
                     $lims_product_variant_data->save();
@@ -712,7 +720,7 @@ class PurchaseController extends Controller
                     if($price)
                         $lims_product_warehouse_data->price = $price;
                     if($lims_product_data->is_variant)
-                        $lims_product_warehouse_data->variant_id = $lims_product_variant_data->variant_id;
+                        $lims_product_warehouse_data->variant_id = $lims_product_variant_data->id;
                 }
 
                 if(isset($imei_numbers[$i]) && $imei_numbers[$i]) {
@@ -866,7 +874,12 @@ class PurchaseController extends Controller
 
         // Build product response array
         $product = [];
-        $product[] = $lims_product_data->name;
+        // ✅ For variant products, append the variant name for identification
+        if (isset($lims_product_data->product_variant_id) && $lims_product_data->product_variant_id) {
+            $product[] = $lims_product_data->name . ' [' . ($lims_product_data->pv_name ?? '') . ']';
+        } else {
+            $product[] = $lims_product_data->name;
+        }
 
         if (isset($lims_product_data->product_variant_id) && $lims_product_data->product_variant_id) {
             $product[] = $lims_product_data->item_code;
@@ -1006,8 +1019,20 @@ class PurchaseController extends Controller
                 $product = Product::find($product_purchase_data->product_id);
                 $unit = Unit::find($product_purchase_data->purchase_unit_id);
                 if($product_purchase_data->variant_id) {
-                    $lims_product_variant_data = ProductVariant::FindExactProduct($product->id, $product_purchase_data->variant_id)->select('item_code')->first();
-                    $product->code = $lims_product_variant_data->item_code;
+                    // ✅ Primary key lookup
+                    $lims_product_variant_data = ProductVariant::select('item_code', 'name')
+                        ->where('id', $product_purchase_data->variant_id)
+                        ->where('product_id', $product->id)
+                        ->first();
+                    // 🪵 Fallback
+                    if(!$lims_product_variant_data) {
+                        $lims_product_variant_data = ProductVariant::FindExactProduct($product->id, $product_purchase_data->variant_id)->select('item_code', 'name')->first();
+                    }
+                    if($lims_product_variant_data) {
+                        $product->code = $lims_product_variant_data->item_code;
+                        // ✅ Append variant name for identification
+                        $product->name .= ' [' . $lims_product_variant_data->name . ']';
+                    }
                 }
                 if($product_purchase_data->product_batch_id) {
                     $product_batch_data = ProductBatch::select('batch_no')->find($product_purchase_data->product_batch_id);
@@ -1313,14 +1338,31 @@ class PurchaseController extends Controller
                 }
                 $lims_product_data = Product::find($product_purchase_data->product_id);
                 if($lims_product_data->is_variant) {
-                    $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')->FindExactProduct($lims_product_data->id, $product_purchase_data->variant_id)->first();
-                    $lims_product_warehouse_data = Product_Warehouse::where([
-                        ['product_id', $lims_product_data->id],
-                        ['variant_id', $product_purchase_data->variant_id],
-                        ['warehouse_id', $lims_purchase_data->warehouse_id]
-                    ])->first();
-                    $lims_product_variant_data->qty -= $old_recieved_value;
-                    $lims_product_variant_data->save();
+                    // ✅ Primary key lookup
+                    $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')
+                        ->where('id', $product_purchase_data->variant_id)
+                        ->where('product_id', $lims_product_data->id)
+                        ->first();
+                    // 🪵 Fallback
+                    if(!$lims_product_variant_data) {
+                        $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')->FindExactProduct($lims_product_data->id, $product_purchase_data->variant_id)->first();
+                    }
+                    if($lims_product_variant_data) {
+                        $lims_product_warehouse_data = Product_Warehouse::where([
+                            ['product_id', $lims_product_data->id],
+                            ['variant_id', $lims_product_variant_data->id],
+                            ['warehouse_id', $lims_purchase_data->warehouse_id]
+                        ])->first();
+                        if(!$lims_product_warehouse_data) {
+                            $lims_product_warehouse_data = Product_Warehouse::where([
+                                ['product_id', $lims_product_data->id],
+                                ['variant_id', $lims_product_variant_data->variant_id],
+                                ['warehouse_id', $lims_purchase_data->warehouse_id]
+                            ])->first();
+                        }
+                        $lims_product_variant_data->qty -= $old_recieved_value;
+                        $lims_product_variant_data->save();
+                    }
                 }
                 elseif($product_purchase_data->product_batch_id) {
                     $product_batch_data = ProductBatch::find($product_purchase_data->product_batch_id);
@@ -1397,12 +1439,21 @@ class PurchaseController extends Controller
 
                 if($lims_product_data->is_variant) {
                     $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')->FindExactProductWithCode($pro_id, $product_code[$key])->first();
+                    if(!$lims_product_variant_data) continue;
                     $lims_product_warehouse_data = Product_Warehouse::where([
                         ['product_id', $pro_id],
-                        ['variant_id', $lims_product_variant_data->variant_id],
+                        ['variant_id', $lims_product_variant_data->id],
                         ['warehouse_id', $data['warehouse_id']]
                     ])->first();
-                    $product_purchase['variant_id'] = $lims_product_variant_data->variant_id;
+                    // 🪵 Fallback
+                    if(!$lims_product_warehouse_data) {
+                        $lims_product_warehouse_data = Product_Warehouse::where([
+                            ['product_id', $pro_id],
+                            ['variant_id', $lims_product_variant_data->variant_id],
+                            ['warehouse_id', $data['warehouse_id']]
+                        ])->first();
+                    }
+                    $product_purchase['variant_id'] = $lims_product_variant_data->id;
                     //add quantity to product variant table
                     $lims_product_variant_data->qty += $new_recieved_value;
                     $lims_product_variant_data->save();
@@ -1445,8 +1496,8 @@ class PurchaseController extends Controller
                     $lims_product_warehouse_data = new Product_Warehouse();
                     $lims_product_warehouse_data->product_id = $pro_id;
                     $lims_product_warehouse_data->product_batch_id = $product_purchase['product_batch_id'];
-                    if($lims_product_data->is_variant)
-                        $lims_product_warehouse_data->variant_id = $lims_product_variant_data->variant_id;
+                    if($lims_product_data->is_variant && $lims_product_variant_data)
+                        $lims_product_warehouse_data->variant_id = $lims_product_variant_data->id;
                     $lims_product_warehouse_data->warehouse_id = $data['warehouse_id'];
                     $lims_product_warehouse_data->qty = $new_recieved_value;
                     if($price)
@@ -1965,11 +2016,24 @@ class PurchaseController extends Controller
 
                 $lims_product_data = Product::find($product_purchase_data->product_id);
                 if($product_purchase_data->variant_id) {
-                    $lims_product_variant_data = ProductVariant::select('id', 'qty')->FindExactProduct($lims_product_data->id, $product_purchase_data->variant_id)->first();
-                    $lims_product_warehouse_data = Product_Warehouse::FindProductWithVariant($product_purchase_data->product_id, $product_purchase_data->variant_id, $lims_purchase_data->warehouse_id)
+                    // ✅ Primary key lookup
+                    $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')
+                        ->where('id', $product_purchase_data->variant_id)
+                        ->where('product_id', $lims_product_data->id)
                         ->first();
-                    $lims_product_variant_data->qty -= $recieved_qty;
-                    $lims_product_variant_data->save();
+                    if(!$lims_product_variant_data)
+                        $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')->FindExactProduct($lims_product_data->id, $product_purchase_data->variant_id)->first();
+                    if($lims_product_variant_data) {
+                        $lims_product_warehouse_data = Product_Warehouse::where([
+                            ['product_id', $product_purchase_data->product_id],
+                            ['variant_id', $lims_product_variant_data->id],
+                            ['warehouse_id', $lims_purchase_data->warehouse_id]
+                        ])->first();
+                        if(!$lims_product_warehouse_data)
+                            $lims_product_warehouse_data = Product_Warehouse::FindProductWithVariant($product_purchase_data->product_id, $product_purchase_data->variant_id, $lims_purchase_data->warehouse_id)->first();
+                        $lims_product_variant_data->qty -= $recieved_qty;
+                        $lims_product_variant_data->save();
+                    }
                 }
                 elseif($product_purchase_data->product_batch_id) {
                     $lims_product_batch_data = ProductBatch::find($product_purchase_data->product_batch_id);
@@ -2031,11 +2095,24 @@ class PurchaseController extends Controller
 
                 $lims_product_data = Product::find($product_purchase_data->product_id);
                 if($product_purchase_data->variant_id) {
-                    $lims_product_variant_data = ProductVariant::select('id', 'qty')->FindExactProduct($lims_product_data->id, $product_purchase_data->variant_id)->first();
-                    $lims_product_warehouse_data = Product_Warehouse::FindProductWithVariant($product_purchase_data->product_id, $product_purchase_data->variant_id, $lims_purchase_data->warehouse_id)
+                    // ✅ Primary key lookup
+                    $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')
+                        ->where('id', $product_purchase_data->variant_id)
+                        ->where('product_id', $lims_product_data->id)
                         ->first();
-                    $lims_product_variant_data->qty -= $recieved_qty;
-                    $lims_product_variant_data->save();
+                    if(!$lims_product_variant_data)
+                        $lims_product_variant_data = ProductVariant::select('id', 'variant_id', 'qty')->FindExactProduct($lims_product_data->id, $product_purchase_data->variant_id)->first();
+                    if($lims_product_variant_data) {
+                        $lims_product_warehouse_data = Product_Warehouse::where([
+                            ['product_id', $product_purchase_data->product_id],
+                            ['variant_id', $lims_product_variant_data->id],
+                            ['warehouse_id', $lims_purchase_data->warehouse_id]
+                        ])->first();
+                        if(!$lims_product_warehouse_data)
+                            $lims_product_warehouse_data = Product_Warehouse::FindProductWithVariant($product_purchase_data->product_id, $product_purchase_data->variant_id, $lims_purchase_data->warehouse_id)->first();
+                        $lims_product_variant_data->qty -= $recieved_qty;
+                        $lims_product_variant_data->save();
+                    }
                 }
                 elseif($product_purchase_data->product_batch_id) {
                     $lims_product_batch_data = ProductBatch::find($product_purchase_data->product_batch_id);

@@ -31,11 +31,11 @@
                                     <div class="col-md-3">
                                         <div class="form-group">
                                             <label>Bill Number</label>
-                                
+
                                             <div class="input-group">
                                                 <input class="form-control" type="text" id="bill_no" name="bill_no" value="{{$lims_purchase_data->bill_no}}">
                                                 <div class="input-group-append">
-                                                    <button type="button" id="generateBillNo"  class="btn btn-sm btn-default" 
+                                                    <button type="button" id="generateBillNo"  class="btn btn-sm btn-default"
                                                         title="Generate Bill Number">
                                                        <i class="fa fa-refresh"></i></i>
                                                     </button>
@@ -114,7 +114,7 @@
                                                         @endforeach
                                                     @elseif($field->type == 'radio_button')
                                                         <br>
-                                                        <?php 
+                                                        <?php
                                                         $option_values = explode(",", $field->option_value);
                                                         ?>
                                                         @foreach($option_values as $value)
@@ -194,9 +194,20 @@
                                                     <?php
                                                         $product_data = DB::table('products')->find($product_purchase->product_id);
                                                         if($product_purchase->variant_id) {
-                                                            $product_variant_data = \App\Models\ProductVariant::FindExactProduct($product_data->id, $product_purchase->variant_id)->select('item_code')->first();
-                                                            if($product_variant_data)
+                                                            // ✅ Primary key lookup
+                                                            $product_variant_data = \App\Models\ProductVariant::select('id', 'item_code', 'name')
+                                                                ->where('id', $product_purchase->variant_id)
+                                                                ->where('product_id', $product_data->id)
+                                                                ->first();
+                                                            // 🪵 Fallback for legacy rows
+                                                            if(!$product_variant_data) {
+                                                                $product_variant_data = \App\Models\ProductVariant::FindExactProduct($product_data->id, $product_purchase->variant_id)->select('id', 'item_code', 'name')->first();
+                                                            }
+                                                            if($product_variant_data) {
                                                                 $product_data->code = $product_variant_data->item_code;
+                                                                // ✅ Append variant name for identification
+                                                                $product_data->name .= ' [' . $product_variant_data->name . ']';
+                                                            }
                                                         }
 
                                                         $tax = DB::table('taxes')->where('rate', $product_purchase->tax_rate)->first();
@@ -470,7 +481,7 @@ $(document).ready(function() {
         // Generate random 10-digit number
         let randomNum = Math.floor(1000000000 + Math.random() * 9000000000);
         let billNumber = 'BNO-' + randomNum;
-        
+
         // Set the value in the input
         $('#bill_no').val(billNumber);
     });

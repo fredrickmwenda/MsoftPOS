@@ -99,25 +99,26 @@
 @endsection
 @push('scripts')
 <script type="text/javascript">
-	$("ul#product").siblings('a').attr('aria-expanded','true');
+        $("ul#product").siblings('a').attr('aria-expanded','true');
     $("ul#product").addClass("show");
     $("ul#product #adjustment-create-menu").addClass("active");
-    // array data depend on warehouse
-   
+
     var product_code = [];
     var product_name = [];
     var product_qty = [];
 
-	$('.selectpicker').selectpicker({
-	    style: 'btn-link',
-	});
-
+        $('.selectpicker').selectpicker({
+            style: 'btn-link',
+        });
 
 var lims_product_array = [];
 
 $('select[name="warehouse_id"]').on('change', function() {
     var id = $(this).val();
+    loadWarehouseProducts(id);
+});
 
+function loadWarehouseProducts(id) {
     $.get('getproduct/' + id, function(data) {
         lims_product_array = [];
         product_code = data[0];
@@ -125,108 +126,90 @@ $('select[name="warehouse_id"]').on('change', function() {
         product_qty = data[2];
 
         $.each(product_code, function(index) {
-
-            let item = product_code[index] + ' (' + product_name[index] + ')';
-
-            // ONLY remove plus sign.
-            item = item.replace(/\+/g, '').trim();
-
+            // ✅ Show qty in the dropdown: "code (name) — Qty: X"
+            var qty = product_qty[index] !== undefined ? product_qty[index] : 0;
+            var item = product_code[index] + ' (' + product_name[index] + ') — Qty: ' + qty;
             lims_product_array.push(item);
         });
-
-        console.log("PRODUCT ARRAY CLEANED:", lims_product_array);
     });
-});
-
+}
 
 var lims_productcodeSearch = $('#lims_productcodeSearch');
 
 lims_productcodeSearch.autocomplete({
     source: function(request, response) {
         const term = request.term.toLowerCase();
-
-        console.log("SOURCE CALLED. ARRAY:", lims_product_array);
-
-        // Safe filter (NO regex issues)
         const filtered = lims_product_array.filter(item =>
             item.toLowerCase().includes(term)
         );
-
-        console.log("FILTERED:", filtered);
-
         response(filtered);
     },
-
     response: function(event, ui) {
-        console.log("RESPONSE FIRED:", ui);
         if (ui.content.length === 1) {
             $(this).autocomplete("close");
             productSearch(ui.content[0].value);
         }
     },
-
     select: function(event, ui) {
-        console.log("SELECT FIRED:", ui.item.value);
         productSearch(ui.item.value);
     }
 });
 
+        $("#myTable").on('input', '.qty', function() {
+            rowindex = $(this).closest('tr').index();
+            checkQuantity($(this).val(), true);
+        });
 
+        $("table.order-list tbody").on("click", ".ibtnDel", function(event) {
+            rowindex = $(this).closest('tr').index();
+            $(this).closest("tr").remove();
+            calculateTotal();
+        });
 
-	$("#myTable").on('input', '.qty', function() {
-	    rowindex = $(this).closest('tr').index();
-	    checkQuantity($(this).val(), true);
-	});
+        $(window).keydown(function(e){
+            if (e.which == 13) {
+                var $targ = $(e.target);
+                if (!$targ.is("textarea") && !$targ.is(":button,:submit")) {
+                    var focusNext = false;
+                    $(this).find(":input:visible:not([disabled],[readonly]), a").each(function(){
+                        if (this === e.target) {
+                            focusNext = true;
+                        }
+                        else if (focusNext){
+                            $(this).focus();
+                            return false;
+                        }
+                    });
+                    return false;
+                }
+            }
+        });
 
-	$("table.order-list tbody").on("click", ".ibtnDel", function(event) {
-	    rowindex = $(this).closest('tr').index();
-	    $(this).closest("tr").remove();
-	    calculateTotal();
-	});
+        $('#adjustment-form').on('submit',function(e){
+            var rownumber = $('table.order-list tbody tr:last').index();
+            if (rownumber < 0) {
+                alert("Please insert product to order table!")
+                e.preventDefault();
+            }
+        });
 
-	$(window).keydown(function(e){
-	    if (e.which == 13) {
-	        var $targ = $(e.target);
-	        if (!$targ.is("textarea") && !$targ.is(":button,:submit")) {
-	            var focusNext = false;
-	            $(this).find(":input:visible:not([disabled],[readonly]), a").each(function(){
-	                if (this === e.target) {
-	                    focusNext = true;
-	                }
-	                else if (focusNext){
-	                    $(this).focus();
-	                    return false;
-	                }
-	            });
-	            return false;
-	        }
-	    }
-	});
-
-	$('#adjustment-form').on('submit',function(e){
-	    var rownumber = $('table.order-list tbody tr:last').index();
-	    if (rownumber < 0) {
-	        alert("Please insert product to order table!")
-	        e.preventDefault();
-	    }
-	});
-
-	function productSearch(data){
-		$.ajax({
+        function productSearch(data){
+                $.ajax({
             type: 'GET',
             url: 'lims_product_search',
             data: {
-                data: data
+                data: data,
+                warehouse_id: $('select[name="warehouse_id"]').val()
             },
             success: function(data) {
                 var flag = 1;
                 $(".product-code").each(function(i) {
                     if ($(this).val() == data[1]) {
                         rowindex = i;
-	                    var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) + 1;
-	                    $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
-	                    checkQuantity(qty);
-	                    flag = 0;
+                            var qty = parseFloat($('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val()) + 1;
+                            $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ') .qty').val(qty);
+                            checkQuantity(qty);
+                            flag = 0;
                     }
                 });
                 $("input[name='product_code_name']").val('');
@@ -235,12 +218,15 @@ lims_productcodeSearch.autocomplete({
                     var cols = '';
                     cols += '<td>' + data[0] + '</td>';
                     cols += '<td>' + data[1] + '</td>';
-                    cols += '<td>' + data[4] + '</td>';
+                    // ✅ Stock Quantity column — shows the current stock from limsProductSearch
+                    cols += '<td class="stock-qty">' + data[4] + '</td>';
                     cols += '<td><input type="number" class="form-control qty" name="qty[]" value="1" required step="any" /></td>';
                     cols += '<td class="action"><select name="action[]" class="form-control act-val"><option value="-">{{trans("file.Subtraction")}}</option><option value="+">{{trans("file.Addition")}}</option></select></td>';
                     cols += '<td><button type="button" class="ibtnDel btn btn-md btn-danger">{{trans("file.delete")}}</button></td>';
                     cols += '<input type="hidden" class="product-code" name="product_code[]" value="' + data[1] + '"/>';
                     cols += '<input type="hidden" class="product-id" name="product_id[]" value="' + data[2] + '"/>';
+                    // ✅ Send product_variant_id so the controller can look up the variant by primary key
+                    cols += '<input type="hidden" name="product_variant_id[]" value="' + (data[3] || '') + '"/>';
 
                     newRow.append(cols);
                     $("table.order-list tbody").append(newRow);
@@ -249,38 +235,37 @@ lims_productcodeSearch.autocomplete({
                 }
             }
         });
-	}
+        }
 
-	function checkQuantity(qty) {
-	    var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('td:nth-child(2)').text();
-	    var action = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.act-val').val();
-	    var pos = product_code.indexOf(row_product_code);
+        function checkQuantity(qty) {
+            var row_product_code = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.product-code').val();
+            var action = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.act-val').val();
+            var pos = product_code.indexOf(row_product_code);
 
-	    if ( (qty > parseFloat(product_qty[pos])) && (action == '-') ) {
-	        alert('Quantity exceeds stock quantity!');
+            if (pos >= 0 && (qty > parseFloat(product_qty[pos])) && (action == '-')) {
+                alert('Quantity exceeds stock quantity!');
             var row_qty = $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val();
             row_qty = row_qty.substring(0, row_qty.length - 1);
             $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(row_qty);
-	    }
-	    else {
-	        $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(qty);
-	    }
-	    calculateTotal();
-	}
+            }
+            else {
+                $('table.order-list tbody tr:nth-child(' + (rowindex + 1) + ')').find('.qty').val(qty);
+            }
+            calculateTotal();
+        }
 
-	function calculateTotal() {
-	    var total_qty = 0;
-	    $(".qty").each(function() {
-
-	        if ($(this).val() == '') {
-	            total_qty += 0;
-	        } else {
-	            total_qty += parseFloat($(this).val());
-	        }
-	    });
-	    $("#total-qty").text(total_qty);
-	    $('input[name="total_qty"]').val(total_qty);
-	    $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
-	}
+        function calculateTotal() {
+            var total_qty = 0;
+            $(".qty").each(function() {
+                if ($(this).val() == '') {
+                    total_qty += 0;
+                } else {
+                    total_qty += parseFloat($(this).val());
+                }
+            });
+            $("#total-qty").text(total_qty);
+            $('input[name="total_qty"]').val(total_qty);
+            $('input[name="item"]').val($('table.order-list tbody tr:last').index() + 1);
+        }
 </script>
 @endpush

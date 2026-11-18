@@ -33,46 +33,118 @@
                     <td>{{ date('d-m-Y', strtotime($adjustment->created_at->toDateString())) . ' '. $adjustment->created_at->toTimeString() }}</td>
                     <td>{{ $adjustment->reference_no }}</td>
                     <?php $warehouse = DB::table('warehouses')->find($adjustment->warehouse_id) ?>
-                    <td>{{ $warehouse->name }}</td>
+                    <td>{{ optional($warehouse)->name }}</td>
+
+                    {{-- ================================================================ --}}
+                    {{-- PRODUCTS COLUMN                                                  --}}
+                    {{--   Variant products  → "Product Name [Variant Name]"             --}}
+                    {{--                       e.g. "Mana Product [Wine long/S]"         --}}
+                    {{--   Standard products → "Product Name [Product Code]"             --}}
+                    {{--                                                                  --}}
+                    {{--   ✅ FIX: look up the variant by product_variants.id (primary   --}}
+                    {{--   key), which is what product_adjustments.variant_id actually   --}}
+                    {{--   stores. Fallback to the old variant_id column for any legacy  --}}
+                    {{--   rows created before the controller fix.                       --}}
+                    {{-- ================================================================ --}}
                     <td>
                     <?php
-                    	$product_adjustment_data = DB::table('product_adjustments')->where('adjustment_id', $adjustment->id)->get();
-                    	foreach ($product_adjustment_data as $key => $product_adjustment) {
-                            if($product_adjustment->variant_id) {
-                                $product = DB::table('products')
-                                        ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
-                                        ->select('products.name','product_variants.item_code as code')
-                                        ->where([
-                                            ['product_id', $product_adjustment->product_id],
-                                            ['variant_id', $product_adjustment->variant_id]
-                                        ])->first();
-                            }
-                            else {
-                                $product = DB::table('products')->select('name','code')->find($product_adjustment->product_id);
-                            }
+                        $product_adjustment_data = DB::table('product_adjustments')
+                            ->where('adjustment_id', $adjustment->id)
+                            ->get();
 
-                    	 	if($key)
-                    	 		echo '<br>';
-                    	 	echo $product->name.' ['.$product->code.']';
-                    	 }
+                        foreach ($product_adjustment_data as $i => $product_adjustment) {
+                            if ($i) echo '<br>';
+
+                            if ($product_adjustment->variant_id) {
+                                // ✅ Primary lookup: product_adjustments.variant_id
+                                //    stores product_variants.id (the pivot row PK).
+                                $product = DB::table('products')
+                                    ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+                                    ->select(
+                                        'products.name as product_name',
+                                        'product_variants.name as variant_name',
+                                        'product_variants.item_code as code'
+                                    )
+                                    ->where('product_variants.id', $product_adjustment->variant_id)
+                                    ->where('product_variants.product_id', $product_adjustment->product_id)
+                                    ->first();
+
+                                // 🪵 Fallback: legacy rows where variant_id stored
+                                //    variants.id (the value-type id). This may match
+                                //    multiple Color variants — pick the first one.
+                                if (!$product) {
+                                    $product = DB::table('products')
+                                        ->join('product_variants', 'products.id', '=', 'product_variants.product_id')
+                                        ->select(
+                                            'products.name as product_name',
+                                            'product_variants.name as variant_name',
+                                            'product_variants.item_code as code'
+                                        )
+                                        ->where('product_variants.product_id', $product_adjustment->product_id)
+                                        ->where('product_variants.variant_id', $product_adjustment->variant_id)
+                                        ->first();
+                                }
+
+                                if ($product) {
+                                    // ✅ Display: "Product Name [Variant Name]"
+                                    //    e.g. "Mana Product [Wine long/S]"
+                                    echo e($product->product_name) . ' [' . e($product->variant_name) . ']';
+                                } else {
+                                    echo '<span class="text-danger">Product not found (variant_id=' . e($product_adjustment->variant_id) . ')</span>';
+                                }
+                            } else {
+                                // Standard (non-variant) product
+                                $product = DB::table('products')
+                                    ->select('name', 'code')
+                                    ->find($product_adjustment->product_id);
+
+                                if ($product) {
+                                    echo e($product->name) . ' [' . e($product->code) . ']';
+                                } else {
+                                    echo '<span class="text-danger">Product not found</span>';
+                                }
+                            }
+                        }
                     ?>
                     </td>
                     <td>{{ $adjustment->total_qty }}</td>
-                    <!-- total_stock_qty get it from the qty in Products Model -->
+
+                    {{-- ================================================================ --}}
+                    {{-- STOCK QTY COLUMN                                                 --}}
+                    {{--   For variant products → pulls qty from product_variants.qty    --}}
+                    {{--   For standard products → pulls qty from products.qty           --}}
+                    {{--                                                                  --}}
+                    {{--   ✅ FIX: same primary-key lookup. The stock shown here is the  --}}
+                    {{--   CURRENT qty in product_variants (after the adjustment was     --}}
+                    {{--   applied), not the qty at the time of adjustment. The           --}}
+                    {{--   AdjustmentController::store() / update() / destroy() methods  --}}
+                    {{--   already keep products.qty, product_variants.qty AND           --}}
+                    {{--   product_warehouse.qty all in sync when an adjustment runs.    --}}
+                    {{-- ================================================================ --}}
                     <td>
                     <?php
                         $total_stock_qty = 0;
-                        foreach ($product_adjustment_data as $key => $product_adjustment) {
-                            if($product_adjustment->variant_id) {
+                        foreach ($product_adjustment_data as $i => $product_adjustment) {
+                            if ($product_adjustment->variant_id) {
+                                // ✅ Primary lookup by product_variants.id
                                 $product_stock = DB::table('product_variants')
-                                        ->where([
-                                            ['product_id', $product_adjustment->product_id],
-                                            ['variant_id', $product_adjustment->variant_id]
-                                        ])->first();
-                                $total_stock_qty += $product_stock->qty;
+                                    ->where('id', $product_adjustment->variant_id)
+                                    ->where('product_id', $product_adjustment->product_id)
+                                    ->first();
+
+                                // 🪵 Fallback for legacy rows
+                                if (!$product_stock) {
+                                    $product_stock = DB::table('product_variants')
+                                        ->where('product_id', $product_adjustment->product_id)
+                                        ->where('variant_id', $product_adjustment->variant_id)
+                                        ->first();
+                                }
+                            } else {
+                                $product_stock = DB::table('products')
+                                    ->find($product_adjustment->product_id);
                             }
-                            else {
-                                $product_stock = DB::table('products')->find($product_adjustment->product_id);
+
+                            if ($product_stock) {
                                 $total_stock_qty += $product_stock->qty;
                             }
                         }
@@ -80,7 +152,7 @@
                     ?>
                     </td>
                     <td>{{$adjustment->note}}</td>
-                    
+
                     <td>
                         <div class="btn-group">
                             <button type="button" class="btn btn-default btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">{{trans('file.action')}}<span class="caret"></span><span class="sr-only">Toggle Dropdown</span>
