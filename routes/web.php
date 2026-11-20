@@ -94,7 +94,7 @@ use App\Http\Controllers\SalaryTemplateController;
 use App\Http\Controllers\PayrollPaymentController;
 use App\Http\Controllers\SocialMediaController;
 use App\Http\Controllers\VariantTypeController;
-
+use App\Http\Controllers\SmsGatewayController;
 
 // ---------------------------------------
 
@@ -130,8 +130,6 @@ Route::get('stock-count/batches',[StockCountController::class, 'getBatches'])->n
 
 
 //set them as Resource
-Route::resource('variant-types', VariantTypeController::class);
-
 
 
 Route::get('update-coupon', [CouponController::class, 'updateCoupon']);
@@ -255,6 +253,11 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('addon-list', 'addonList');
         Route::get('my-transactions/{year}/{month}', 'myTransaction');
     });
+
+
+    Route::resource('variant-types', VariantTypeController::class);
+    Route::patch('variant-types/{id}/change-order', [VariantTypeController::class, 'changeOrder'])->name('variant-types.changeOrder');
+
 
 
     Route::resource('policies', AdminPolicyController::class);
@@ -728,6 +731,15 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('user/all', 'allUsers')->name('user.all');
     });
     Route::resource('user', UserController::class);
+
+    // SMS gateway dashboard + CRUD
+    Route::resource('sms-gateways', SmsGatewayController::class);
+
+    // Activate a gateway — sets it active and deactivates the previous one
+    Route::post('sms-gateways/{sms_gateway}/activate',
+        [SmsGatewayController::class, 'activate']
+    )->name('sms-gateways.activate');
+
 
 
     Route::controller(SettingController::class)->group(function () {

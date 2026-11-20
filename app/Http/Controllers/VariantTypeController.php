@@ -4,100 +4,102 @@ namespace App\Http\Controllers;
 
 use App\Models\VariantType;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class VariantTypeController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
+        $variantTypes = VariantType::ordered()->get();
 
-        $variantTypes = VariantType::all();
+
         return view('backend.variant_type.index', compact('variantTypes'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         return view('backend.variant_type.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'order' => 'required|integer',
+        $validated = $request->validate([
+            'name'   => ['required', 'string', 'max:255'],
+            'order'  => ['required', 'integer', 'min:0', 'unique:variant_types,order'],
+            'active' => ['sometimes', 'boolean'],
         ]);
-        //check if order is unique
-        //
-        $variantType = VariantType::where('order', $request->order)->first();
-        if ($variantType) {
-            return redirect()->back()->withErrors(['order' => 'Order must be unique']);
-        }
 
-        VariantType::create($request->all());
+        $validated['active'] = $request->boolean('active', true);
 
-        return redirect()->route('variant-types.index');
+        VariantType::create($validated);
+
+        return redirect()
+            ->route('variant-types.index')
+            ->with('success', 'Variant type created.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show($id)
+    public function show(VariantType $variantType)
     {
-        $variantType = VariantType::findOrFail($id);
         return view('backend.variant_type.show', compact('variantType'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
+    public function edit(VariantType $variantType)
     {
-        $variantType = VariantType::findOrFail($id);
         return view('backend.variant_type.edit', compact('variantType'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, $id)
+    public function update(Request $request, VariantType $variantType)
     {
-        $variantType = VariantType::findOrFail($id);
-        $variantType->update($request->all());
+        $validated = $request->validate([
+            'name'   => ['required', 'string', 'max:255'],
+            'order'  => [
+                'required', 'integer', 'min:0',
+                Rule::unique('variant_types', 'order')->ignore($variantType->id),
+            ],
+            'active' => ['sometimes', 'boolean'],
+        ]);
 
-        return redirect()->route('variant-types.index');
+        $validated['active'] = $request->boolean('active');
+
+        $variantType->update($validated);
+
+        return redirect()
+            ->route('variant-types.index')
+            ->with('success', 'Variant type updated.');
     }
 
-
-    //change order
-    public function changeOrder(Request $request, $id)
+    /** Custom action — must be registered manually (see routes below). */
+    public function changeOrder(Request $request, VariantType $variantType)
     {
-        $variantType = VariantType::findOrFail($id);
-        $variantType->update(['order' => $request->order]);
+        $validated = $request->validate([
+            'order' => [
+                'required', 'integer', 'min:0',
+                Rule::unique('variant_types', 'order')->ignore($variantType->id),
+            ],
+        ]);
 
-        return redirect()->route('variant-types.index');
+        $variantType->update(['order' => $validated['order']]);
+
+        return redirect()
+            ->route('variant-types.index')
+            ->with('success', 'Order updated.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy($id)
+    public function destroy(VariantType $variantType)
     {
-        // what if it is being used in a product variant?
-        // check if it is being used in a product variant
-        $variantType = VariantType::findOrFail($id);
-        if ($variantType->productVariants()->count() > 0) {
-            return redirect()->back()->withErrors(['variantType' => 'Cannot delete variant type that is being used in a product variant']);
+        // Now works thanks to the hasManyThrough relation.
+        if ($variantType->productVariants()->exists()) {
+            return redirect()
+                ->back()
+                ->withErrors([
+                    'variantType' => 'Cannot delete a variant type that is being used by a product variant.',
+                ]);
         }
+
         $variantType->delete();
 
-        return redirect()->route('variant-types.index');
+        return redirect()
+            ->route('variant-types.index')
+            ->with('success', 'Variant type deleted.');
     }
 }

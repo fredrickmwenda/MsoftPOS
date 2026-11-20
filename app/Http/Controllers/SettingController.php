@@ -505,48 +505,155 @@ class SettingController extends Controller
         return view('backend.setting.create_sms', compact('lims_customer_list'));
     }
 
+    // public function sendSms(Request $request)
+    // {
+    //     $data = $request->all();
+    //     $numbers = explode(",", $data['mobile']);
+
+    //     if( env('SMS_GATEWAY') == 'twilio') {
+    //         $account_sid = env('ACCOUNT_SID');
+    //         $auth_token = env('AUTH_TOKEN');
+    //         $twilio_phone_number = env('Twilio_Number');
+    //         try{
+    //             $client = new Client($account_sid, $auth_token);
+    //             foreach ($numbers as $number) {
+    //                 $client->messages->create(
+    //                     $number,
+    //                     array(
+    //                         "from" => $twilio_phone_number,
+    //                         "body" => $data['message']
+    //                     )
+    //                 );
+    //             }
+    //         }
+    //         catch(\Exception $e){
+    //             //return $e;
+    //             return redirect()->back()->with('not_permitted', 'Please setup your <a href="sms_setting">SMS Setting</a> to send SMS.');
+    //         }
+    //         $message = "SMS sent successfully";
+    //     }
+    //     elseif( env('SMS_GATEWAY') == 'clickatell') {
+    //         try {
+    //             $clickatell = new \Clickatell\Rest(env('CLICKATELL_API_KEY'));
+    //             foreach ($numbers as $number) {
+    //                 $result = $clickatell->sendMessage(['to' => [$number], 'content' => $data['message']]);
+    //             }
+    //         }
+    //         catch (ClickatellException $e) {
+    //             return redirect()->back()->with('not_permitted', 'Please setup your <a href="sms_setting">SMS Setting</a> to send SMS.');
+    //         }
+    //         $message = "SMS sent successfully";
+    //     }
+    //     else
+    //         return redirect()->back()->with('not_permitted', 'Please setup your <a href="sms_setting">SMS Setting</a> to send SMS.');
+    //     return redirect()->back()->with('message', $message);
+    // }
+    //
+    //
     public function sendSms(Request $request)
     {
-        $data = $request->all();
-        $numbers = explode(",", $data['mobile']);
+        $data     = $request->all();
+        $numbers  = explode(",", $data['mobile']);
+        $message  = $data['message'];
+        $sentById = auth()->id();
 
-        if( env('SMS_GATEWAY') == 'twilio') {
-            $account_sid = env('ACCOUNT_SID');
-            $auth_token = env('AUTH_TOKEN');
-            $twilio_phone_number = env('Twilio_Number');
-            try{
-                $client = new Client($account_sid, $auth_token);
+        // ---- 1. DB-backed active gateway (preferred) ---------------------------
+        $gateway = \App\Models\SmsGateway::getActive();
+
+        if ($gateway) {
+            return $this->sendSmsViaGateway($gateway, $numbers, $message, $sentById);
+        }
+
+        // ---- 2. Legacy .env-based fallback --------------------------------------
+        $provider = env('SMS_GATEWAY');
+
+        if ($provider === 'twilio') {
+            try {
+                $client = new \Twilio\Rest\Client(env('ACCOUNT_SID'), env('AUTH_TOKEN'));
                 foreach ($numbers as $number) {
-                    $client->messages->create(
-                        $number,
-                        array(
-                            "from" => $twilio_phone_number,
-                            "body" => $data['message']
-                        )
-                    );
+                    $client->messages->create($number, [
+                        'from' => env('Twilio_Number'),
+                        'body' => $message,
+                    ]);
                 }
-            }
-            catch(\Exception $e){
-                //return $e;
+                $this->logSms(null, $numbers, $message, 'sent', 'Sent via .env Twilio config', $sentById);
+                return redirect()->back()->with('message', 'SMS sent successfully');
+            } catch (\Exception $e) {
+                $this->logSms(null, $numbers, $message, 'failed', $e->getMessage(), $sentById);
                 return redirect()->back()->with('not_permitted', 'Please setup your <a href="sms_setting">SMS Setting</a> to send SMS.');
             }
-            $message = "SMS sent successfully";
         }
-        elseif( env('SMS_GATEWAY') == 'clickatell') {
+
+        if ($provider === 'clickatell') {
             try {
                 $clickatell = new \Clickatell\Rest(env('CLICKATELL_API_KEY'));
                 foreach ($numbers as $number) {
-                    $result = $clickatell->sendMessage(['to' => [$number], 'content' => $data['message']]);
+                    $clickatell->sendMessage(['to' => [$number], 'content' => $message]);
                 }
-            }
-            catch (ClickatellException $e) {
+                $this->logSms(null, $numbers, $message, 'sent', 'Sent via .env Clickatell config', $sentById);
+                return redirect()->back()->with('message', 'SMS sent successfully');
+            } catch (\Clickatell\ClickatellException $e) {
+                $this->logSms(null, $numbers, $message, 'failed', $e->getMessage(), $sentById);
                 return redirect()->back()->with('not_permitted', 'Please setup your <a href="sms_setting">SMS Setting</a> to send SMS.');
             }
-            $message = "SMS sent successfully";
         }
-        else
-            return redirect()->back()->with('not_permitted', 'Please setup your <a href="sms_setting">SMS Setting</a> to send SMS.');
-        return redirect()->back()->with('message', $message);
+
+        return redirect()->back()->with('not_permitted', 'No active SMS gateway configured. Visit the <a href="' . route('sms-gateways.index') . '">SMS Dashboard</a>.');
+    }
+
+    /**
+     * Dispatch via a DB-backed Arkesel gateway and log the result.
+     *
+     * Uses your existing App\Services\Arkesel — the constructor accepts
+     * ($apiKey, $sender) which map directly to $gateway->key and $gateway->sender.
+     */
+    protected function sendSmsViaGateway(\App\Models\SmsGateway $gateway, array $numbers, string $message, ?int $sentById)
+    {
+        try {
+            $arkesel  = new \App\Services\Arkesel($gateway->key, $gateway->sender);
+            $response = $arkesel->send($message, $numbers);
+            $raw      = is_string($response) ? $response : json_encode($response);
+
+            // Try to grab the Arkesel message id from the response payload
+            $msgId = null;
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $msgId = $decoded['data']['message_id'][0]
+                         ?? $decoded['message_id']
+                         ?? null;
+            }
+
+            $this->logSms($gateway, $numbers, $message, 'sent', $raw, $sentById, $msgId);
+
+            return redirect()->back()->with('message', "SMS sent successfully via {$gateway->name}.");
+
+        } catch (\Exception $e) {
+            $this->logSms($gateway, $numbers, $message, 'failed', $e->getMessage(), $sentById);
+            return redirect()->back()->with('not_permitted', "SMS failed: {$e->getMessage()}");
+        }
+    }
+
+    /**
+     * Write a row to sms_messages.
+     */
+    protected function logSms(
+        ?\App\Models\SmsGateway $gateway,
+        array $numbers,
+        string $message,
+        string $status,
+        string $response,
+        ?int $sentById,
+        ?string $msgId = null
+    ): void {
+        \App\Models\SmsMessage::create([
+            'sms_gateway_id' => $gateway?->id,
+            'recipients'     => implode(',', $numbers),
+            'message'        => $message,
+            'status'         => $status,
+            'response'       => $response,
+            'message_id'     => $msgId,
+            'sent_by'        => $sentById,
+        ]);
     }
 
     public function hrmSetting()

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('sms_gateways', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->string('name')->nullable();
             $table->string('key');
             $table->string('sender');
             $table->boolean('active')->default(false);
