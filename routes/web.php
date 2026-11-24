@@ -95,6 +95,9 @@ use App\Http\Controllers\PayrollPaymentController;
 use App\Http\Controllers\SocialMediaController;
 use App\Http\Controllers\VariantTypeController;
 use App\Http\Controllers\SmsGatewayController;
+use App\Http\Controllers\StorefrontController;
+use App\Http\Controllers\EcommerceSetupController;
+
 
 // ---------------------------------------
 
@@ -264,6 +267,8 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
     Route::post('policies/{policy}/toggle', [AdminPolicyController::class, 'toggleActive'])->name('policies.toggle');
 
 
+
+
     // Need to check again
     Route::resource('products',ProductController::class)->except([ 'show']);
     Route::controller(ProductController::class)->group(function () {
@@ -343,7 +348,6 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
         Route::get('suppliers/all-companies', 'allCompanies')->name('supplier.allCompanies');
         // Product search filtered by warehouse (for purchase create)
         Route::get('lims_product_search_warehouse', 'productSearchByWarehouse')->name('lims_product_search_warehouse');
-
         // Quick supplier creation from modal (AJAX)
         Route::post('suppliers/quick-store', 'quickStoreSupplier')->name('suppliers.quick_store');
     });
@@ -487,6 +491,10 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
 
     // Route::get('/customer-display', [SaleController::class, 'customerDisplay'])->name('sales.customerDisplay');
 
+    Route::prefix('ecommerce-setup')->name('ecommerce.setup.')->group(function () {
+        Route::get('/',  [EcommerceSetupController::class, 'edit'])->name('edit');
+        Route::post('/', [EcommerceSetupController::class, 'update'])->name('update');
+    });
     Route::controller(HirePurchaseController::class)->group(function () {
         Route::prefix('hire-purchase')->group(function () {
             Route::get('/', 'index')->name('hire_purchase.index');
@@ -869,7 +877,7 @@ Route::group(['middleware' => ['auth', 'common', 'active']], function() {
        Route::post('payroll/update/{id}',        [PayrollController::class, 'update'])->name('payroll.update');
        Route::delete('payroll/{id}',             [PayrollController::class, 'destroy'])->name('payroll.destroy');
     // AJAX endpoints for creating templates and template items from modal
-    Route::post('payroll-templates/store', [\App\Http\Controllers\PayrollTemplateController::class, 'store']);
+   // Route::post('payroll-templates/store', [\App\Http\Controllers\PayrollTemplateController::class, 'store']);
 
 
 

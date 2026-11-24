@@ -501,8 +501,19 @@ class SettingController extends Controller
 
     public function createSms()
     {
-        $lims_customer_list = Customer::where('is_active', true)->get();
-        return view('backend.setting.create_sms', compact('lims_customer_list'));
+        $lims_customer_list       = Customer::where('is_active', true)->get();
+        $lims_employee_list       = \App\Models\Employee::where('is_active', true)->get();
+        $lims_customer_group_list = \App\Models\CustomerGroup::all();
+        $lims_department_list     = \App\Models\Department::all();
+        $lims_sms_template_list   = \App\Models\SmsTemplate::all();
+
+        return view('backend.setting.create_sms', compact(
+            'lims_customer_list',
+            'lims_employee_list',
+            'lims_customer_group_list',
+            'lims_department_list',
+            'lims_sms_template_list'
+        ));
     }
 
     // public function sendSms(Request $request)

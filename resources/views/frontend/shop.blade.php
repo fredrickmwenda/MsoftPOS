@@ -1,21 +1,18 @@
 @extends('frontend.layout')
 @php
-    // Fetch the general settings safely. 
+    // ── General settings (header/footer identity) ─────────────────
     $setting = \App\Models\GeneralSetting::latest()->first();
-    
+
     // Helper to safely resolve public path for images (logos, favicons)
-    // If the DB only stores the filename (e.g., 'logo.png'), it prepends 'logo/'
     $resolveAssetPath = function ($path, $defaultDir = 'logo') {
         if (empty($path)) return null;
-        // If it's already a full URL (http://...) or contains a slash (logo/img.png)
         if (filter_var($path, FILTER_VALIDATE_URL) || str_contains($path, '/')) {
             return $path;
         }
-        // Otherwise, assume it's just a filename and prepend the directory
         return $defaultDir . '/' . $path;
     };
 
-    // Provide safe defaults for all settings
+    // Safe defaults for all settings
     $siteTitle      = $setting->site_title      ?? config('app.name', 'JoexPOS');
     $siteLogo       = $resolveAssetPath($setting->site_logo ?? null, 'logo');
     $siteFavicon    = $resolveAssetPath($setting->site_favicon ?? null, 'logo');
@@ -29,11 +26,50 @@
     // Normalize WhatsApp number (strip non-digits, ensure country code)
     $whatsappNumber = preg_replace('/[^0-9]/', '', $whatsappNumber);
     if (substr($whatsappNumber, 0, 1) === '0') {
-        // Convert local Ghana format like 0245168718 -> 233245168718
         $whatsappNumber = '233' . substr($whatsappNumber, 1);
     }
 
+    // ── Homepage content from ecommerce_setup ─────────────────────
+    $hero        = setting('homepage.hero', []);
+    $catSection  = setting('homepage.categories', []);
+    $deal        = setting('homepage.deal', []);
+    $featuredSec = setting('homepage.featured', []);
 
+    // Hero (with safe fallbacks if not yet seeded)
+    $heroBadge          = $hero['badge']              ?? $siteTitle;
+    $heroTitlePrefix    = $hero['title_prefix']       ?? 'Everything you need to';
+    $heroTitleHighlight = $hero['title_highlight']    ?? 'build better.';
+    $heroDescription    = $hero['description']        ?? 'Affordable, reliable and durable tools, building materials and expert support for contractors, tradespeople and home projects.';
+    $primaryBtnText     = $hero['primary_btn_text']   ?? 'Shop products';
+    $primaryBtnLink     = $hero['primary_btn_link']   ?? (\Route::has('all.products') ? route('all.products') : '#');
+    $secondaryBtnText   = $hero['secondary_btn_text'] ?? 'Request a quote';
+    $secondaryBtnLink   = $hero['secondary_btn_link'] ?? '#categories';
+    $warrantyTitle      = $hero['warranty_title']     ?? 'Genuine products';
+    $warrantySubtitle   = $hero['warranty_subtitle']  ?? 'Manufacturer warranty';
+    $heroStats          = $hero['stats'] ?? [
+        ['value' => '5,000+',    'label' => 'Quality products'],
+        ['value' => '24–48 hrs', 'label' => 'Accra delivery'],
+        ['value' => '100%',      'label' => 'Genuine brands'],
+    ];
+
+    // Categories section headings
+    $catEyebrow     = $catSection['eyebrow']       ?? 'Find what you need';
+    $catHeading     = $catSection['heading']       ?? 'Shop by category';
+    $catViewAllText = $catSection['view_all_text'] ?? 'View all products →';
+
+    // Deal banner
+    $dealLabel       = $deal['label']        ?? "THIS WEEK'S DEAL";
+    $dealHeading     = $deal['heading']      ?? 'Power up your projects.';
+    $dealDescription = $deal['description']  ?? 'Save on selected power tools, hand tools and essential site equipment.';
+    $dealLinkText    = $deal['link_text']    ?? 'Explore special offers →';
+    $dealLinkUrl     = $deal['link_url']     ?? (\Route::has('all.products') ? route('all.products') : '#');
+    $dealBadgeTop    = $deal['badge_top']    ?? 'UP TO';
+    $dealBadgeValue  = $deal['badge_value']  ?? '25%';
+    $dealBadgeBottom = $deal['badge_bottom'] ?? 'OFF';
+
+    // Featured heading
+    $featuredEyebrow = $featuredSec['eyebrow'] ?? 'SELECTED FOR YOU';
+    $featuredHeading = $featuredSec['heading'] ?? 'Featured products';
 @endphp
 
 @push('styles')
@@ -85,23 +121,32 @@
 }
 </style>
 @endpush
+
 @section('content')
+    {{-- ============================= HERO ============================= --}}
     <section class="store-hero">
         <div class="hero-copy">
-            <span class="hero-badge">{{$siteTitle}}</span>
-            <h1>Everything you need to <span>build better.</span></h1>
-            <p>Affordable, reliable and durable tools, building materials and expert support for contractors, tradespeople and home projects.</p>
+            <span class="hero-badge">{{ $heroBadge }}</span>
+            <h1>{{ $heroTitlePrefix }} <span>{{ $heroTitleHighlight }}</span></h1>
+            <p>{{ $heroDescription }}</p>
 
             <div class="hero-actions">
-                <a href="{{ route('all.products') }}" class="btn btn-primary">Shop products</a>
-                <a href="#categories" class="btn btn-secondary">Request a quote</a>
+                <a href="{{ $primaryBtnLink }}" class="btn btn-primary">{{ $primaryBtnText }}</a>
+                @if (!empty($secondaryBtnText))
+                    <a href="{{ $secondaryBtnLink }}" class="btn btn-secondary">{{ $secondaryBtnText }}</a>
+                @endif
             </div>
 
-            <div class="hero-stats">
-                <div><strong>5,000+</strong><span>Quality products</span></div>
-                <div><strong>24–48 hrs</strong><span>Accra delivery</span></div>
-                <div><strong>100%</strong><span>Genuine brands</span></div>
-            </div>
+            @if (!empty($heroStats))
+                <div class="hero-stats">
+                    @foreach ($heroStats as $stat)
+                        <div>
+                            <strong>{{ $stat['value'] ?? '' }}</strong>
+                            <span>{{ $stat['label'] ?? '' }}</span>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
 
         <div class="hero-visual">
@@ -109,29 +154,30 @@
             <span class="tool tool-left">🔧</span>
             <span class="tool tool-right">🧰</span>
             <span class="tool tool-bottom">🛠️</span>
-            <div class="warranty-card">
-                <span>✓</span>
-                <div>
-                    <strong>Genuine products</strong>
-                    <small>Manufacturer warranty</small>
+            @if (!empty($warrantyTitle))
+                <div class="warranty-card">
+                    <span>✓</span>
+                    <div>
+                        <strong>{{ $warrantyTitle }}</strong>
+                        <small>{{ $warrantySubtitle }}</small>
+                    </div>
                 </div>
-            </div>
+            @endif
         </div>
     </section>
 
+    {{-- ========================== CATEGORIES ========================= --}}
     <section id="categories" class="category-section">
         <div class="section-heading">
             <div>
-                <span class="eyebrow">Find what you need</span>
-                <h2>Shop by category</h2>
+                <span class="eyebrow">{{ $catEyebrow }}</span>
+                <h2>{{ $catHeading }}</h2>
             </div>
-            <!-- Update link to point to all products route -->
-            <a href="{{ route('all.products') }}">View all products →</a>
+            <a href="{{ route('all.products') }}">{{ $catViewAllText }}</a>
         </div>
 
         <div class="category-grid">
             @foreach ($categories as $category)
-                <!-- Update link to point to all products route with category filter -->
                 <a href="{{ route('all.products', ['category' => $category->slug]) }}#products" class="category-card">
                     <span class="category-icon">{{ $category->image ?? '🧱' }}</span>
                     <div>
@@ -144,29 +190,31 @@
         </div>
     </section>
 
+    {{-- =========================== DEAL BANNER ======================== --}}
     <section class="deal-banner">
         <div class="deal-copy">
-            <span class="deal-label">THIS WEEK'S DEAL</span>
-            <h2>Power up your projects.</h2>
-            <p>Save on selected power tools, hand tools and essential site equipment.</p>
-            <a href="{{ route('all.products') }}">Explore special offers →</a>
+            <span class="deal-label">{{ $dealLabel }}</span>
+            <h2>{{ $dealHeading }}</h2>
+            <p>{{ $dealDescription }}</p>
+            <a href="{{ $dealLinkUrl }}">{{ $dealLinkText }}</a>
         </div>
 
         <div class="deal-art">
             <div class="gear-icon">⚙️</div>
             <div class="discount-badge">
-                <span>UP TO</span>
-                <strong>25%</strong>
-                <small>OFF</small>
+                <span>{{ $dealBadgeTop }}</span>
+                <strong>{{ $dealBadgeValue }}</strong>
+                <small>{{ $dealBadgeBottom }}</small>
             </div>
         </div>
     </section>
 
+    {{-- ============================ FEATURED ========================== --}}
     <section id="products" class="showcase-section">
         <div class="section-heading top-heading">
             <div>
-                <span class="eyebrow">SELECTED FOR YOU</span>
-                <h2>Featured products</h2>
+                <span class="eyebrow">{{ $featuredEyebrow }}</span>
+                <h2>{{ $featuredHeading }}</h2>
             </div>
             <span class="results-count">{{ $featuredProducts->count() }} items available</span>
         </div>
@@ -179,7 +227,7 @@
                     @endphp
 
                     <article class="product-card">
-                        <!-- IMAGE (separate link, NOT wrapping the body) -->
+                        {{-- IMAGE (separate link, NOT wrapping the body) --}}
                         <div class="product-image-wrap">
                             <a href="{{ route('products.show', $product->id) }}" class="product-image-link">
                                 <img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy">
@@ -191,7 +239,7 @@
                                     title="Add to Wishlist">♡</button>
                         </div>
 
-                        <!-- BODY (flex:1 grows to fill card, pushes footer down) -->
+                        {{-- BODY (flex:1 grows to fill card, pushes footer down) --}}
                         <div class="product-body">
                             <span class="product-category">{{ strtoupper($product->category->name ?? 'General') }}</span>
 
@@ -207,7 +255,7 @@
                             <p class="product-desc">{{ \Illuminate\Support\Str::limit(strip_tags($product->product_details ?? $product->name), 90) }}</p>
                         </div>
 
-                        <!-- FOOTER (always at the bottom because body has flex:1) -->
+                        {{-- FOOTER (always at the bottom because body has flex:1) --}}
                         <div class="product-footer">
                             <div class="price-box">
                                 <strong>{{ $currencyCode }} {{ number_format((float) $product->price, 2) }}</strong>
@@ -232,10 +280,10 @@
             </div>
         @endif
 
-        <!-- Toast Notification for Wishlist -->
+        {{-- Toast Notification for Wishlist --}}
         <div id="wishlist-toast" style="position: fixed; bottom: 20px; right: 20px; background: #0d5a39; color: white; padding: 12px 20px; border-radius: 8px; display: none; z-index: 9999; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,0.2);"></div>
-        
-        <!-- CSRF Token for JS -->
+
+        {{-- CSRF Token for JS --}}
         <meta name="csrf-token" content="{{ csrf_token() }}">
     </section>
 @endsection
@@ -248,7 +296,7 @@
 
         // Prevent the click from bubbling up to the <a> tag and triggering page navigation
         event.preventDefault();
-        event.stopPropagation(); 
+        event.stopPropagation();
 
         const productId = btn.dataset.productId;
         const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -276,7 +324,7 @@
         })
         .then(data => {
             if (data && data.success) {
-                btn.innerHTML = '♥'; // Change to filled heart
+                btn.innerHTML = '♥';       // Change to filled heart
                 btn.style.color = '#ef4444'; // Make it red
                 showToast('Product added to wishlist!');
             }

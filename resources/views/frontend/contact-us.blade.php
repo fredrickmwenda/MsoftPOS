@@ -457,7 +457,8 @@
 
 @section('content')
 
-<?php
+@php
+    // ── Base settings (general setting fallbacks) ────────────────
     $gs = $generalSetting ?? null;
     $companyName    = $gs ? ($gs->company_name ?? config('app.name', 'JoexPOS')) : config('app.name', 'JoexPOS');
     $companyPhone   = $gs ? ($gs->phone ?? $gs->phone_number ?? null) : null;
@@ -467,12 +468,80 @@
     $openTime       = $gs ? ($gs->opening_time ?? '8:00 AM') : '8:00 AM';
     $closeTime      = $gs ? ($gs->closing_time ?? '6:00 PM') : '6:00 PM';
     $mapHelper      = \App\Http\Controllers\ContactController::class;
-?>
+
+    // ── ecommerce_setup overrides (single source of truth) ────────
+    $setupPhone   = setting('contact.phone');
+    $setupEmail   = setting('contact.email');
+    $setupAddress = setting('address.line1');
+    $setupCity    = setting('address.city');
+    $setupState   = setting('address.state');
+    $setupCountry = setting('address.country');
+
+    $companyPhone   = $setupPhone   ?: $companyPhone;
+    $companyEmail   = $setupEmail   ?: $companyEmail;
+    $companyAddress = $setupAddress ?: $companyAddress;
+    $companyCity    = $setupCity    ?: $companyCity;
+
+    // Full display address
+    $fullAddress = trim(collect([$companyAddress, $companyCity, $setupState, $setupCountry])->filter()->implode(', '));
+    if ($fullAddress === '') {
+        $fullAddress = $companyAddress ?: $companyCity;
+    }
+
+    // ── Contact page content ──────────────────────────────────────
+    $cp = setting('contact_page', []);
+
+    $cpHero     = $cp['hero']       ?? [];
+    $cpInfo     = $cp['info_cards'] ?? [];
+    $cpForm     = $cp['form']       ?? [];
+    $cpMap      = $cp['map']        ?? [];
+    $cpHours    = $cp['hours']      ?? [];
+    $cpBranches = $cp['branches']   ?? [];
+    $cpCta      = $cp['cta']        ?? [];
+
+    $heroHeading = $cpHero['heading']     ?? 'Get in Touch';
+    $heroDesc    = $cpHero['description'] ?? "We'd love to hear from you. Whether you have a question about a product, need help with an order, or just want to say hello - our team is here to help.";
+
+    $visitLabel = $cpInfo['visit_label'] ?? 'Visit Us';
+    $callLabel  = $cpInfo['call_label']  ?? 'Call Us';
+    $emailLabel = $cpInfo['email_label'] ?? 'Email Us';
+    $hoursLabel = $cpInfo['hours_label'] ?? 'Open Hours';
+
+    $formHeading    = $cpForm['heading']     ?? 'Send Us a Message';
+    $formSub        = $cpForm['sub']         ?? "Fill out the form below and we'll get back to you as soon as possible.";
+    $formSubmitText = $cpForm['submit_text'] ?? 'Send Message';
+
+    $mapHeading  = $cpMap['heading']   ?? 'Find Us on the Map';
+    $mapSub      = $cpMap['sub']       ?? 'Visit our main office or get in touch using the details below.';
+    $mapEmbedUrl = $cpMap['embed_url'] ?? null;
+
+    // Hours labels
+    $weekdaysLabel  = $cpHours['weekdays_label']   ?? 'Monday - Friday';
+    $saturdayLabel  = $cpHours['saturday_label']   ?? 'Saturday';
+    $sundayLabel    = $cpHours['sunday_label']     ?? 'Sunday';
+    $saturdayClose  = $cpHours['saturday_close']   ?? '2:00 PM';
+    $infoHoursTop   = $cpHours['info_top_label']   ?? 'Mon - Saturday';
+    $infoSundayNote = $cpHours['info_sunday_note'] ?? 'Sunday: Closed';
+
+    $branchesHeading = $cpBranches['heading']         ?? 'Our Branches';
+    $branchesSub     = $cpBranches['sub']             ?? 'Find a branch near you. Each location is fully stocked and ready to serve you.';
+    $branchesBadge   = $cpBranches['badge_text']      ?? 'Branch';
+    $directionsText  = $cpBranches['directions_text'] ?? 'Get Directions';
+
+    $ctaHeading     = $cpCta['heading']     ?? 'Ready to Start Shopping?';
+    $ctaDescription = $cpCta['description'] ?? 'Browse our full catalogue and place your order online - pay with Paystack or pay on delivery.';
+    $ctaButtonText  = $cpCta['button_text'] ?? 'Shop Now';
+    $ctaButtonLink  = $cpCta['button_link'] ?? (\Route::has('shop.index') ? route('shop.index') : '#');
+
+    // Resolve map URL — DB override wins, else fall back to auto-generated
+    $autoMapUrl = (isset($mainAddress) && $mainAddress) ? $mapHelper::mapEmbedUrl($mainAddress) : null;
+    $resolvedMapUrl = $mapEmbedUrl ?: $autoMapUrl;
+@endphp
 
 <!-- HERO SECTION -->
 <section class="contact-hero">
-    <h1>Get in Touch</h1>
-    <p>We'd love to hear from you. Whether you have a question about a product, need help with an order, or just want to say hello - our team is here to help.</p>
+    <h1>{{ $heroHeading }}</h1>
+    <p>{{ $heroDesc }}</p>
 </section>
 
 <!-- QUICK INFO CARDS -->
@@ -482,13 +551,9 @@
             <div class="icon-circle">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
             </div>
-            <h3>Visit Us</h3>
+            <h3>{{ $visitLabel }}</h3>
             <div class="info-value">
-                @if($companyAddress)
-                    {{ $companyAddress }}@if($companyCity), {{ $companyCity }}@endif
-                @else
-                    {{ $companyName }}
-                @endif
+                {{ $fullAddress ?: $companyName }}
             </div>
         </div>
 
@@ -496,7 +561,7 @@
             <div class="icon-circle">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
             </div>
-            <h3>Call Us</h3>
+            <h3>{{ $callLabel }}</h3>
             <div class="info-value">
                 @if($companyPhone)
                     <a href="tel:{{ $companyPhone }}">{{ $companyPhone }}</a>
@@ -510,7 +575,7 @@
             <div class="icon-circle">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             </div>
-            <h3>Email Us</h3>
+            <h3>{{ $emailLabel }}</h3>
             <div class="info-value">
                 @if($companyEmail)
                     <a href="mailto:{{ $companyEmail }}">{{ $companyEmail }}</a>
@@ -524,11 +589,11 @@
             <div class="icon-circle">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             </div>
-            <h3>Open Hours</h3>
+            <h3>{{ $hoursLabel }}</h3>
             <div class="info-value">
-                Mon - Saturday<br>
+                {{ $infoHoursTop }}<br>
                 {{ $openTime }} - {{ $closeTime }}<br>
-                <span style="color:#ef4444;font-size:12px;">Sunday: Closed</span>
+                <span style="color:#ef4444;font-size:12px;">{{ $infoSundayNote }}</span>
             </div>
         </div>
     </div>
@@ -540,8 +605,8 @@
 
         <!-- LEFT: Contact Form -->
         <div class="form-card">
-            <h2>Send Us a Message</h2>
-            <p class="sub">Fill out the form below and we'll get back to you as soon as possible.</p>
+            <h2>{{ $formHeading }}</h2>
+            <p class="sub">{{ $formSub }}</p>
 
             @if(session('success'))
                 <div class="alert-success">
@@ -599,29 +664,31 @@
                     @error('message') <div class="error-text">{{ $message }}</div> @enderror
                 </div>
 
-                <button type="submit" class="btn-submit">Send Message</button>
+                <button type="submit" class="btn-submit">{{ $formSubmitText }}</button>
             </form>
         </div>
 
         <!-- RIGHT: Map + Address + Hours -->
         <div class="map-card">
-            <h2>Find Us on the Map</h2>
-            <p class="sub">Visit our main office or get in touch using the details below.</p>
+            <h2>{{ $mapHeading }}</h2>
+            <p class="sub">{{ $mapSub }}</p>
 
-            @if($mainAddress)
-                <iframe
-                    class="map-embed"
-                    src="{{ $mapHelper::mapEmbedUrl($mainAddress) }}"
-                    loading="lazy"
-                    referrerpolicy="no-referrer-when-downgrade"
-                    allowfullscreen>
-                </iframe>
+            @if($resolvedMapUrl || $fullAddress)
+                @if($resolvedMapUrl)
+                    <iframe
+                        class="map-embed"
+                        src="{{ $resolvedMapUrl }}"
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                        allowfullscreen>
+                    </iframe>
+                @endif
 
                 <div class="map-address-line">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     <div class="addr-text">
                         <strong>{{ $companyName }}</strong>
-                        {{ $mainAddress }}
+                        {{ $fullAddress }}
                         @if($companyPhone)
                             <br><a href="tel:{{ $companyPhone }}" style="color:var(--ark-green);font-weight:600;">{{ $companyPhone }}</a>
                         @endif
@@ -642,9 +709,9 @@
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     Business Hours
                 </div>
-                <div class="hours-row"><span class="day">Monday - Friday</span><span class="time">{{ $openTime }} - {{ $closeTime }}</span></div>
-                <div class="hours-row"><span class="day">Saturday</span><span class="time">{{ $openTime }} - 2:00 PM</span></div>
-                <div class="hours-row closed"><span class="day">Sunday</span><span class="time">Closed</span></div>
+                <div class="hours-row"><span class="day">{{ $weekdaysLabel }}</span><span class="time">{{ $openTime }} - {{ $closeTime }}</span></div>
+                <div class="hours-row"><span class="day">{{ $saturdayLabel }}</span><span class="time">{{ $openTime }} - {{ $saturdayClose }}</span></div>
+                <div class="hours-row closed"><span class="day">{{ $sundayLabel }}</span><span class="time">Closed</span></div>
             </div>
         </div>
     </div>
@@ -655,17 +722,17 @@
 <section class="branches-section">
     <div class="branches-inner">
         <div class="branches-header">
-            <h2>Our Branches</h2>
-            <p>Find a branch near you. Each location is fully stocked and ready to serve you.</p>
+            <h2>{{ $branchesHeading }}</h2>
+            <p>{{ $branchesSub }}</p>
         </div>
 
         <div class="branches-grid">
             @foreach($branches as $branch)
-                <?php
+                @php
                     $branchAddress = $mapHelper::buildBranchAddress($branch);
                     $branchPhone   = $branch->phone ?? $branch->phone_number ?? null;
                     $branchEmail   = $branch->email ?? null;
-                ?>
+                @endphp
                 <div class="branch-card">
                     @if($branchAddress)
                         <iframe
@@ -677,7 +744,7 @@
                     @endif
 
                     <div class="branch-body">
-                        <span class="branch-badge">Branch</span>
+                        <span class="branch-badge">{{ $branchesBadge }}</span>
                         <h3>{{ $branch->name }}</h3>
 
                         @if($branchAddress)
@@ -703,7 +770,7 @@
 
                         <div class="branch-detail">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>Mon - Sat: {{ $openTime }} - {{ $closeTime }}</span>
+                            <span>{{ $infoHoursTop }}: {{ $openTime }} - {{ $closeTime }}</span>
                         </div>
 
                         <div class="branch-actions">
@@ -711,7 +778,7 @@
                                 <a href="{{ $mapHelper::mapDirectionsUrl($branchAddress) }}"
                                    target="_blank" rel="noopener" class="btn-directions">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 3V4m0 0L9 7"></path></svg>
-                                    Get Directions
+                                    {{ $directionsText }}
                                 </a>
                             @endif
                         </div>
@@ -725,9 +792,9 @@
 
 <!-- CTA BANNER -->
 <section class="cta-banner">
-    <h3>Ready to Start Shopping?</h3>
-    <p>Browse our full catalogue and place your order online - pay with Paystack or pay on delivery.</p>
-    <a href="{{ route('shop.index') }}" class="cta-btn">Shop Now</a>
+    <h3>{{ $ctaHeading }}</h3>
+    <p>{{ $ctaDescription }}</p>
+    <a href="{{ $ctaButtonLink }}" class="cta-btn">{{ $ctaButtonText }}</a>
 </section>
 
 @endsection

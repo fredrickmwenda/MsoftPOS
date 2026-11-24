@@ -7,6 +7,7 @@ use Database\Seeders\AdminPermissionSeeder;
 use Database\Seeders\PermissionSeeder;
 use Database\Seeders\PolicySeeder;
 use Database\Seeders\UserRoleSeeder;
+use Database\Seeders\EcommerceSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -22,7 +23,8 @@ class DatabaseSeeder extends Seeder
             //UserSeeder::class,
             //UserRoleSeeder::class,
           // PermissionSeeder::class,
-          PolicySeeder::class,
+         // PolicySeeder::class,
+         EcommerceSeeder::class,
         ]);
     }
 }

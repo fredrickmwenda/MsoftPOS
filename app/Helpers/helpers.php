@@ -3,6 +3,8 @@
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use App\Models\EcommerceSetup;
+
 
 if (!function_exists('normalize_to_sql_datetime')) {
     function normalize_to_sql_datetime($input, $useCurrentTime = false)
@@ -81,7 +83,7 @@ if (!function_exists('format_currency')) {
 }
 
 if (! function_exists('gen_setting')) {
-    function gen_setting() 
+    function gen_setting()
     {
         return Cache::remember('general_setting', 60 * 60 * 24 * 365, function () {
             return DB::table('general_settings')->latest()->first();
@@ -122,5 +124,24 @@ if (! function_exists('get_active_categories')) {
         return Cache::remember('categories_list', 60 * 60 * 24 * 365, function () {
             return DB::table('categories')->where('is_active', true)->get();
         });
+    }
+}
+
+
+// Eccomerce Setup
+if (! function_exists('setting')) {
+    function setting(string $path, mixed $default = null): mixed
+    {
+        $all = Cache::rememberForever('ecommerce_setup.all', fn () => EcommerceSetup::allGrouped());
+
+        [$group, $field] = array_pad(explode('.', $path, 2), 2, null);
+
+        if (! array_key_exists($group, $all)) {
+            return $default;
+        }
+
+        return $field === null
+            ? $all[$group]
+            : data_get($all[$group], $field, $default);
     }
 }

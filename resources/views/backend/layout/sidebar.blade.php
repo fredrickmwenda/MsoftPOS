@@ -484,6 +484,7 @@
             @endif
             @if($is_admin)
             <li><a href="{{route('smstemplates.index')}}">SMS Templates</a></li>
+            <li><a href="{{route('sms-gateways.index')}}">SMS Gateway</a></li>
             @endif
             @if($create_sms_active)
             <li id="create-sms-menu"><a href="{{route('setting.createSms')}}">{{trans('file.Create SMS')}}</a></li>
