@@ -516,9 +516,14 @@
         $discount_permission_active            = $role_has_permissions_list->where('name', 'discount')->first();
         $custom_field_permission_active        = $role_has_permissions_list->where('name', 'custom_field')->first();
         $social_media_permission_active = $role_has_permissions_list->where('name', 'social-media')->first();
+        $ecommerce_setup_permission_active = $role_has_permissions_list->where('name', 'ecommerce-setup')->first();
     ?>
     <li><a href="#setting" aria-expanded="false" data-toggle="collapse"> <i class="dripicons dripicons-gear"></i><span>{{trans('file.settings')}}</span></a>
         <ul id="setting" class="collapse list-unstyled">
+
+            @if($ecommerce_setup_permission_active)
+            <li id="ecommerce-menu"><a href="{{route('ecommerce.setup.edit')}}">{{trans('file.Ecommerce Setup')}}</a></li>
+            @endif
 
             @if($is_admin)
             <li id="role-menu"><a href="{{route('role.index')}}">{{trans('file.Role Permission')}}</a></li>
