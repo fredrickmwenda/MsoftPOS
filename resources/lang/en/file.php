@@ -1063,6 +1063,7 @@ return [
 	'Ecommerce Setup' => 'Ecommerce Setup',
 	'Enable Ecommerce Setup' => 'Enable Ecommerce Setup',
 	'saving' => 'Saving',
-	'Ecommerce Setup' => 'Ecommerce Setup'
+	'Ecommerce Setup' => 'Ecommerce Setup',
+	'variant_type' => 'Variant Type',
 ];
 ?>

@@ -44,6 +44,16 @@
     if (auth()->guard('customer')->check()) {
         $wishlistCount = \App\Models\Wishlist::where('customer_id', auth()->guard('customer')->id())->count();
     }
+
+    $storeDesign = setting('design', []);
+    $storeColor = function ($key, $fallback) use ($storeDesign) {
+        $color = $storeDesign[$key] ?? $fallback;
+        return is_string($color) && preg_match('/\\A#[0-9A-Fa-f]{6}\\z/', $color) ? $color : $fallback;
+    };
+    $storeFont = in_array($storeDesign['font_family'] ?? 'Inter', ['Inter', 'Arial', 'Roboto', 'Georgia'], true)
+        ? $storeDesign['font_family'] ?? 'Inter' : 'Inter';
+    $storeWidth = ['compact' => '1040px', 'standard' => '1220px', 'wide' => '1440px'][$storeDesign['content_width'] ?? 'standard'] ?? '1220px';
+    $storeRadius = ($storeDesign['corner_style'] ?? 'rounded') === 'square' ? '2px' : '12px';
 @endphp
 
 <!DOCTYPE html>
@@ -61,8 +71,32 @@
     <meta name="description" content="Modern ecommerce storefront powered by the JoexPOS inventory.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/frontend.css') }}">
+    <style>
+        body.storefront-page {
+            --ark-green: {{ $storeColor('primary_color', '#0d5a39') }};
+            --ark-green-deep: {{ $storeColor('secondary_color', '#0a382b') }};
+            --ark-gold: {{ $storeColor('accent_color', '#d5a61c') }};
+            --ark-gold-soft: color-mix(in srgb, var(--ark-gold) 22%, white);
+            --ark-line: color-mix(in srgb, var(--ark-green) 14%, transparent);
+            --ark-ivory: {{ $storeColor('background_color', '#f7f5f1') }};
+            --ark-card: {{ $storeColor('surface_color', '#ffffff') }};
+            --ark-ink: {{ $storeColor('text_color', '#17342b') }};
+            --store-content-width: {{ $storeWidth }};
+            --store-radius: {{ $storeRadius }};
+            font-family: '{{ $storeFont }}', sans-serif;
+            background: var(--ark-ivory);
+        }
+        body.storefront-page .btn,
+        body.storefront-page .customer-link,
+        body.storefront-page .cart-pill,
+        body.storefront-page .category-card,
+        body.storefront-page .product-card,
+        body.storefront-page .add-to-cart,
+        body.storefront-page .deal-banner { border-radius: var(--store-radius); }
+        body.storefront-page .wishlist-count { background: var(--ark-green); }
+    </style>
     @stack('styles')
 </head>
 <body class="storefront-page">
@@ -110,7 +144,7 @@
 
                 <!-- Wishlist Icon -->
                 <a href="{{ route('customer.wishlist') }}" class="customer-link" title="My Wishlist" style="display: flex; align-items: center; gap: 6px;">
-                    ♡ <span id="wishlist-count" style="background: #0d5a39; color: #fff; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">{{ $wishlistCount }}</span>
+                    ♡ <span id="wishlist-count" style="background: var(--ark-green); color: #fff; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">{{ $wishlistCount }}</span>
                 </a>
 
                 <!-- Cart Icon with real count -->

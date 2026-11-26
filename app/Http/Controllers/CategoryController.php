@@ -555,6 +555,7 @@ class CategoryController extends Controller
 
         $data = [];
         foreach ($departments as $key => $department) {
+            $nestedData = [];
             $nestedData['id'] = $department->id; // <--- ADD THIS LINE
             $nestedData['key'] = $key + 1;
             $nestedData['name'] = '<img src="' .
@@ -563,7 +564,17 @@ class CategoryController extends Controller
 
             $nestedData['is_active'] = $department->is_active ? 'Active' : 'Inactive';
 
-            // ... options ...
+            $actions = '';
+            if (Auth::user()->hasPermissionTo('category-department-edit')) {
+                $actions .= '<button type="button" class="btn btn-link p-0 open-EditCategoryDialog" data-id="' . (int) $department->id . '" title="Edit">'
+                    . '<i class="dripicons-document-edit"></i></button> ';
+            }
+            if (Auth::user()->hasPermissionTo('category-department-delete')) {
+                $actions .= '<form action="' . route('category-department.destroy', $department->id) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Delete this department?\')">'
+                    . csrf_field() . method_field('DELETE')
+                    . '<button type="submit" class="btn btn-link p-0 text-danger" title="Delete"><i class="dripicons-trash"></i></button></form>';
+            }
+            $nestedData['options'] = $actions;
 
             $data[] = $nestedData;
         }

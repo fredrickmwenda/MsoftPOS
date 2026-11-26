@@ -1047,7 +1047,19 @@ class ReportController extends Controller
     public function profitLossData(Request $request)
     {
 
-        /* ---------- 1. Period (year + month, "All (Full Year)" supported) ---------- */
+        /* ---------- 1. Period (day, week, month, or full year) ---------- */
+        $period_type = $request->input('period_type', 'month');
+        if (!in_array($period_type, ['day', 'week', 'month'], true)) {
+            $period_type = 'month';
+        }
+
+        $selected_date = $request->input('date', date('Y-m-d'));
+        $parsed_date = strtotime($selected_date);
+        if (!$parsed_date || date('Y-m-d', $parsed_date) !== $selected_date) {
+            $selected_date = date('Y-m-d');
+            $parsed_date = strtotime($selected_date);
+        }
+
         $selected_year = (int) $request->input('year', date('Y'));
         if ($selected_year < 1900 || $selected_year > 2100) {
             $selected_year = (int) date('Y');
@@ -1059,16 +1071,34 @@ class ReportController extends Controller
         }
         $selected_month = $selected_month === '' ? '' : str_pad($selected_month, 2, '0', STR_PAD_LEFT);
 
-        if ($selected_month !== '') {
-            $start_date      = $selected_year . '-' . $selected_month . '-01';
-            $end_date        = date('Y-m-t', strtotime($start_date)); // last day of month
-            $period_label    = date('F Y', strtotime($start_date));
+        if ($period_type === 'day') {
+            $start_date = $selected_date;
+            $end_date = $selected_date;
+            $period_label = date('F d, Y', $parsed_date);
+            $period_subtitle = 'For ' . date('F d, Y', $parsed_date);
+            $previous_start = date('Y-m-d', strtotime('-1 day', $parsed_date));
+            $previous_end = $previous_start;
+        } elseif ($period_type === 'week') {
+            $start_date = date('Y-m-d', strtotime('monday this week', $parsed_date));
+            $end_date = date('Y-m-d', strtotime('sunday this week', $parsed_date));
+            $period_label = 'Week of ' . date('M d, Y', strtotime($start_date));
+            $period_subtitle = 'For the Week of ' . date('F d', strtotime($start_date)) . ' to ' . date('F d, Y', strtotime($end_date));
+            $previous_start = date('Y-m-d', strtotime('-7 days', strtotime($start_date)));
+            $previous_end = date('Y-m-d', strtotime('-7 days', strtotime($end_date)));
+        } elseif ($selected_month !== '') {
+            $start_date = $selected_year . '-' . $selected_month . '-01';
+            $end_date = date('Y-m-t', strtotime($start_date));
+            $period_label = date('F Y', strtotime($start_date));
             $period_subtitle = 'For the Month Ending ' . date('F d, Y', strtotime($end_date));
+            $previous_start = date('Y-m-01', strtotime('-1 month', strtotime($start_date)));
+            $previous_end = date('Y-m-t', strtotime($previous_start));
         } else {
-            $start_date      = $selected_year . '-01-01';
-            $end_date        = $selected_year . '-12-31';
-            $period_label    = $selected_year;
+            $start_date = $selected_year . '-01-01';
+            $end_date = $selected_year . '-12-31';
+            $period_label = $selected_year;
             $period_subtitle = 'For the Year Ending December 31, ' . $selected_year;
+            $previous_start = ($selected_year - 1) . '-01-01';
+            $previous_end = ($selected_year - 1) . '-12-31';
         }
 
         $range_start = $start_date . ' 00:00:00';
@@ -1123,14 +1153,35 @@ class ReportController extends Controller
         // Product tax (from the sold goods) is applied AFTER operating profit — never inside COGS
         $calculated_net_profit = round($calculated_operating_profit - $product_tax, $decimal);
 
-        /* ---------- 9. Currency ---------- */
+        /* ---------- 9. Comparable prior period for the chart ---------- */
+        $previous_range_start = $previous_start . ' 00:00:00';
+        $previous_range_end = $previous_end . ' 23:59:59';
+        $previous_sale_data = $this->getSaleReportData($previous_start, $previous_end);
+        $previous_sales = (float) $previous_sale_data['total_sold_amount'];
+        $previous_cogs = (float) $previous_sale_data['total_item_cost'];
+        $previous_sales_returns = (float) Returns::whereBetween('created_at', [$previous_range_start, $previous_range_end])->sum('grand_total');
+        $previous_purchase_returns = (float) ReturnPurchase::whereBetween('created_at', [$previous_range_start, $previous_range_end])->sum('grand_total');
+        $previous_payroll = (float) Payroll::whereBetween('created_at', [$previous_range_start, $previous_range_end])->sum('amount');
+        $previous_expenses = (float) Expense::whereBetween('created_at', [$previous_range_start, $previous_range_end])->sum('amount');
+        $previous_product_tax = (float) $previous_sale_data['product_tax_total'];
+        $previous_net_profit = round(
+            ($previous_sales - $previous_sales_returns - ($previous_cogs - $previous_purchase_returns)
+                - $previous_payroll - $previous_expenses - $previous_product_tax),
+            $decimal
+        );
+        $comparison_label = $period_type === 'day' ? 'Previous day'
+            : ($period_type === 'week' ? 'Previous week'
+            : ($selected_month !== '' ? 'Previous month' : 'Previous year'));
+
+        /* ---------- 10. Currency ---------- */
         $currency_code = $general_setting->currency ?? 'GHC';
         if (is_numeric($currency_code)) {
             $currency_code = Currency::find($currency_code)->code ?? 'GHC';
         }
 
         return view('backend.report.profitloss', compact(
-            'selected_year', 'selected_month', 'period_label', 'period_subtitle',
+            'selected_year', 'selected_month', 'period_type', 'selected_date', 'period_label', 'period_subtitle',
+                        'previous_net_profit', 'comparison_label',
             'start_date', 'end_date', 'currency_code', 'decimal',
             'total_sale', 'sale_return_amount', 'net_revenue',
             'total_item_cost', 'purchase_return_amount', 'net_cogs',

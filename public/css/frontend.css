@@ -10,12 +10,14 @@
   --ark-line: rgba(13, 90, 57, 0.12);
   --ark-card: #ffffff;
   --ark-white: #ffffff;
+  --store-content-width: 1220px;
+  --store-radius: 12px;
 }
 
 body.storefront-page {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: #f7f5f1;
+  background: var(--ark-ivory);
   color: var(--ark-ink);
   line-height: 1.4;
   overflow-x: hidden; /* Prevents horizontal scroll from 100vw paddings */
@@ -28,7 +30,7 @@ body.storefront-page button,
 body.storefront-page input { font: inherit; }
 
 body.storefront-page .container {
-  width: min(1220px, calc(100% - 32px));
+  width: min(var(--store-content-width, 1220px), calc(100% - 32px));
   margin: 0 auto;
 }
 
@@ -222,7 +224,7 @@ body.storefront-page .store-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
   min-height: 560px;
-  background: linear-gradient(120deg, #f9f5eb 0%, #f4f6f2 100%);
+  background: linear-gradient(120deg, var(--ark-ivory) 0%, var(--ark-card) 100%);
   border-bottom: 1px solid var(--ark-line);
 }
 
@@ -321,7 +323,7 @@ body.storefront-page .hero-stats span {
 body.storefront-page .hero-visual {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #efcf62, #d0a52b);
+  background: linear-gradient(135deg, var(--ark-gold), var(--ark-gold));
 }
 
 body.storefront-page .hero-ring {
@@ -472,7 +474,7 @@ body.storefront-page .category-card strong {
 body.storefront-page .deal-banner {
   max-width: 1220px;
   margin: 58px auto 0;
-  background: linear-gradient(120deg, #0c3a2a 0%, #0a5a39 100%);
+  background: linear-gradient(120deg, var(--ark-green-deep) 0%, var(--ark-green) 100%);
   color: var(--ark-white);
   display: flex;
   align-items: center;

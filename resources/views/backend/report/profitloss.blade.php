@@ -25,7 +25,23 @@ Sale Report — they always match the Sale Report for this period and filters.
 {!! Form::open(['route' => 'report.profitLossData', 'method' => 'post', 'id' => 'yearForm']) !!}
 @csrf
 <div class="row mb-3 pl-report-filter">
-<div class="col-md-3 offset-md-1 mt-3">
+<div class="col-md-2 mt-3">
+<div class="form-group">
+<label for="period_type"><strong>Compare by</strong></label>
+<select name="period_type" id="period_type" class="form-control">
+<option value="day" {{ ($period_type ?? 'month') === 'day' ? 'selected' : '' }}>Day</option>
+<option value="week" {{ ($period_type ?? 'month') === 'week' ? 'selected' : '' }}>Week</option>
+<option value="month" {{ ($period_type ?? 'month') === 'month' ? 'selected' : '' }}>Month / Year</option>
+</select>
+</div>
+</div>
+<div class="col-md-2 mt-3" id="dateFilter">
+<div class="form-group">
+<label for="date"><strong>Choose Date</strong></label>
+<input type="date" name="date" id="date" class="form-control" value="{{ $selected_date ?? date('Y-m-d') }}">
+</div>
+</div>
+<div class="col-md-2 mt-3" id="yearFilter">
 <div class="form-group row">
 <label class="d-tc mt-2"><strong>Choose Year</strong> &nbsp;</label>
 <div class="d-tc">
@@ -44,7 +60,7 @@ $startYear = $currentYear - 10;
 </div>
 </div>
 </div>
-<div class="col-md-3 mt-3">
+<div class="col-md-3 mt-3" id="monthFilter">
 <div class="form-group row">
 <label class="d-tc mt-2"><strong>Choose Month</strong> &nbsp;</label>
 <div class="d-tc">
@@ -244,6 +260,12 @@ Period: {{ date('F d, Y', strtotime($start_date)) }} to {{ date('F d, Y', strtot
 </tfoot>
 </table>
 </div>
+<div class="card mt-4">
+<div class="card-header"><h5 class="mb-0">Net Profit Comparison</h5></div>
+<div class="card-body" style="height: 360px;">
+<canvas id="profitLossComparisonChart" aria-label="Net profit comparison chart"></canvas>
+</div>
+</div>
 </div>
 </section>
 @endsection
@@ -254,13 +276,58 @@ Period: {{ date('F d, Y', strtotime($start_date)) }} to {{ date('F d, Y', strtot
 $(document).ready(function() {
     const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     function updateSelectedPeriod() {
+        const type = $('#period_type').val();
+        if (type !== 'month') {
+            const dateValue = $('#date').val();
+            if (dateValue) {
+                const date = new Date(dateValue + 'T00:00:00');
+                $('#selectedPeriod').text(type === 'day'
+                    ? date.toLocaleDateString(undefined, {year: 'numeric', month: 'long', day: 'numeric'})
+                    : 'Week of ' + date.toLocaleDateString(undefined, {year: 'numeric', month: 'long', day: 'numeric'}));
+            }
+            return;
+        }
         const year = $('#year').val() || new Date().getFullYear();
         const monthVal = $('#month').val();
-        const period = monthVal ? monthNames[parseInt(monthVal, 10)] + ' ' + year : year;
-        $('#selectedPeriod').text(period);
+        $('#selectedPeriod').text(monthVal ? monthNames[parseInt(monthVal, 10)] + ' ' + year : year);
     }
     updateSelectedPeriod();
+    function updatePeriodFilters() {
+        const isCalendarPeriod = $('#period_type').val() === 'month';
+        $('#dateFilter').toggle(!isCalendarPeriod);
+        $('#date').prop('disabled', isCalendarPeriod);
+        $('#yearFilter, #monthFilter').toggle(isCalendarPeriod);
+        $('#year, #month').prop('disabled', !isCalendarPeriod);
+        $('#year').prop('required', isCalendarPeriod);
+    }
+    updatePeriodFilters();
+    $('#period_type').on('change', updatePeriodFilters);
     $('#year, #month').on('change', updateSelectedPeriod);
+
+    const chartCanvas = document.getElementById('profitLossComparisonChart');
+    if (chartCanvas && window.Chart) {
+        new Chart(chartCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: [@json($comparison_label), @json($period_label)],
+                datasets: [{
+                    label: 'Net Profit / Loss ({{ $currency_code }})',
+                    data: [{{ $previous_net_profit }}, {{ $calculated_net_profit }}],
+                    backgroundColor: ['rgba(108, 117, 125, 0.65)', 'rgba(40, 167, 69, 0.7)'],
+                    borderColor: ['#6c757d', '#28a745'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { yAxes: [{ ticks: { beginAtZero: true } }] },
+                tooltips: { callbacks: { label: function(item) {
+                    return '{{ $currency_code }} ' + Number(item.yLabel).toLocaleString();
+                } } }
+            }
+        });
+    }
     $('#yearForm').on('submit', function() {
         updateSelectedPeriod();
     });

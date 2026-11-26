@@ -100,6 +100,39 @@ use App\Http\Controllers\EcommerceSetupController;
 
 
 // ---------------------------------------
+//
+// Need to  download the composer and set it phar in cpanel root project folder
+Route::get('/dump-autoload', function () {
+    // Define a writable directory for Composer's home
+    $composerHome = storage_path('app/composer-home');
+
+    // Ensure the directory exists and is writable
+    if (!is_dir($composerHome)) {
+        mkdir($composerHome, 0755, true);
+    }
+
+    $process = new Process([
+        '/opt/cpanel/ea-php81/root/usr/bin/php', // Force PHP 8.1
+        base_path('composer.phar'),              // Use local Composer
+        'dump-autoload',
+        '--optimize',
+    ]);
+
+    // This is the key part: set the environment variable
+    $process->setEnv(['COMPOSER_HOME' => $composerHome]);
+
+    $process->setWorkingDirectory(base_path());
+    $process->setTimeout(120);
+    $process->run();
+
+    return response()->json([
+        'successful' => $process->isSuccessful(),
+        'output'     => $process->getOutput(),
+        'error'      => $process->getErrorOutput(),
+    ]);
+});
+
+
 
 Route::get('migrate', function() {
     Artisan::call('migrate');

@@ -482,7 +482,7 @@ class UserController extends Controller
         $notification_users = User::where('is_active', true)
             ->where('id', '!=', \Auth::user()->id)
             ->whereDoesntHave('roles', function ($query) {
-                $query->where('id', 5);
+                $query->where('roles.id', 5);
             })->get();
 
         $html = '';

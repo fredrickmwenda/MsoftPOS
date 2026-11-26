@@ -133,9 +133,9 @@
 <script type="text/javascript">
 
     // Expand sidebar menu (if a variant-type menu group exists)
-    // $("ul#catalog").siblings('a').attr('aria-expanded', 'true');
-    // $("ul#catalog").addClass("show");
-    // $("ul#catalog #variant-type-list-menu").addClass("active");
+    $("ul#product").siblings('a').attr('aria-expanded', 'true');
+    $("ul#product").addClass("show");
+    $("ul#product #variation-list-menu").addClass("active");
 
     var variant_type_id = [];
     var all_permission = <?php echo json_encode($all_permission ?? []) ?>;

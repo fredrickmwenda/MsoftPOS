@@ -33,6 +33,7 @@
     $ad    = $settings['address']      ?? [];
     $hr    = $settings['hours']        ?? [];
     $cm    = $settings['commerce']     ?? [];
+    $design = $settings['design']      ?? [];
     $hp    = $settings['homepage']     ?? [];
     $hpHero= $hp['hero']       ?? [];
     $hpCat = $hp['categories'] ?? [];
@@ -244,6 +245,70 @@
                                                 <label><strong>Announcement Bar Text</strong></label>
                                                 <input type="text" name="commerce[announcement]" class="form-control"
                                                        value="{{ old('commerce.announcement', $cm['announcement'] ?? '') }}">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- ================= STOREFRONT DESIGN ================= --}}
+                        <div class="card mb-2">
+                            <div class="card-header" data-toggle="collapse" data-target="#sec-design" style="cursor:pointer">
+                                <h5 class="mb-0">🎨 Storefront Appearance</h5>
+                            </div>
+                            <div id="sec-design" class="collapse show">
+                                <div class="card-body">
+                                    <p class="text-muted">Customize the public storefront colors, typography, corners, and content width for this store.</p>
+                                    <div class="row">
+                                        @foreach([
+                                            'primary_color' => 'Primary brand color',
+                                            'secondary_color' => 'Deep / secondary color',
+                                            'accent_color' => 'Accent color',
+                                            'background_color' => 'Page background',
+                                            'surface_color' => 'Cards and panels',
+                                            'text_color' => 'Main text color',
+                                        ] as $field => $label)
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="design_{{ $field }}"><strong>{{ $label }}</strong></label>
+                                                    <div class="input-group">
+                                                        <input type="color" id="design_{{ $field }}" name="design[{{ $field }}]" class="form-control design-color-picker"
+                                                               value="{{ old('design.' . $field, $design[$field] ?? match($field) { 'primary_color' => '#0d5a39', 'secondary_color' => '#0a382b', 'accent_color' => '#d5a61c', 'background_color' => '#f7f5f1', 'surface_color' => '#ffffff', default => '#17342b' }) }}">
+                                                        <div class="input-group-append">
+                                                            <span class="input-group-text font-monospace" id="{{ $field }}_value">{{ old('design.' . $field, $design[$field] ?? match($field) { 'primary_color' => '#0d5a39', 'secondary_color' => '#0a382b', 'accent_color' => '#d5a61c', 'background_color' => '#f7f5f1', 'surface_color' => '#ffffff', default => '#17342b' }) }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="design_font_family"><strong>Font</strong></label>
+                                                <select id="design_font_family" name="design[font_family]" class="form-control">
+                                                    @foreach(['Inter', 'Arial', 'Roboto', 'Georgia'] as $font)
+                                                        <option value="{{ $font }}" {{ old('design.font_family', $design['font_family'] ?? 'Inter') === $font ? 'selected' : '' }}>{{ $font }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="design_corner_style"><strong>Button and card corners</strong></label>
+                                                <select id="design_corner_style" name="design[corner_style]" class="form-control">
+                                                    <option value="rounded" {{ old('design.corner_style', $design['corner_style'] ?? 'rounded') === 'rounded' ? 'selected' : '' }}>Rounded</option>
+                                                    <option value="square" {{ old('design.corner_style', $design['corner_style'] ?? 'rounded') === 'square' ? 'selected' : '' }}>Square</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="design_content_width"><strong>Content width</strong></label>
+                                                <select id="design_content_width" name="design[content_width]" class="form-control">
+                                                    @foreach(['compact' => 'Compact', 'standard' => 'Standard', 'wide' => 'Wide'] as $value => $label)
+                                                        <option value="{{ $value }}" {{ old('design.content_width', $design['content_width'] ?? 'standard') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
                                             </div>
                                         </div>
                                     </div>
@@ -732,6 +797,18 @@
 @push('scripts')
 <script type="text/javascript">
 $(function () {
+    // Show the selected hex value next to each color input and update it immediately.
+    $('.design-color-picker').each(function () {
+        const picker = this;
+        const valueDisplay = document.getElementById(picker.id.replace('design_', '') + '_value');
+        const updateColorValue = function () {
+            if (valueDisplay) valueDisplay.textContent = picker.value.toLowerCase();
+        };
+        updateColorValue();
+        picker.addEventListener('input', updateColorValue);
+        picker.addEventListener('change', updateColorValue);
+    });
+
     // ── Expand / Collapse All ────────────────────────────────
     $('#expand-all').on('click', function () {
         $('.collapse').collapse('show');

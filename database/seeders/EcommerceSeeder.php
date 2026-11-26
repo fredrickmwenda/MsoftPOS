@@ -12,7 +12,7 @@ class EcommerceSeeder extends Seeder
      * Run the database seeds.
      */
     public function run(): void
-    {
+    { 
         $defaults = [
             'identity' => [
                 'logo' => 'logo.png',
@@ -35,6 +35,17 @@ class EcommerceSeeder extends Seeder
                 'Saturday' => '9a.m - 10p.m'
             ],
             'commerce' => [ /* ... */ ],
+            'design' => [
+                'primary_color' => '#0d5a39',
+                'secondary_color' => '#0a382b',
+                'accent_color' => '#d5a61c',
+                'background_color' => '#f7f5f1',
+                'surface_color' => '#ffffff',
+                'text_color' => '#17342b',
+                'font_family' => 'Inter',
+                'corner_style' => 'rounded',
+                'content_width' => 'standard',
+            ],
             'homepage' => [
 
                 'hero' => [

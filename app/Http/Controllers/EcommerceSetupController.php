@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EcommerceSetup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class EcommerceSetupController extends Controller
 {
@@ -41,6 +42,17 @@ class EcommerceSetupController extends Controller
             'hours_keys.*'        => 'nullable|string|max:50',
             'hours_values'        => 'array',
             'hours_values.*'      => 'nullable|string|max:100',
+
+            // Storefront design
+            'design.primary_color'   => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'design.secondary_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'design.accent_color'    => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'design.background_color'=> ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'design.surface_color'   => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'design.text_color'      => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'design.font_family'     => 'nullable|in:Inter,Arial,Roboto,Georgia',
+            'design.corner_style'    => 'nullable|in:rounded,square',
+            'design.content_width'   => 'nullable|in:compact,standard,wide',
 
             // Commerce
             'commerce.currency'           => 'nullable|string|max:10',
@@ -142,7 +154,7 @@ class EcommerceSetupController extends Controller
         }
 
         // Save each group
-        foreach (['identity', 'contact', 'address', 'commerce', 'homepage', 'contact_page'] as $group) {
+        foreach (['identity', 'contact', 'address', 'commerce', 'design', 'homepage', 'contact_page'] as $group) {
             EcommerceSetup::updateOrCreate(
                 ['key' => $group],
                 ['value' => $data[$group] ?? []]
@@ -150,7 +162,7 @@ class EcommerceSetupController extends Controller
         }
         EcommerceSetup::updateOrCreate(['key' => 'hours'], ['value' => $hoursMap]);
 
-        Cache::forget('ecommerce_setup.all');
+        Cache::forget('ecommerce_setup.all.' . DB::connection()->getDatabaseName());
         Cache::forget('ecommerce_setup.view');
 
         return back()->with('message', 'E-commerce setup saved successfully.');

@@ -132,7 +132,8 @@ if (! function_exists('get_active_categories')) {
 if (! function_exists('setting')) {
     function setting(string $path, mixed $default = null): mixed
     {
-        $all = Cache::rememberForever('ecommerce_setup.all', fn () => EcommerceSetup::allGrouped());
+        $cacheKey = 'ecommerce_setup.all.' . DB::connection()->getDatabaseName();
+        $all = Cache::rememberForever($cacheKey, fn () => EcommerceSetup::allGrouped());
 
         [$group, $field] = array_pad(explode('.', $path, 2), 2, null);
 

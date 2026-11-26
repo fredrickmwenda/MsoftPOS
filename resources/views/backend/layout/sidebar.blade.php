@@ -34,6 +34,10 @@
             <li id="product-list-menu"><a href="{{route('products.index')}}">{{__('file.product_list')}}</a></li>
             @endif
 
+            @if($index_permission_active)
+            <li id="variation-list-menu"><a href="{{route('variant-types.index')}}">{{__('file.variant_type')}}</a></li>
+            @endif
+
             @if($print_barcode_active)
             <li id="printBarcode-menu"><a href="{{route('product.printBarcode')}}">{{__('file.print_barcode')}}</a></li>
             @endif
